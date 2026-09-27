@@ -28,6 +28,13 @@ Core pieces:
 - Before starting work, compare this repo against the Base44 sandbox and pull in any builder-side changes; after a change, apply it to both and create a Base44 checkpoint.
 - Never commit `.env*` or `base44/.app.jsonc` (gitignored). Secrets such as `ZAI_API_KEY` live in Base44's environment, not in code.
 
+## Premium access
+
+- Premium is granted by admins only, via the `PremiumGrant` entity (one row per user, `user_id`). Admins (`role === 'admin'`) are always premium.
+- The check is enforced server-side in `base44/shared/premium.ts` (`hasPremium`), used by `structureStory` and `generateImage`. Any new premium backend function must call it.
+- The client reads `PremiumGrant` only to show/hide the Generate UI (`PublicProfile.jsx`). Never gate premium features on client state alone, and never add access flags to the `User` entity.
+- The old `is_premium` field on `User` is being retired (Sept 2026) — don't use it in new code.
+
 ## ⚠️ Critical gotcha: the schema STRIPS undeclared fields
 
 Base44 silently drops any card/element field that is NOT declared in `base44/entities/Post.jsonc` when a story is saved — even though the schema says `additionalProperties: true`. This caused real bugs (text font sizes resetting after reload, Text FX disappearing, image settings lost).
