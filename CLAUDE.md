@@ -19,7 +19,7 @@ Core pieces:
 - React + Vite + Tailwind, hosted on Base44 (app id `6a161402f22a3ebcce243595`, app name "SW"). Base44 also provides auth, the database (entities), file storage and serverless functions (`base44/functions/*`).
 - Data model lives in `base44/entities/*.jsonc` — the important one is `Post.jsonc` (a story: `cards[]` → each card has `elements[]`).
 - A Supabase project exists but holds no app data; StoryWall's data is all in Base44.
-- Source can ALSO be edited by Oz through Base44's own AI builder chat, so files can change between sessions — always re-read a file before editing.
+- Source can ALSO be edited by Oz through Base44's own AI builder chat and through Claude (Cowork / Claude Code) via the Base44 connector, sometimes at the same time — so files can change between sessions or even mid-session. Always re-read a file right before editing it.
 
 ### Two copies of the code: GitHub and Base44
 
