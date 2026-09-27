@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
+import { hasPremium } from '../../shared/premium.ts';
 
 // Generates an image from a text prompt using the platform's built-in
 // GenerateImage integration. Returns { url: string } on success.
@@ -7,6 +8,12 @@ export default async function(req: Request): Promise<Response> {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    // Image generation is part of the premium AI Carousel Builder (and the
+    // admin-only Prompt Test page). Enforced here, not just in the UI, so it
+    // can't be called directly by non-premium accounts.
+    if (!(await hasPremium(base44, user))) {
+      return Response.json({ error: 'Premium required' }, { status: 403 });
+    }
 
     const body = await req.json();
     const prompt = typeof body?.prompt === 'string' ? body.prompt.trim() : '';

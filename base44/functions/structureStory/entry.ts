@@ -1,4 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.48';
+import { hasPremium } from '../../shared/premium.ts';
 
 const SYSTEM_PROMPT = `You are a story structuring assistant for StoryWall, a career storytelling platform that turns raw notes into swipeable card carousels.
 
@@ -221,8 +222,9 @@ Deno.serve(async (req) => {
     }
     if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Premium check — only premium users can use the AI carousel builder
-    if (!user.is_premium) {
+    // Premium check — only premium users can use the AI carousel builder.
+    // Decided server-side from PremiumGrant (see shared/premium.ts).
+    if (!(await hasPremium(base44, user))) {
       return Response.json({ error: "Premium required" }, { status: 403 });
     }
 

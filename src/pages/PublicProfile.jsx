@@ -103,11 +103,19 @@ export default function PublicProfile() {
     base44.auth.me()
       .then(user => {
         setAuthUserId(user?.id ?? null);
-        setIsPremium(!!user?.is_premium);
         // Admin gate: uses the built-in role field on the User entity.
-        // TODO: if role isn't populated for Oz's account, replace this with
-        // an explicit admin role check once the role field is reliably set.
-        setIsAdmin(user?.role === 'admin');
+        const admin = user?.role === 'admin';
+        setIsAdmin(admin);
+        // Premium only shows/hides the Generate UI here — the backend
+        // functions enforce it (base44/shared/premium.ts). Grants live in the
+        // admin-managed PremiumGrant entity; admins are always premium.
+        if (admin) {
+          setIsPremium(true);
+        } else if (user?.id) {
+          base44.entities.PremiumGrant.filter({ user_id: user.id })
+            .then(grants => setIsPremium(Array.isArray(grants) && grants.length > 0))
+            .catch(() => setIsPremium(false));
+        }
       })
       .catch(() => setAuthUserId(null));
   }, []);

@@ -16,7 +16,7 @@ export const ENABLE_VIDEO_AND_AUDIO = false;
 
 // AI Carousel Builder (Generate mode) — master kill switch.
 // When false, the ENTIRE Generate pipeline is hidden: no Write/Generate toggle,
-// no Notes view, no Base44.com/Wan calls — regardless of a user's is_premium
+// no Notes view, no Base44.com/Wan calls — regardless of a user's premium
 // value. This is independent of the premium flag; its only purpose is a fast
 // app-wide off switch if Base44.com or Wan misbehave in production.
 export const aiCarouselBuilderEnabled = true;
