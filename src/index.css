@@ -1,0 +1,416 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Anton&family=Changa+One&family=Comfortaa:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Righteous&family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 0 0% 5%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 5%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 5%;
+    --primary: 0 0% 5%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 95%;
+    --secondary-foreground: 0 0% 20%;
+    --muted: 0 0% 93%;
+    --muted-foreground: 0 0% 50%;
+    --accent: 0 0% 93%;
+    --accent-foreground: 0 0% 5%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 88%;
+    --input: 0 0% 93%;
+    --ring: 0 0% 5%;
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+}
+
+/* Outside any @layer — unlayered CSS beats Tailwind utilities for normal
+   declarations, and !important guarantees the input font-size wins. */
+html, body {
+  overscroll-behavior: none;
+}
+
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+/* Landing page animations */
+@keyframes pulse-dot { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
+@keyframes swipe-mark { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes blink-cursor { 50% { opacity: 0 } }
+@keyframes floaty-card { 0%,100% { transform: rotate(2.5deg) translateY(0) } 50% { transform: rotate(2.5deg) translateY(-10px) } }
+@keyframes nudge-arrow { 0%,100% { transform: translateX(0) } 50% { transform: translateX(4px) } }
+
+/* Landing page highlight mark */
+.landing-mark { position: relative; white-space: nowrap; }
+.landing-mark::after {
+  content: ""; position: absolute; left: -0.04em; right: -0.04em; bottom: 0.06em; height: 0.42em;
+  background: rgba(255,206,102,0.55); z-index: -1; border-radius: 2px;
+  transform: scaleX(0); transform-origin: left;
+}
+.landing-mark.lit::after { animation: swipe-mark 0.5s ease forwards; }
+
+* {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
+/* Pixel/8-bit loader — shared visual language for every loading spinner in
+   the app (replaces the old plain CSS "ring" spinners and lucide Loader
+   icons). See src/components/ui/PixelSpinner.jsx for the component; this is
+   the one shared keyframes definition every instance reuses via the
+   --pxs-u (unit size) and --pxs-c (color) custom properties it sets inline. */
+.pixel-spinner-dot {
+  animation: pixel-spin 1s linear infinite;
+}
+
+@keyframes pixel-spin {
+  0% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) transparent;
+  }
+  6.25% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) transparent;
+  }
+  12.5% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) transparent;
+  }
+  18.75% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) transparent;
+  }
+  25% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) transparent;
+  }
+  31.25% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) transparent;
+  }
+  37.5% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) transparent;
+  }
+  43.75% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) transparent;
+  }
+  50% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) var(--pxs-c);
+  }
+  56.25% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) var(--pxs-c);
+  }
+  62.5% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) var(--pxs-c);
+  }
+  68.75% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) var(--pxs-c);
+  }
+  75% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) var(--pxs-c);
+  }
+  81.25% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) var(--pxs-c);
+  }
+  87.5% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) var(--pxs-c);
+  }
+  93.75% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) var(--pxs-c);
+  }
+  100% { box-shadow:
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * -3) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * -2) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * -1) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 0) var(--pxs-c),
+    calc(var(--pxs-u) * 3) calc(var(--pxs-u) * 1) var(--pxs-c),
+    calc(var(--pxs-u) * 2) calc(var(--pxs-u) * 2) var(--pxs-c),
+    calc(var(--pxs-u) * 1) calc(var(--pxs-u) * 3) var(--pxs-c),
+    calc(var(--pxs-u) * 0) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * 3) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * 2) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 1) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * 0) transparent,
+    calc(var(--pxs-u) * -3) calc(var(--pxs-u) * -1) transparent,
+    calc(var(--pxs-u) * -2) calc(var(--pxs-u) * -2) transparent,
+    calc(var(--pxs-u) * -1) calc(var(--pxs-u) * -3) transparent;
+  }
+}
+/* ── Image skeleton: soft beam sweeping across a neutral block while an
+   image loads (profile picture, canvas media). Used by ImageSkeleton.jsx. */
+.image-skeleton {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #e5e7eb;
+  pointer-events: none;
+}
+.image-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0) 100%);
+  animation: image-skeleton-beam 1.4s ease-in-out infinite;
+}
+@keyframes image-skeleton-beam {
+  100% { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .image-skeleton::after { animation: none; }
+}

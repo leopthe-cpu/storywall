@@ -1,0 +1,89 @@
+{
+  "type": "object",
+  "name": "User",
+  "title": "User",
+  "properties": {
+    "username": {
+      "type": "string",
+      "description": "Unique username / handle"
+    },
+    "display_name": {
+      "type": "string"
+    },
+    "bio": {
+      "type": "string"
+    },
+    "profile_image": {
+      "type": "string",
+      "description": "Profile photo URL"
+    },
+    "headline": {
+      "type": "string",
+      "description": "Job title / headline"
+    },
+    "location": {
+      "type": "string"
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Skill/interest tags"
+    },
+    "links": {
+      "type": "array",
+      "description": "Free-form links shown on profile",
+      "items": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "favicon": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "is_premium": {
+      "type": "boolean",
+      "default": false,
+      "description": "Premium access flag \u2014 enables AI Carousel Builder (Generate mode)"
+    },
+    "is_private": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, the profile is hidden from public view"
+    }
+  },
+  "required": [],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {},
+    "update": {
+      "$or": [
+        {
+          "id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
