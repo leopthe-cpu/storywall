@@ -79,10 +79,10 @@ export default function Landing() {
       <div className="relative z-10 max-w-[1180px] mx-auto px-7 sm:px-7">
         {/* Header */}
         <header className="flex items-center justify-between pt-[26px]">
-          <img src="/logo-grey.png" alt="StoryWall" className="h-[22px] w-auto" />
-          <nav className="flex items-center gap-[22px]">
-            <Link to="/signin" className="font-mono text-[13px] text-[#6B6864] no-underline hover:text-[#111]">Sign in</Link>
-            <Link to="/signup" className="font-mono text-[13px] font-bold text-[#FBFAF8] bg-[#111] px-4 py-2 rounded-lg no-underline hover:opacity-90 hover:-translate-y-px transition-all">Get started</Link>
+          <img src="/logo-slash-grey.png" alt="StoryWall" className="h-[18px] sm:h-[22px] w-auto flex-shrink-0" />
+          <nav className="flex items-center gap-3 sm:gap-[22px] whitespace-nowrap">
+            <Link to="/signin" className="font-mono text-[14px] font-bold text-[#6B6864] no-underline hover:text-[#111]">Sign in</Link>
+            <Link to="/signup" className="font-mono text-[12px] sm:text-[13px] font-bold text-[#FBFAF8] bg-[#111] px-3 sm:px-4 py-2 rounded-lg no-underline hover:opacity-90 hover:-translate-y-px transition-all">Claim your wall</Link>
           </nav>
         </header>
 
