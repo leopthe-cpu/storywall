@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Copy, Check } from 'lucide-react';
+import { X, Copy, Check } from '@/components/icons';
 
 // Fallback for the share button when the Clipboard API is unavailable or denied.
 // Shows the URL in a readable field the user can select/copy manually, plus a

@@ -1,4 +1,4 @@
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw } from '@/components/icons';
 
 // Full-screen fallback shown when a loading state exceeds its maximum wait.
 // Default retry reloads the page so the auth client re-initializes cleanly.

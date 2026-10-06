@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight } from '@/components/icons';
 import { motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import CardThumb from '@/components/creator/CardThumb';
@@ -140,7 +140,7 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
                 <div
                   onClick={reorderMode ? undefined : () => onNavigate(i)}
                   className={`w-16 aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all relative ${
-                    i === currentCardIndex ? 'border-white' : 'border-white/20 hover:border-white/50'
+                    i === currentCardIndex ? 'border-emerald-400' : 'border-white/20 hover:border-white/50'
                   }`}
                 >
                   <CardThumb card={card} displaySize={64} tokens={tokens} />
@@ -223,7 +223,7 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3">
           {loadingDrafts ? (
             <div className="flex justify-center py-8">
-              <PixelSpinner size={20} color="rgba(255,255,255,0.6)" />
+              <PixelSpinner size={20} tone="light" />
             </div>
           ) : drafts.length === 0 ? (
             <div className="py-8 text-center">

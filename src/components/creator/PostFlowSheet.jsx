@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { X, ChevronLeft, RotateCw, Plus } from 'lucide-react';
+import { X, ChevronLeft, RotateCw, Plus } from '@/components/icons';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import CardCarousel from '@/components/creator/CardCarousel';

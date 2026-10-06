@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { X, ZoomIn, ZoomOut, Check } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, Check } from '@/components/icons';
 
 // Simple pan+zoom crop UI — no external library needed
 export default function ImageCropModal({ imageUrl, aspectRatio = 1, onConfirm, onCancel }) {

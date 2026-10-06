@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useLayoutEffect } from 'react';
 import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from './CanvasArea';
-import { Play } from 'lucide-react';
+import { Play } from '@/components/icons';
 import AudioWidget from './AudioWidget';
 import { useDraftMedia } from './DraftMediaContext';
 import { resolveColor } from '@/lib/colorTokens';
@@ -607,33 +607,49 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
       updates.displayWidth = Math.round(Math.max(node.scrollWidth / scale + 4, currentWidth + 10));
     }
 
-    // Auto-grow height if text overflows vertically
-    const contentHeightRef = node.scrollHeight / scale;
-    if (contentHeightRef > (node.clientHeight / scale)) {
-      if (currentHeight > 0) {
-        // Fixed height — grow displayHeight, adjust y if needed
-        const newHeight = Math.max(contentHeightRef + 4, currentHeight + 10);
-        if (newHeight <= safeZoneSize) {
-          updates.displayHeight = Math.round(newHeight);
-        } else {
-          updates.displayHeight = Math.round(safeZoneSize);
-          updates.y = (SAFE_ZONE_INSET / REFERENCE_CARD_SIZE) * 100;
-        }
+    // Vertical room. An auto-height box grows downward with its text until it
+    // reaches the bottom of the card's safe zone; a box the user gave a fixed
+    // height keeps that height. When the text no longer fits, the FONT shrinks
+    // to the largest size that fits (min 8) instead of the box jumping up the
+    // card. This only ever runs while typing (onInput) — once the user stops
+    // or taps away, size and position are left exactly as they are.
+    const padPx = Math.round(2 * scale);
+    const boxTopRef = Math.max(SAFE_ZONE_INSET, ((element.y ?? 20) / 100) * REFERENCE_CARD_SIZE);
+    const roomRef = currentHeight > 0
+      ? Math.min(currentHeight, safeZoneSize)
+      : Math.max(20, (REFERENCE_CARD_SIZE - SAFE_ZONE_INSET) - boxTopRef);
+    const roomPx = roomRef * scale - padPx * 2;
+    if (node.scrollHeight > roomPx + 1) {
+      const MIN_TYPING_FONT = 8;
+      const baseSize = parseInt(element.font_size) || 14;
+      // Measure candidate sizes directly on the live node (restored after),
+      // so the result accounts for real wrapping, font and effects.
+      const saved = { fontSize: node.style.fontSize, lineHeight: node.style.lineHeight, minHeight: node.style.minHeight, height: node.style.height };
+      node.style.minHeight = '0px';
+      node.style.height = 'auto';
+      const fits = (fs) => {
+        node.style.fontSize = `${fs * scale}px`;
+        node.style.lineHeight = fs >= 32 ? '1.05' : '1.3';
+        return node.scrollHeight <= roomPx + 1;
+      };
+      let lo = MIN_TYPING_FONT, hi = baseSize - 1, best = null;
+      while (lo <= hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        if (fits(mid)) { best = mid; lo = mid + 1; } else { hi = mid - 1; }
+      }
+      Object.assign(node.style, saved);
+      if (best) {
+        updates.font_size = String(best);
       } else {
-        // Auto height — adjust y to top of safe zone to make room
-        if (contentHeightRef <= safeZoneSize) {
-          updates.y = (SAFE_ZONE_INSET / REFERENCE_CARD_SIZE) * 100;
-        } else {
-          // Too tall even at top — revert last keystroke
-          node.innerText = prevContentRef.current;
-          const range = document.createRange();
-          range.selectNodeContents(node);
-          range.collapse(false);
-          const sel = window.getSelection();
-          sel.removeAllRanges();
-          sel.addRange(range);
-          return;
-        }
+        // Doesn't fit even at the minimum size — refuse the last keystroke.
+        node.innerText = prevContentRef.current;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return;
       }
     }
 
@@ -993,7 +1009,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
           <ImageSkeleton loaded={mediaLoaded} />
           {showSpinner && !mediaLoaded && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <PixelSpinner size={18} color="#9CA3AF" />
+              <PixelSpinner size={18} />
             </div>
           )}
         </div>
@@ -1195,7 +1211,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
         </div>
         {isEmpty && (
           <div
-            className="absolute pointer-events-none whitespace-pre-wrap break-words"
+            className="absolute pointer-events-none whitespace-pre-wrap break-words flex items-baseline"
             style={{
               left: padPx,
               top: padPx,
@@ -1215,6 +1231,18 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
               ].filter(Boolean).join(' ') || 'none',
             }}
           >
+            {/* Blinking caret — invites tapping/typing into an untouched text
+                box, reusing the same blink-cursor keyframe as the landing page. */}
+            <span
+              style={{
+                display: 'inline-block',
+                width: Math.max(1, Math.round(1.5 * scale)),
+                height: '1em',
+                marginRight: 2,
+                background: resolveColor(element.color_token, tokens, element.color || '#000000'),
+                animation: 'blink-cursor 1s step-end infinite',
+              }}
+            />
             Text
           </div>
         )}

@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { ImagePlus, Video } from 'lucide-react';
+import { ImagePlus, Video } from '@/components/icons';
 
 // Full-screen notes editor for Generate mode.
 // Plain white canvas with a blinking text cursor (native textarea cursor).

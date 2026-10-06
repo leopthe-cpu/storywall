@@ -5,19 +5,21 @@
 // the point a control resets/snaps back to conceptually (e.g. 0 for a
 // signed effect strength, 100 for zoom). Purely visual, doesn't affect drag.
 //
-// `compact` (optional): renders the whole control narrower and centered
-// instead of edge-to-edge. Being narrower and inset from the container's
+// `compact` (default ON — this is now the app-wide standard): renders the whole
+// control narrower and centered instead of edge-to-edge. Being narrower and inset from the container's
 // edges also means a drag doesn't start right at the screen edge, which on
 // mobile is where the browser's edge-swipe back/forward gesture lives — a
 // full-width slider flush against the side of the screen risks triggering
-// that gesture instead of moving the thumb. Opt-in and defaults to the
-// original full-width behavior so existing call sites (zoom, overlay
-// intensity, etc.) are unaffected until they're deliberately switched over.
-export default function MinimalSlider({ value, min = 0, max = 100, step = 1, onChange, dark = true, resetValue, compact = false }) {
+// that gesture instead of moving the thumb. Pass compact={false}
+// only where a full-width track is genuinely needed.
+//
+// `dark` (default true) is for the dark builder UI; dark={false} is the light
+// variant (beige/ink) used on light screens such as the profile-photo cropper.
+export default function MinimalSlider({ value, min = 0, max = 100, step = 1, onChange, dark = true, resetValue, compact = true, ariaLabel }) {
   const pct = max > min ? ((value - min) / (max - min)) * 100 : 0;
   const resetPct = resetValue != null && max > min ? ((resetValue - min) / (max - min)) * 100 : null;
-  const trackColor = dark ? '#444' : '#d4d4d4';
-  const fillColor = dark ? '#666' : '#bbb';
+  const trackColor = dark ? '#444' : '#D6D2C7';
+  const fillColor = dark ? '#666' : '#8A877F';
   return (
     <div className={compact ? 'relative mx-auto' : 'relative w-full'} style={{ height: 20, width: compact ? '62%' : undefined }}>
       <div
@@ -38,7 +40,7 @@ export default function MinimalSlider({ value, min = 0, max = 100, step = 1, onC
             width: 2,
             height: 8,
             borderRadius: 1,
-            background: dark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)',
+            background: dark ? 'rgba(244,242,236,0.5)' : 'rgba(38,38,36,0.4)',
           }}
         />
       )}
@@ -51,8 +53,8 @@ export default function MinimalSlider({ value, min = 0, max = 100, step = 1, onC
           width: 12,
           height: 12,
           borderRadius: '50%',
-          background: '#fff',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.35)',
+          background: dark ? '#F4F2EC' : '#262624',
+          boxShadow: dark ? '0 1px 3px rgba(0,0,0,0.35)' : '0 1px 3px rgba(38,38,36,0.35)',
         }}
       />
       <input
@@ -61,6 +63,7 @@ export default function MinimalSlider({ value, min = 0, max = 100, step = 1, onC
         max={max}
         step={step}
         value={value}
+        aria-label={ariaLabel}
         onChange={(e) => onChange(Number(e.target.value))}
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
       />

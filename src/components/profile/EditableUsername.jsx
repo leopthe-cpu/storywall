@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Pencil, Check, X, AlertCircle } from 'lucide-react';
+import { Pencil, Check, X, AlertCircle } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 
 // Inline-editable username row with real-time availability check.
@@ -87,7 +87,7 @@ export default function EditableUsername({ currentUsername, currentUserId, onSav
             className="flex-1 px-2 py-2.5 text-sm text-gray-900 focus:outline-none"
           />
           <div className="pr-2 flex-shrink-0 flex items-center">
-            {checkState === 'checking' && <PixelSpinner size={14} color="#9CA3AF" />}
+            {checkState === 'checking' && <PixelSpinner size={14} />}
             {checkState === 'available' && <Check size={14} className="text-green-500" />}
             {checkState === 'taken' && <X size={14} className="text-red-500" />}
             {checkState === 'error' && <AlertCircle size={14} className="text-red-500" />}

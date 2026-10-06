@@ -16,7 +16,7 @@ export default function GenerateProgress({ visible, completedSteps, totalSteps, 
           exit={{ opacity: 0 }}
         >
           <div className="w-full max-w-xs px-8 flex flex-col items-center gap-6">
-            <PixelSpinner size={24} color="#111827" />
+            <PixelSpinner size={24} />
 
             {/* Percentage */}
             <div className="text-3xl font-bold text-gray-900 tabular-nums">{pct}%</div>

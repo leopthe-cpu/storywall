@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MoreHorizontal, Pencil, Trash2, Archive } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Archive } from '@/components/icons';
 
 // Kebab menu for a story entry on the profile. Owner-only; renders nothing for visitors.
 export default function StoryKebab({ onEdit, onDelete, onArchive }) {

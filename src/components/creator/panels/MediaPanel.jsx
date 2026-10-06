@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Plus, Camera, FolderOpen, Image as ImageIcon, Mic, Play, Film, Music, RefreshCw, RotateCw, FlipHorizontal, FlipVertical, Eraser } from 'lucide-react';
+import { Plus, Camera, FolderOpen, Image as ImageIcon, Mic, Play, Film, Music, RefreshCw, RotateCw, FlipHorizontal, FlipVertical, Eraser } from '@/components/icons';
 import { base44 } from '@/api/base44Client';
 import { useDraftMedia } from '@/components/creator/DraftMediaContext';
 import ColorPicker from '@/components/creator/ColorPicker';
@@ -84,7 +84,7 @@ function getMediaDuration(file) {
   });
 }
 
-export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateElementById, onAddElement, onDeleteElement, currentCard, onSelectElement, onDuplicateElement, onUpdateCard, cards = [], onNavigate, onRemoveMediaByUrl, galleryResetToken }) {
+export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateElementById, onAddElement, onDeleteElement, currentCard, currentCardIndex, onSelectElement, onDuplicateElementToCard, onUpdateCard, cards = [], onNavigate, onRemoveMediaByUrl, galleryResetToken }) {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const [tab, setTab] = useState('gallery');
@@ -111,17 +111,23 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
 
   // Gallery is scoped to the current story — derived from the media elements
   // actually placed on the story's cards, not the account-wide Media library.
+  // One entry per unique image_url, but `placements` tracks EVERY card it's
+  // actually on (an image can now be added to more than one card via the
+  // gallery's "Add to card" action) — drives the per-item card-position
+  // badges and the "already on this card" green highlight below.
   const derivedItems = useMemo(() => {
-    const seen = new Set();
-    const items = [];
-    for (const card of cards) {
+    const byUrl = new Map();
+    cards.forEach((card, cardIndex) => {
       for (const el of (card?.elements || [])) {
-        if ((el.type === 'image' || el.type === 'video' || el.type === 'audio') && el.image_url && !seen.has(el.image_url)) {
-          seen.add(el.image_url);
-          items.push({ id: el.id, image_url: el.image_url, media_type: el.type, duration: el.duration });
+        if ((el.type === 'image' || el.type === 'video' || el.type === 'audio') && el.image_url) {
+          if (!byUrl.has(el.image_url)) {
+            byUrl.set(el.image_url, { id: el.id, image_url: el.image_url, media_type: el.type, duration: el.duration, placements: [] });
+          }
+          byUrl.get(el.image_url).placements.push({ cardIndex, elementId: el.id });
         }
       }
-    }
+    });
+    const items = Array.from(byUrl.values());
     if (!ENABLE_VIDEO_AND_AUDIO) return items.filter(m => (m.media_type || 'image') === 'image');
     return items;
   }, [cards]);
@@ -296,16 +302,29 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
     setTab(defaultTabForType(mtype));
   };
 
-  const duplicateMedia = (item) => {
+  // "Add to card" (replaces plain Duplicate in this gallery): places a copy
+  // of this media onto whichever card the user picks from the kebab's
+  // card-number grid — including the current card, or a card it's already
+  // on. Uses one of the item's existing placements as the template to copy
+  // display/crop/overlay settings from; falls back to a fresh element with
+  // this gallery entry's own defaults if somehow none exist yet.
+  const addMediaToCard = (item, targetCardIndex) => {
     const mtype = item.media_type || 'image';
-    for (let i = 0; i < cards.length; i++) {
-      const found = cards[i]?.elements?.find(e => e.image_url === item.image_url);
-      if (found) {
-        onDuplicateElement?.(found);
-        return;
-      }
+    const templateCardIndex = item.placements?.[0]?.cardIndex;
+    const templateEl = templateCardIndex != null
+      ? cards[templateCardIndex]?.elements?.find(e => e.id === item.placements[0].elementId)
+      : null;
+    if (templateEl && onDuplicateElementToCard) {
+      onDuplicateElementToCard(templateEl, targetCardIndex);
+      return;
     }
-    onAddElement({ type: mtype, image_url: item.image_url, duration: item.duration, ...defaultPropsForType(mtype) });
+    const newEl = { type: mtype, image_url: item.image_url, duration: item.duration, ...defaultPropsForType(mtype) };
+    if (targetCardIndex === currentCardIndex) {
+      onAddElement(newEl);
+    } else {
+      onNavigate?.(targetCardIndex);
+      onAddElement(newEl);
+    }
   };
 
   const deleteMedia = async (item) => {
@@ -525,7 +544,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                       style={{ width: TILE, height: TILE }}
                     >
                       {uploading ? (
-                        <PixelSpinner size={20} color="rgba(255,255,255,0.5)" />
+                        <PixelSpinner size={20} tone="light" />
                       ) : (
                         <Plus size={20} className="text-white/40" />
                       )}
@@ -537,7 +556,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                       style={{ width: TILE, height: TILE }}
                     >
                       {uploading ? (
-                        <PixelSpinner size={20} color="rgba(255,255,255,0.5)" />
+                        <PixelSpinner size={20} tone="light" />
                       ) : (
                         <Plus size={20} className="text-white/40" />
                       )}
@@ -589,9 +608,17 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                 <span className="text-[9px] text-white/20">Add</span>
               </div>
 
-              {/* Media library thumbnails */}
-              {mediaItems.map((item, i) => (
-                <div key={item.id} className="flex-shrink-0 flex flex-col items-center gap-1.5">
+              {/* Media library thumbnails. Green border = already placed on
+                  the card you're viewing right now (solid once it's also
+                  the literally-selected canvas element); card-position
+                  badges + the kebab sit in a column to the right instead of
+                  centered below, so there's room to show every card an item
+                  is placed on, not just one. */}
+              {mediaItems.map((item, i) => {
+                const onCurrentCard = item.placements.some(p => p.cardIndex === currentCardIndex);
+                const isSelected = selectedElement?.image_url === item.image_url;
+                return (
+                <div key={item.id} className="flex-shrink-0 flex items-start gap-1">
                   <div
                     draggable={reorderMode}
                     onDragStart={reorderMode ? (e) => onDragStart(e, i) : undefined}
@@ -599,21 +626,38 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                     onDrop={reorderMode ? (e) => onDrop(e, i) : undefined}
                     onClick={reorderMode ? undefined : () => selectMedia(item)}
                     className={`rounded-lg overflow-hidden border-2 transition-colors ${reorderMode ? 'cursor-grab' : ''} ${
-                      selectedElement?.image_url === item.image_url ? 'border-white' : 'border-white/10 hover:border-white/40'
+                      isSelected ? 'border-emerald-400' : onCurrentCard ? 'border-emerald-400/40' : 'border-white/10 hover:border-white/40'
                     }`}
                     style={{ width: TILE, height: TILE }}
                   >
                     {renderThumb(item)}
                   </div>
                   {!reorderMode && (
-                    <ThumbMenu
-                      onDuplicate={() => duplicateMedia(item)}
-                      onReorder={() => setReorderMode(true)}
-                      onDelete={() => deleteMedia(item)}
-                    />
+                    <div className="flex flex-col items-start gap-1 pt-0.5">
+                      {item.placements.map(p => (
+                        <span
+                          key={p.cardIndex}
+                          className={`text-[9px] leading-none px-1 py-0.5 rounded font-mono ${
+                            p.cardIndex === currentCardIndex ? 'bg-emerald-400/20 text-emerald-300' : 'bg-white/10 text-white/40'
+                          }`}
+                        >
+                          {p.cardIndex + 1}/{cards.length}
+                        </span>
+                      ))}
+                      <ThumbMenu
+                        onReorder={() => setReorderMode(true)}
+                        onDelete={() => deleteMedia(item)}
+                        addToCard={{
+                          cards,
+                          currentIndices: item.placements.map(p => p.cardIndex),
+                          onPick: (targetIndex) => addMediaToCard(item, targetIndex),
+                        }}
+                      />
+                    </div>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -638,7 +682,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
             </div>
             <div>
               <label className="text-white/40 text-[9px] uppercase tracking-wider mb-1.5 block">Zoom: {zoom}%</label>
-              <MinimalSlider min={50} max={200} value={zoom} onChange={v => onUpdateElement({ zoom: v })} />
+              <MinimalSlider min={50} max={200} value={zoom} resetValue={100} ariaLabel="Zoom" onChange={v => onUpdateElement({ zoom: v })} />
             </div>
             <div className="flex items-end gap-3">
               <SizeStepper

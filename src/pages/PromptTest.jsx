@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, Image as ImageIcon, Loader2, Download, X, Paperclip } from 'lucide-react';
+import { ChevronLeft, Image as ImageIcon, Download, X, Paperclip } from '@/components/icons';
+import PixelSpinner from '@/components/ui/PixelSpinner';
 import { base44 } from '@/api/base44Client';
 
 const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4'];
@@ -52,7 +53,7 @@ export default function PromptTest() {
   if (authed === null) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-white">
-        <div className="w-6 h-6 border-2 border-black border-t-transparent rounded-full animate-spin" />
+        <PixelSpinner size={24} />
       </div>
     );
   }
@@ -199,7 +200,7 @@ export default function PromptTest() {
             >
               {uploadingRef ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" />
+                  <PixelSpinner size={16} />
                   Uploading…
                 </>
               ) : (
@@ -232,7 +233,7 @@ export default function PromptTest() {
         >
           {generating ? (
             <span className="flex items-center justify-center gap-2">
-              <Loader2 size={16} className="animate-spin" />
+              <PixelSpinner size={16} />
               Generating…
             </span>
           ) : 'Generate'}

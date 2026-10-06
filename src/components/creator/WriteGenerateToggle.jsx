@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pencil, Sparkles, Lock, FlaskConical } from 'lucide-react';
+import { Pencil, Sparkles, Lock, FlaskConical } from '@/components/icons';
 
 // Bottom sheet that appears when tapping the "+" button.
 // Shows two options: Write (existing manual flow) and Generate (AI flow).

@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react';
+import { Plus } from '@/components/icons';
 
 export default function ReorderPanel({ cards, currentCardIndex, onNavigate, onReorder, onAddCard }) {
   const handleDragStart = (e, index) => {

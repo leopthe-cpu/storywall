@@ -1,5 +1,5 @@
 {
-  "name": "SW",
+  "name": "StoryWall",
   "site": {
     "installCommand": "npm install",
     "buildCommand": "npm run build",

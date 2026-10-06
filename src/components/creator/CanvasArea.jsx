@@ -139,7 +139,7 @@ export default function CanvasArea({ card, cardSize, selectedElementId, onSelect
       {card.imageRetrying && (
         <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 5000 }}>
           <div className="bg-black/80 text-white text-xs font-medium px-3 py-2 rounded-lg flex items-center gap-2">
-            <PixelSpinner size={14} color="#fff" />
+            <PixelSpinner size={14} tone="light" />
             <span>Generating image…</span>
           </div>
         </div>

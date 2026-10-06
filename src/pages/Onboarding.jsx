@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Check, X, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Check, X, AlertCircle } from '@/components/icons';
 import LinksEditor from '@/components/profile/LinksEditor';
 import ProfilePhotoEditor from '@/components/profile/ProfilePhotoEditor';
 import { ProfileHeroCard, ProfileInfo } from '@/components/profile/ProfileHeader';
 import { ImagePanel, PreviewPanel } from '@/components/signup/SidePanel';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import useDocumentTitle from '@/lib/useDocumentTitle';
 
 // Desktop side-panel caption per step. Step 1 shows a photo; steps 2–5 show a
 // live preview of the profile being built.
@@ -22,13 +23,51 @@ const STEP_CAPTIONS = {
 
 const TOTAL_STEPS = 5;
 
+// Onboarding progress is kept in this browser (per user) until the profile is
+// saved, so leaving midway (e.g. via the logo), refreshing, or closing the tab
+// doesn't lose what was entered. Cleared once the profile is saved.
+const draftKey = (userId) => `sw_onboarding_draft_v1:${userId}`;
+const readDraft = (userId) => { try { return JSON.parse(localStorage.getItem(draftKey(userId)) || 'null'); } catch { return null; } };
+const writeDraft = (userId, data) => { try { localStorage.setItem(draftKey(userId), JSON.stringify(data)); } catch { /* storage unavailable */ } };
+const clearDraft = (userId) => { try { localStorage.removeItem(draftKey(userId)); } catch { /* ignore */ } };
+
+// Server copy of the draft (private table, owner-only) so a user can resume on
+// any device. Every call is non-blocking: if it fails, the browser copy still works.
+const withTimeout = (promise, ms) => Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
+async function loadServerDraft(userId) {
+  try {
+    const rows = await withTimeout(base44.entities.OnboardingDraft.filter({ user_id: userId }), 3000);
+    if (!rows?.length) return null;
+    const row = [...rows].sort((a, b) => new Date(b.updated_date || 0) - new Date(a.updated_date || 0))[0];
+    const d = JSON.parse(row.data || 'null');
+    return d ? { ...d, _rowId: row.id } : null;
+  } catch { return null; }
+}
+async function saveServerDraft(userId, rowIdRef, payload) {
+  try {
+    const body = { user_id: userId, step: payload.step, data: JSON.stringify(payload) };
+    if (!rowIdRef.current) {
+      const rows = await base44.entities.OnboardingDraft.filter({ user_id: userId });
+      if (rows?.length) rowIdRef.current = rows[0].id;
+    }
+    if (rowIdRef.current) await base44.entities.OnboardingDraft.update(rowIdRef.current, body);
+    else { const created = await base44.entities.OnboardingDraft.create(body); rowIdRef.current = created?.id || null; }
+  } catch { /* non-blocking */ }
+}
+async function deleteServerDraft(userId) {
+  try {
+    const rows = await base44.entities.OnboardingDraft.filter({ user_id: userId });
+    for (const r of rows || []) await base44.entities.OnboardingDraft.delete(r.id);
+  } catch { /* non-blocking */ }
+}
+
 function ProgressBar({ step }) {
   return (
     <div className="flex gap-1.5">
       {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
         <div
           key={i}
-          className={`h-1 flex-1 rounded-full transition-all duration-300 ${i < step ? 'bg-black' : 'bg-gray-200'}`}
+          className={`h-1 flex-1 rounded-full transition-all duration-300 ${i < step ? 'bg-[#262624]' : 'bg-[#E6E0D2]'}`}
         />
       ))}
     </div>
@@ -45,7 +84,7 @@ function StepWrapper({ children, onBack, canGoBack }) {
       className="flex flex-col gap-6"
     >
       {canGoBack && (
-        <button onClick={onBack} className="flex items-center gap-1 text-gray-500 hover:text-gray-900 transition-colors w-fit -ml-1">
+        <button onClick={onBack} className="flex items-center gap-1 text-[#6B6964] hover:text-[#262624] transition-colors w-fit -ml-1">
           <ChevronLeft size={18} />
           <span className="text-sm">Back</span>
         </button>
@@ -58,14 +97,14 @@ function StepWrapper({ children, onBack, canGoBack }) {
 function Field({ label, value, onChange, placeholder, type = 'text', multiline = false }) {
   return (
     <div>
-      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">{label}</label>
+      <label className="text-xs font-semibold text-[#6B6964] uppercase tracking-wider mb-2 block">{label}</label>
       {multiline ? (
         <textarea
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           rows={4}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20 resize-none"
+          className="w-full border border-[#D6D2C7] rounded-xl px-4 py-3 text-sm text-[#262624] placeholder:text-[#8A877F] focus:outline-none focus:ring-2 focus:ring-[#262624]/20 resize-none"
         />
       ) : (
         <input
@@ -73,7 +112,7 @@ function Field({ label, value, onChange, placeholder, type = 'text', multiline =
           value={value}
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20"
+          className="w-full border border-[#D6D2C7] rounded-xl px-4 py-3.5 text-sm text-[#262624] placeholder:text-[#8A877F] focus:outline-none focus:ring-2 focus:ring-[#262624]/20"
         />
       )}
     </div>
@@ -92,6 +131,7 @@ function suggestUsername(name) {
 }
 
 export default function Onboarding() {
+  useDocumentTitle('Get Started | storywall');
   const navigate = useNavigate();
   const { checkAppState } = useAuth();
   const [step, setStep] = useState(1);
@@ -103,6 +143,12 @@ export default function Onboarding() {
   const [usernameTouched, setUsernameTouched] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  // True while the profile-photo cropper is open (photo uploaded but not yet saved/discarded)
+  const [photoEditing, setPhotoEditing] = useState(false);
+  const finishedRef = useRef(false); // set once the profile is saved, so the draft isn't re-written
+  const serverRowId = useRef(null);      // id of this user's server-side draft row, once known
+  const serverTimer = useRef(null);      // debounce timer for the server save
+  const lastServerJson = useRef('');     // last content saved to the server (skip identical saves)
   const [currentUserId, setCurrentUserId] = useState(null);
 
   const [form, setForm] = useState({
@@ -116,17 +162,34 @@ export default function Onboarding() {
   });
 
   useEffect(() => {
-    base44.auth.me().then(u => {
+    base44.auth.me().then(async u => {
       if (!u) { navigate('/signin', { replace: true }); return; }
       // If user already has a username, they've already onboarded — send to their profile
       if (u.username) { navigate(`/${u.username}`, { replace: true }); return; }
+      // Look for saved progress on the server too (resume on another device), before showing the form
+      const serverDraft = await loadServerDraft(u.id);
+      if (serverDraft?._rowId) serverRowId.current = serverDraft._rowId;
       setCurrentUserId(u.id);
       setAuthChecked(true);
-      // Pre-fill username from the claim flow (URL query or sessionStorage)
+      // Restore progress from an earlier visit (left via the logo, refreshed, closed the tab)
+      const localDraft = readDraft(u.id);
+      const draft = serverDraft && (!localDraft || (serverDraft.savedAt || 0) > (localDraft.savedAt || 0)) ? serverDraft : localDraft;
+      if (draft?.form) {
+        lastServerJson.current = JSON.stringify({ form: draft.form, step: draft.step });
+        setForm(f => ({ ...f, ...draft.form }));
+        if (draft.usernameTouched) setUsernameTouched(true);
+        if (draft.step > 1 && draft.step <= TOTAL_STEPS) setStep(draft.step);
+      }
+      // Pre-fill username from the claim flow (URL query or sessionStorage).
+      // A username claimed just now wins over the saved one and starts at step 1
+      // (so it gets confirmed); the same one as in the draft leaves progress as is.
       const urlParams = new URLSearchParams(window.location.search);
-      const claimed = urlParams.get('username') || sessionStorage.getItem('claimed_username') || '';
+      const claimed = (urlParams.get('username') || sessionStorage.getItem('claimed_username') || '').toLowerCase();
       if (claimed) {
-        setForm(f => ({ ...f, username: claimed.toLowerCase() }));
+        if (claimed !== draft?.form?.username) {
+          setForm(f => ({ ...f, username: claimed }));
+          setStep(1);
+        }
         setUsernameTouched(true);
         sessionStorage.removeItem('claimed_username');
       }
@@ -176,17 +239,41 @@ export default function Onboarding() {
           if (attempt < 1) continue; // retry once
           if (cancelled) return;
           setCheckState('error');
-          setUsernameError('Could not verify — please try again');
+          setUsernameError('Could not verify. Please try again.');
         }
       }
     }, 400);
     return () => { cancelled = true; clearTimeout(t); };
   }, [form.username]);
 
+  // Keep progress in this browser until the profile is saved.
+  useEffect(() => {
+    if (!authChecked || !currentUserId || finishedRef.current) return;
+    const started = step > 1 || form.full_name || form.headline || form.bio || form.location || form.profile_image || form.links.length > 0;
+    if (!started) return;
+    const payload = { form, step, usernameTouched, savedAt: Date.now() };
+    writeDraft(currentUserId, payload);
+    // Server copy, debounced. Not cleared on unmount, so a last edit still saves if they leave right away.
+    const json = JSON.stringify({ form, step });
+    if (json === lastServerJson.current) return;
+    clearTimeout(serverTimer.current);
+    serverTimer.current = setTimeout(() => {
+      if (finishedRef.current) return;
+      lastServerJson.current = json;
+      saveServerDraft(currentUserId, serverRowId, payload);
+    }, 900);
+  }, [authChecked, currentUserId, form, step, usernameTouched]);
+
+  // A restored draft can sit on a later step with a username someone else has
+  // since taken — send them back to step 1 to choose another.
+  useEffect(() => {
+    if (step > 1 && checkState === 'taken') setStep(1);
+  }, [step, checkState]);
+
   if (!authChecked) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-[#F7F7F5]">
-        <PixelSpinner size={24} color="#000" />
+      <div className="fixed inset-0 flex items-center justify-center bg-[#F4F2EC]">
+        <PixelSpinner size={24} />
       </div>
     );
   }
@@ -252,6 +339,10 @@ export default function Onboarding() {
         await new Promise(r => setTimeout(r, 300));
         // Refresh AuthContext so any component reading from context sees
         // the updated user with the username set.
+        finishedRef.current = true;
+        clearTimeout(serverTimer.current);
+        clearDraft(currentUserId);
+        deleteServerDraft(currentUserId);
         checkAppState();
         navigate(`/${updatedUser.username}`);
         return;
@@ -275,6 +366,38 @@ export default function Onboarding() {
   const canContinueStep1 = !!form.full_name.trim() && usernameValid && checkState === 'available';
 
 
+  const actionBar = (
+    <div className="w-full max-w-sm mx-auto flex flex-col gap-3">
+          {saveError ? (
+            <>
+              <p className="text-red-500 text-sm text-center">Something went wrong saving your profile. Please try again.</p>
+              <button
+                onClick={handleFinish}
+                disabled={saving}
+                className="w-full bg-[#262624] text-[#F4F2EC] py-4 rounded-2xl font-semibold text-base disabled:opacity-50 hover:bg-[#30302E] active:scale-[0.98] transition-all"
+              >
+                {saving ? 'Saving...' : 'Retry'}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleNext}
+                disabled={saving || (step === 1 && !canContinueStep1) || (step === TOTAL_STEPS && photoEditing)}
+                className="w-full bg-[#262624] text-[#F4F2EC] py-4 rounded-2xl font-semibold text-base disabled:opacity-50 hover:bg-[#30302E] active:scale-[0.98] transition-all"
+              >
+                {saving ? 'Saving...' : step === TOTAL_STEPS ? 'Take me to my profile →' : 'Continue'}
+              </button>
+              {isSkippable && step < TOTAL_STEPS && (
+                <button onClick={handleSkip} className="text-center text-sm text-[#8A877F] hover:text-[#3A3935] transition-colors py-1">
+                  Skip for now
+                </button>
+              )}
+            </>
+          )}
+    </div>
+  );
+
   return (
     <>
       {/* Scrollable content area */}
@@ -285,19 +408,27 @@ export default function Onboarding() {
         <PreviewPanel caption={STEP_CAPTIONS[step]}>
           <div className="w-full flex flex-col gap-5" style={{ maxWidth: 340 }}>
             {/* Same placement/style as the live profile's top bar */}
-            <span className="-mb-2 text-xs text-gray-400 font-mono tracking-tight">storywall.io/{form.username}</span>
+            <span className="-mb-2 text-xs text-[#8A877F] font-mono tracking-tight">storywall.io/{form.username}</span>
             <ProfileHeroCard profile={form} name={form.full_name.trim() || 'Your name'} aspectRatio="1/1" />
             <ProfileInfo profile={form} />
           </div>
         </PreviewPanel>
       )}
 
-      <div className="fixed top-0 left-0 right-0 md:right-1/2 h-[100dvh] bg-[#F7F7F5] overflow-y-auto">
-        <div className="px-6 pt-10 pb-32">
-          <div className="w-full max-w-sm mx-auto flex flex-col gap-8">
-            <ProgressBar step={step} />
-            <div className="text-xs text-gray-400 font-medium">Step {step} of {TOTAL_STEPS}</div>
+      <div className="fixed top-0 left-0 right-0 md:right-1/2 h-[100dvh] bg-[#F4F2EC] overflow-y-auto">
+        {/* Logo: back to the home page at any step (progress is kept, see draft helpers) */}
+        <Link to="/" aria-label="Back to the StoryWall home page" className="absolute top-6 left-6 md:top-8 md:left-10 z-10">
+          <img src="/logo-slash-ink.png" alt="StoryWall" className="h-[20px] w-auto" />
+        </Link>
+        <div className="px-6 pt-[4.5rem] pb-32 md:pt-20 md:pb-0 md:min-h-full md:flex md:flex-col">
+          <div className="w-full max-w-sm mx-auto flex flex-col gap-8 md:flex-1">
+            <div className="flex flex-col gap-8">
+              <ProgressBar step={step} />
+              <div className="text-xs text-[#8A877F] font-medium">Step {step} of {TOTAL_STEPS}</div>
+            </div>
 
+            {/* Desktop: the form and Continue are centred in the remaining height (progress bar stays a little higher) */}
+            <div className="flex flex-col gap-8 md:flex-1 md:justify-center md:pb-28">
             <AnimatePresence mode="wait">
               <div key={step} className="flex flex-col gap-6">
 
@@ -305,16 +436,16 @@ export default function Onboarding() {
                 {step === 1 && (
                   <StepWrapper canGoBack={canGoBack} onBack={() => setStep(s => s - 1)}>
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900">Who are you?</h2>
-                      <p className="text-gray-500 text-sm mt-1">
+                      <h2 className="font-display text-[28px] leading-tight font-medium text-[#262624]">Who are you?</h2>
+                      <p className="text-[#6B6964] text-sm mt-1">
                         This is how others will find you.
                       </p>
                     </div>
                     <Field label="Name" value={form.full_name} onChange={handleNameChange} placeholder="Alex Rivera" />
                     <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Username</label>
-                      <div className="flex items-center border border-gray-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-black/20">
-                        <span className="px-3 text-gray-400 text-sm bg-gray-50 border-r border-gray-200 py-3.5 flex-shrink-0">storywall.io/</span>
+                      <label className="text-xs font-semibold text-[#6B6964] uppercase tracking-wider mb-2 block">Username</label>
+                      <div className="flex items-center border border-[#D6D2C7] rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#262624]/20">
+                        <span className="px-3 text-[#8A877F] text-sm bg-[#FAF9F5] border-r border-[#D6D2C7] py-3.5 flex-shrink-0">storywall.io/</span>
                         <input
                           value={form.username}
                           onChange={e => {
@@ -323,10 +454,10 @@ export default function Onboarding() {
                           }}
                           placeholder="yourname"
                           maxLength={30}
-                          className="flex-1 px-3 py-3.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
+                          className="flex-1 px-3 py-3.5 text-sm text-[#262624] placeholder:text-[#8A877F] focus:outline-none"
                         />
                         <div className="pr-3 flex-shrink-0 flex items-center">
-                          {checkState === 'checking' && <PixelSpinner size={16} color="#9CA3AF" />}
+                          {checkState === 'checking' && <PixelSpinner size={16} />}
                           {checkState === 'available' && <Check size={16} className="text-green-500" />}
                           {checkState === 'taken' && <X size={16} className="text-red-500" />}
                           {checkState === 'error' && <AlertCircle size={16} className="text-red-500" />}
@@ -341,8 +472,8 @@ export default function Onboarding() {
                 {step === 2 && (
                   <StepWrapper canGoBack={canGoBack} onBack={() => setStep(s => s - 1)}>
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900">Your story</h2>
-                      <p className="text-gray-500 text-sm mt-1">Tell people what you do and who you are.</p>
+                      <h2 className="font-display text-[28px] leading-tight font-medium text-[#262624]">Your story</h2>
+                      <p className="text-[#6B6964] text-sm mt-1">Tell people what you do and who you are.</p>
                     </div>
                     <Field label="Job title / Headline" value={form.headline} onChange={set('headline')} placeholder="Product Designer at Acme" />
                     <Field label="Bio" value={form.bio} onChange={set('bio')} placeholder="A few words about your journey..." multiline />
@@ -353,8 +484,8 @@ export default function Onboarding() {
                 {step === 3 && (
                   <StepWrapper canGoBack={canGoBack} onBack={() => setStep(s => s - 1)}>
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900">Where are you?</h2>
-                      <p className="text-gray-500 text-sm mt-1">Your city or country.</p>
+                      <h2 className="font-display text-[28px] leading-tight font-medium text-[#262624]">Where are you?</h2>
+                      <p className="text-[#6B6964] text-sm mt-1">Your city or country.</p>
                     </div>
                     <Field label="Location" value={form.location} onChange={set('location')} placeholder="San Francisco, CA" />
                   </StepWrapper>
@@ -364,8 +495,8 @@ export default function Onboarding() {
                 {step === 4 && (
                   <StepWrapper canGoBack={canGoBack} onBack={() => setStep(s => s - 1)}>
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900">Your links</h2>
-                      <p className="text-gray-500 text-sm mt-1">Add any links you want to share on your profile.</p>
+                      <h2 className="font-display text-[28px] leading-tight font-medium text-[#262624]">Your links</h2>
+                      <p className="text-[#6B6964] text-sm mt-1">Add any links you want to share on your profile.</p>
                     </div>
                     <LinksEditor links={form.links} onChange={set('links')} />
                   </StepWrapper>
@@ -375,12 +506,13 @@ export default function Onboarding() {
                 {step === 5 && (
                   <StepWrapper canGoBack={canGoBack} onBack={() => setStep(s => s - 1)}>
                     <div>
-                      <h2 className="text-2xl font-bold text-gray-900">Profile photo</h2>
-                      <p className="text-gray-500 text-sm mt-1">Add a face to your name.</p>
+                      <h2 className="font-display text-[28px] leading-tight font-medium text-[#262624]">Profile photo</h2>
+                      <p className="text-[#6B6964] text-sm mt-1">Add a face to your name.</p>
                     </div>
                     <ProfilePhotoEditor
                       value={form.profile_image}
                       onChange={(url) => set('profile_image')(url)}
+                      onEditingChange={setPhotoEditing}
                       size={300}
                     />
                   </StepWrapper>
@@ -390,41 +522,16 @@ export default function Onboarding() {
             </AnimatePresence>
 
             {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
+            <div className="hidden md:block">{actionBar}</div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Fixed bottom button — always visible on all steps */}
-      <div className="fixed left-4 right-4 md:right-[calc(50%+1rem)] z-50" style={{ bottom: 'max(24px, env(safe-area-inset-bottom, 0px) + 16px)' }}>
-        <div className="w-full max-w-sm mx-auto flex flex-col gap-3">
-          {saveError ? (
-            <>
-              <p className="text-red-500 text-sm text-center">Something went wrong saving your profile. Please try again.</p>
-              <button
-                onClick={handleFinish}
-                disabled={saving}
-                className="w-full bg-black text-white py-4 rounded-2xl font-semibold text-base disabled:opacity-50 hover:bg-gray-900 active:scale-[0.98] transition-all"
-              >
-                {saving ? 'Saving...' : 'Retry'}
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={handleNext}
-                disabled={saving || (step === 1 && !canContinueStep1)}
-                className="w-full bg-black text-white py-4 rounded-2xl font-semibold text-base disabled:opacity-50 hover:bg-gray-900 active:scale-[0.98] transition-all"
-              >
-                {saving ? 'Saving...' : step === TOTAL_STEPS ? 'Take me to my profile →' : 'Continue'}
-              </button>
-              {isSkippable && step < TOTAL_STEPS && (
-                <button onClick={handleSkip} className="text-center text-sm text-gray-400 hover:text-gray-700 transition-colors py-1">
-                  Skip for now
-                </button>
-              )}
-            </>
-          )}
-        </div>
+      {/* Mobile: button pinned to the bottom. Desktop (md+): the same actions render in-flow under the form instead (see actionBar). */}
+      <div className="md:hidden fixed left-4 right-4 z-50" style={{ bottom: 'max(24px, env(safe-area-inset-bottom, 0px) + 16px)' }}>
+        {actionBar}
       </div>
     </>
   );

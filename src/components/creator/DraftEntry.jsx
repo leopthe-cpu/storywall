@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Trash2, ChevronLeft, ChevronRight } from '@/components/icons';
 import { formatDistanceToNow } from 'date-fns';
 import CardThumb from '@/components/creator/CardThumb';
 import MiniatureStrip from '@/components/creator/MiniatureStrip';
@@ -40,12 +40,13 @@ export default function DraftEntry({ draft, onApply, onDelete, confirmDelete, is
   const activeIndex = isApplied && cards.length > 0
     ? Math.min(currentCardIndex ?? 0, cards.length - 1)
     : null;
+  const counterLabel = cards.length > 0 ? `${(activeIndex ?? 0) + 1}/${cards.length}` : null;
 
   return (
     <div
       onClick={() => onApply(draft)}
-      className={`flex items-start gap-3 rounded-xl p-2.5 transition-colors cursor-pointer ${
-        isApplied ? 'bg-white/15 ring-1 ring-white/40' : 'bg-white/5 hover:bg-white/10'
+      className={`relative flex items-start gap-3 rounded-xl p-2.5 transition-colors cursor-pointer ${
+        isApplied ? 'bg-emerald-400/10 ring-1 ring-emerald-400' : 'bg-white/5 hover:bg-white/10'
       }`}
     >
       {/* Main preview — always the first card (cover) */}
@@ -58,8 +59,13 @@ export default function DraftEntry({ draft, onApply, onDelete, confirmDelete, is
 
       <div className="flex-1 min-w-0 flex flex-col gap-1.5">
         <div className="flex items-start gap-2">
-          {/* Miniature strip with position indicator + pagination arrows */}
-          <div ref={rowRef} className="flex-1 relative" onClick={(e) => e.stopPropagation()}>
+          {/* Miniature strip with position indicator + pagination arrows.
+              min-w-0 is required here: without it this flex item won't shrink
+              below its content's intrinsic width (the overflow-hidden clip
+              inside MiniatureStrip is one level down, so it can't rescue the
+              flex sizing on its own), which is what made many-card drafts
+              overflow the row instead of clipping/paginating. */}
+          <div ref={rowRef} className="flex-1 min-w-0 relative" onClick={(e) => e.stopPropagation()}>
             <MiniatureStrip
               cards={cards}
               tokens={draft.color_tokens}
@@ -101,6 +107,17 @@ export default function DraftEntry({ draft, onApply, onDelete, confirmDelete, is
 
         <p className="text-white/30 text-[10px]">Saved {timeAgo}</p>
       </div>
+
+      {/* Card-position counter, bottom-right corner of the row */}
+      {counterLabel && (
+        <span
+          className={`absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold tabular-nums leading-none ${
+            isApplied ? 'bg-emerald-400 text-black' : 'bg-black/60 text-white/70'
+          }`}
+        >
+          {counterLabel}
+        </span>
+      )}
     </div>
   );
 }

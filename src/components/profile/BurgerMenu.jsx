@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, LogOut, Archive } from 'lucide-react';
+import { X, LogOut, Archive } from '@/components/icons';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';

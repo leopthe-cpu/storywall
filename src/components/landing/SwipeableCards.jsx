@@ -7,7 +7,7 @@ export default function SwipeableCards() {
       <div className="relative w-[300px] h-[400px]">
         {/* Back card (rotated, faded) */}
         <div
-          className="absolute inset-0 rounded-[20px] overflow-hidden bg-[#111111]"
+          className="absolute inset-0 rounded-[20px] overflow-hidden bg-[#262624]"
           style={{
             transform: 'rotate(-8deg) translate(-30px,14px) scale(0.94)',
             opacity: 0.55,
@@ -26,7 +26,7 @@ export default function SwipeableCards() {
         />
         {/* Front card (floating animation) */}
         <article
-          className="absolute inset-0 rounded-[20px] overflow-hidden bg-[#111111] text-white flex flex-col"
+          className="absolute inset-0 rounded-[20px] overflow-hidden bg-[#262624] text-white flex flex-col"
           style={{
             transform: 'rotate(2.5deg)',
             animation: 'floaty-card 6s ease-in-out infinite',
@@ -71,7 +71,7 @@ export default function SwipeableCards() {
         </article>
         {/* Swipe note */}
         <div
-          className="absolute -bottom-1.5 -right-1.5 font-mono text-[11px] text-[#6B6864] bg-[#FBFAF8] border border-[#E4E1DB] px-3 py-1.5 rounded-full flex items-center gap-[7px]"
+          className="absolute -bottom-1.5 -right-1.5 font-mono text-[11px] text-[#6B6964] bg-[#F4F2EC] border border-[#E6E0D2] px-3 py-1.5 rounded-full flex items-center gap-[7px]"
           style={{ boxShadow: '0 6px 18px -8px rgba(17,17,17,0.25)' }}
         >
           <span>swipe the story</span>

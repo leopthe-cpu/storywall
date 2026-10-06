@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Globe, Link } from 'lucide-react';
+import { Globe, Link } from '@/components/icons';
 import Tag from '@/components/profile/Tag';
 import ImageSkeleton from '@/components/ui/ImageSkeleton';
 
@@ -32,13 +32,13 @@ export function ProfileHeroCard({ profile, name, aspectRatio = '1/1', style }) {
           <ImageSkeleton loaded={imgLoaded} />
         </>
       ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-700" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#262624] to-[#3A3935]" />
       )}
       <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.70) 100%)' }} />
       <div className="absolute bottom-0 left-0 right-0 px-5 pb-6">
-        <h1 className="text-white font-bold text-3xl leading-tight tracking-tight">{name}</h1>
+        <h1 className="text-[#F4F2EC] font-bold text-3xl leading-tight tracking-tight">{name}</h1>
         {profile?.headline && (
-          <p className="text-white/70 text-sm mt-1 font-medium">{profile.headline}</p>
+          <p className="text-[#F4F2EC]/70 text-sm mt-1 font-medium">{profile.headline}</p>
         )}
       </div>
     </div>
@@ -82,13 +82,13 @@ export function ProfileInfo({ profile, visibleSkills = [], selectedTags = [], on
         <div className="mb-5">
           {/* Hidden in-flow copy for measurement — never clamped */}
           <div style={{ height: 0, overflow: 'hidden' }} aria-hidden="true">
-            <p ref={bioMeasureRef} className="text-sm text-gray-600 leading-relaxed">
+            <p ref={bioMeasureRef} className="text-sm text-[#6B6964] leading-relaxed">
               {profile.bio}
             </p>
           </div>
           <p
             ref={bioRef}
-            className="text-sm text-gray-600 leading-relaxed"
+            className="text-sm text-[#6B6964] leading-relaxed"
             style={bioExpanded ? {} : {
               display: '-webkit-box',
               WebkitLineClamp: 3,
@@ -101,7 +101,7 @@ export function ProfileInfo({ profile, visibleSkills = [], selectedTags = [], on
           {(bioExpanded || bioOverflows) && (
             <button
               onClick={() => setBioExpanded(e => !e)}
-              className="text-sm text-gray-400 underline mt-1 text-left"
+              className="text-sm text-[#8A877F] underline mt-1 text-left"
             >
               {bioExpanded ? 'less' : 'more'}
             </button>
@@ -121,7 +121,7 @@ export function ProfileInfo({ profile, visibleSkills = [], selectedTags = [], on
                 ) : (
                   <Link size={14} />
                 )}
-                <span className="text-xs text-gray-500">{link.label}</span>
+                <span className="text-xs text-[#6B6964]">{link.label}</span>
               </>
             );
             return safe ? (
@@ -130,13 +130,13 @@ export function ProfileInfo({ profile, visibleSkills = [], selectedTags = [], on
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 transition-colors"
+                className="flex items-center gap-1.5 text-[#6B6964] hover:text-[#262624] transition-colors"
                 title={link.label}
               >
                 {content}
               </a>
             ) : (
-              <span key={i} className="flex items-center gap-1.5 text-gray-400" title={link.label}>
+              <span key={i} className="flex items-center gap-1.5 text-[#8A877F]" title={link.label}>
                 {content}
               </span>
             );
@@ -154,7 +154,7 @@ export function ProfileInfo({ profile, visibleSkills = [], selectedTags = [], on
           {visibleSkills.length > 3 && (
             <button
               onClick={() => setSkillsExpanded(e => !e)}
-              className="text-sm text-gray-400 underline mt-1 text-left"
+              className="text-sm text-[#8A877F] underline mt-1 text-left"
             >
               {skillsExpanded ? 'less' : 'more'}
             </button>
@@ -163,7 +163,7 @@ export function ProfileInfo({ profile, visibleSkills = [], selectedTags = [], on
       )}
 
       {profile?.location && (
-        <div className="flex items-center gap-1.5 text-gray-400">
+        <div className="flex items-center gap-1.5 text-[#8A877F]">
           <Globe size={13} />
           <span className="text-sm">{profile.location}</span>
         </div>

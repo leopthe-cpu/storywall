@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from '@/components/icons';
 import CardThumb from '@/components/creator/CardThumb';
 
 // Custom transform-based carousel with scroll-intent passthrough:

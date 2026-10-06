@@ -8,7 +8,14 @@
 // around once per second. Reimplemented here as one reusable component
 // (instead of copy-pasted keyframes per usage site) so every instance in
 // the app shares the exact same animation and only varies by size/color.
-export default function PixelSpinner({ size = 24, color = 'currentColor', className = '' }) {
+// Brand colours (see the brand kit): dark spinners use the darkest brand background,
+// light spinners the canvas beige. Use tone="light" ONLY on dark surfaces (dark
+// buttons/overlays/panels) — everywhere else keep the default so every spinner matches.
+export const SPINNER_DARK = '#1F1E1D';
+export const SPINNER_LIGHT = '#F4F2EC';
+
+export default function PixelSpinner({ size = 24, tone = 'dark', color, className = '' }) {
+  const spinnerColor = color || (tone === 'light' ? SPINNER_LIGHT : SPINNER_DARK);
   // The pattern spans 7 grid units across (the dot itself + 3 units of
   // reach on each side) — scale that grid so the whole spinner fits `size`.
   const unit = size / 7;
@@ -21,7 +28,7 @@ export default function PixelSpinner({ size = 24, color = 'currentColor', classN
     >
       <span
         className="pixel-spinner-dot"
-        style={{ width: unit, height: unit, '--pxs-u': `${unit}px`, '--pxs-c': color }}
+        style={{ width: unit, height: unit, '--pxs-u': `${unit}px`, '--pxs-c': spinnerColor }}
       />
     </span>
   );

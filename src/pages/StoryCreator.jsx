@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2, PerspectiveView } from '@/components/icons';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
 import { base44 } from '@/api/base44Client';
-import CanvasArea, { REFERENCE_CARD_SIZE } from '@/components/creator/CanvasArea';
+import CanvasArea, { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/components/creator/CanvasArea';
 import BottomIsland, { ISLAND_CHROME } from '@/components/creator/BottomIsland';
 import PostFlowSheet from '@/components/creator/PostFlowSheet';
 import { DraftMediaProvider } from '@/components/creator/DraftMediaContext';
@@ -15,6 +15,7 @@ import RegenerateChoice from '@/components/creator/RegenerateChoice';
 import { runGeneratePipeline } from '@/lib/generatePipeline';
 import { migrateToTokens, applyTokenColorChange, findOrCreateToken, resolveColor } from '@/lib/colorTokens';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import useDocumentTitle from '@/lib/useDocumentTitle';
 
 // Dimmed overlay + spinner shown over the card while a draft is being opened.
 // Waits ~150ms before appearing so a fast open doesn't flash it.
@@ -27,7 +28,7 @@ function DraftLoadingOverlay() {
   if (!visible) return null;
   return (
     <div className="absolute inset-0 z-20 rounded-2xl flex items-center justify-center pointer-events-none" style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}>
-      <PixelSpinner size={22} color="rgba(255,255,255,0.85)" />
+      <PixelSpinner size={22} tone="light" />
     </div>
   );
 }
@@ -86,13 +87,38 @@ function canonicalize(cards) {
   });
 }
 
+// Where the default text box below lands: the top-left corner of the
+// safe-zone guide, spanning its full width left to right.
+const SAFE_ZONE_PCT = (SAFE_ZONE_INSET / REFERENCE_CARD_SIZE) * 100;
+
+// Every fresh card — the story's first card and every card added afterward
+// — starts with one default text box already in place, ready to type into
+// immediately instead of an empty canvas. If it's never typed into,
+// purgeEmptyText/purgeAllEmptyText strips it back out (card nav, tool
+// switch, and right before Publish/Update), so an untouched card never
+// actually ships an empty text box.
 const newCard = () => ({
   id: `card-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   background_color: DEFAULT_CARD_COLOR,
-  elements: []
+  elements: [{
+    id: `el-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    type: 'text',
+    content: '',
+    x: SAFE_ZONE_PCT, y: SAFE_ZONE_PCT, width: 100 - 2 * SAFE_ZONE_PCT,
+    font_family: 'Inter',
+    font_size: '20',
+    font_size_locked: true,
+    font_weight: '400',
+    font_italic: false, font_underline: false, font_strikethrough: false,
+    color: '#000000',
+    z_index: 1000,
+  }],
 });
 
 export default function StoryCreator() {
+  // Always "Builder", never the story's own title — stories aren't titled
+  // until the publish flow at the end, so there's nothing to show earlier.
+  useDocumentTitle('Builder | storywall');
   const navigate = useNavigate();
   const location = useLocation();
   const editStory = location.state?.editStory;
@@ -336,6 +362,32 @@ export default function StoryCreator() {
     setCards((prev) => prev.map((c, i) => i === cardIdx ? { ...c, elements: [...c.elements, newEl] } : c));
     setCurrentCardIndex(cardIdx);
     setSelectedElementId(newId);
+  }, [cards]);
+
+  // Places a copy of `element` onto an arbitrary target card (not
+  // necessarily the one it currently lives on) — the "Add to card" action
+  // in the Media/Text gallery kebabs, which replaced plain same-card
+  // Duplicate there. Navigates to that card and selects the new copy, same
+  // as every other add-a-new-element path in this file.
+  const duplicateElementToCard = useCallback((element, targetCardIndex) => {
+    const { id, ...rest } = element;
+    const newId = `el-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const targetEls = cards[targetCardIndex]?.elements || [];
+    const x = element.x ?? (element.type === 'text' ? 10 : 20);
+    const y = element.y ?? 20;
+    let z_index;
+    if (element.type !== 'text') {
+      const mediaZs = targetEls.filter((e) => e.type !== 'text').map((e) => e.z_index ?? 1);
+      z_index = Math.min(999, (mediaZs.length ? Math.max(...mediaZs) : 0) + 1);
+    } else {
+      const textZs = targetEls.filter((e) => e.type === 'text').map((e) => e.z_index ?? 1000);
+      z_index = Math.max(1000, (textZs.length ? Math.max(...textZs) : 0) + 1);
+    }
+    const newEl = { ...rest, id: newId, x, y, z_index };
+    setCards((prev) => prev.map((c, i) => i === targetCardIndex ? { ...c, elements: [...(c.elements || []), newEl] } : c));
+    setCurrentCardIndex(targetCardIndex);
+    setSelectedElementId(newId);
+    return newId;
   }, [cards]);
 
   const reorderTextElements = useCallback((orderedIds) => {
@@ -1012,10 +1064,18 @@ export default function StoryCreator() {
 
   const handleOpenPostFlow = useCallback(async () => {
     await flushActiveTextEdit();
+    // Strip any text box that was never typed into (most commonly, the
+    // default box every fresh card starts with — see newCard() above)
+    // before the preview/publish screen and the draft it saves ever see it.
+    // Same "wait one tick" reasoning as flushActiveTextEdit above: setCards
+    // here doesn't land in cardsRef until React applies it, and persistDraft
+    // reads cardsRef synchronously.
+    purgeAllEmptyText();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     await cancelAutosave();
     await persistDraft();
     setShowPostFlow(true);
-  }, [flushActiveTextEdit, cancelAutosave, persistDraft]);
+  }, [flushActiveTextEdit, purgeAllEmptyText, cancelAutosave, persistDraft]);
 
   const handleGenerateTap = () => {
     if (aiGenerated) {
@@ -1036,10 +1096,7 @@ export default function StoryCreator() {
           <button
             onClick={async () => { await flushActiveTextEdit(); firePersist(); navigateToProfile(); }}
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${generatePhase === 'notes' ? 'bg-black/5 hover:bg-black/10' : 'bg-white/10 hover:bg-white/20'}`}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={generatePhase === 'notes' ? 'text-black/60' : 'text-white/60'}>
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-            </svg>
+            <PerspectiveView size={16} className={generatePhase === 'notes' ? 'text-black/60' : 'text-white/60'} />
           </button>
           {generatePhase !== 'notes' && (
             <>
@@ -1189,6 +1246,7 @@ export default function StoryCreator() {
         onDeleteElement={deleteElement}
         onRemoveMediaByUrl={removeMediaByUrl}
         onDuplicateElement={duplicateElement}
+        onDuplicateElementToCard={duplicateElementToCard}
         onReorderElements={reorderTextElements}
         onApplyTemplate={handleApplyTemplate}
         initialCardsTab={editStory || cardsTabVisitedRef.current ? 'Gallery' : 'Templates'}

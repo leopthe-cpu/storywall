@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileEdit, RefreshCw } from 'lucide-react';
+import { FileEdit, RefreshCw } from '@/components/icons';
 
 // Modal shown when the user taps Generate again after editing the raw notes.
 // Offers two choices: re-structure only (keep images), or full regenerate.

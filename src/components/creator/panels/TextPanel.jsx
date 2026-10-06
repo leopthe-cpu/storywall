@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, AlignLeft, AlignCenter, AlignRight } from '@/components/icons';
 import ColorPicker from '@/components/creator/ColorPicker';
 import ThumbMenu from '@/components/creator/ThumbMenu';
 import MinimalSlider from '@/components/creator/MinimalSlider';
@@ -10,6 +10,42 @@ import SizeStepper from '@/components/creator/SizeStepper';
 import { resolveColor, findOrCreateToken } from '@/lib/colorTokens';
 import { TEXT_FX_LIST, TEXT_WARP_LIST, getTextEffectStyle, hasTextWarp } from '@/lib/textEffects';
 import WarpedText from '@/components/creator/WarpedText';
+import { useDraftMedia } from '@/components/creator/DraftMediaContext';
+import { pickReadableTextColor, sampleImageColor } from '@/lib/colorContrast';
+
+// If a photo sits behind where a new text box will land, returns that photo
+// plus the part of it (as 0..1 fractions of the source image) that's behind
+// the box — accounting for crop insets, zoom and object-fit cover — so its
+// colour can be sampled. Topmost photo wins. Rotation/flip are ignored.
+function photoBehindText(elements, xPct, yPct) {
+  const R = REFERENCE_CARD_SIZE / 100;
+  const tx0 = xPct * R, ty0 = yPct * R;
+  const tx1 = Math.min(REFERENCE_CARD_SIZE, tx0 + REFERENCE_CARD_SIZE * 0.8), ty1 = ty0 + 26;
+  const cx = (tx0 + tx1) / 2, cy = (ty0 + ty1) / 2;
+  const photos = elements.filter((e) => e.type === 'image' && e.image_url)
+    .sort((a, b) => (b.z_index ?? 1) - (a.z_index ?? 1));
+  for (const el of photos) {
+    const dw = el.displayWidth ?? 192, dh = el.displayHeight ?? dw;
+    const cl = el.clipLeft || 0, cr = el.clipRight || 0, ct = el.clipTop || 0, cb = el.clipBottom || 0;
+    const L = (el.x ?? 0) * R, T = (el.y ?? 0) * R;
+    const W = dw - cl - cr, H = dh - ct - cb;
+    if (cx < L || cx > L + W || cy < T || cy > T + H) continue;
+    const zoom = (el.zoom ?? 100) / 100;
+    const nw = el.naturalWidth || dw, nh = el.naturalHeight || dh;
+    const s = Math.max(dw / nw, dh / nh);
+    const Wd = nw * s, Hd = nh * s;
+    const ox = (dw - Wd) * ((el.focalX ?? 50) / 100), oy = (dh - Hd) * ((el.focalY ?? 50) / 100);
+    const toImg = (px, py) => {
+      const u = 0.5 + ((px - L + cl) / dw - 0.5) / zoom;
+      const v = 0.5 + ((py - T + ct) / dh - 0.5) / zoom;
+      return [(u * dw - ox) / Wd, (v * dh - oy) / Hd];
+    };
+    const [x0, y0] = toImg(Math.max(tx0, L), Math.max(ty0, T));
+    const [x1, y1] = toImg(Math.min(tx1, L + W), Math.min(ty1, T + H));
+    return { el, rect: { x0, y0, x1, y1 } };
+  }
+  return null;
+}
 
 // Effects/Warp pill styling: every pill that's in use (non-zero) is white;
 // the one whose slider is currently open additionally gets a ring so you can
@@ -62,11 +98,15 @@ function TextThumb({ element, cardBg, tokens }) {
 
 export default function TextPanel({
   selectedElement, onUpdateElement, onUpdateCard, onAddElement,
-  currentCard, onSelectElement, onDuplicateElement, onDeleteElement, onReorderElements,
+  currentCard, currentCardIndex, onSelectElement, onDuplicateElementToCard, onDeleteElement, onReorderElements,
   tokens = [], onSetTokens,
   cards = [], onNavigate,
   galleryResetToken,
+  onUpdateElementById,
 }) {
+  const { resolveMediaUrl } = useDraftMedia();
+  const tokensRef = useRef(tokens);
+  tokensRef.current = tokens;
   const [tab, setTab] = useState('gallery');
   const [showColorPicker, setShowColorPicker] = useState(false);
   // Holds the colorField name (e.g. 'text_fx_shadow_color') of whichever
@@ -168,16 +208,31 @@ export default function TextPanel({
   }, [selectedElement?.id]);
 
   const addText = () => {
-    const { token, tokens: newTokens } = findOrCreateToken('#000000', tokens);
+    // Pick a text colour that reads well on whatever the box lands on: the
+    // card colour right away (the box must be added synchronously so the
+    // mobile keyboard opens), then — if a photo is behind it — re-pick from
+    // the photo's actual pixels a moment later. Sampling is best-effort: if
+    // the image can't be read (cross-origin), the card-colour pick stays.
+    const els = currentCard?.elements || [];
+    const nText = els.filter((e) => e.type === 'text').length;
+    // Same cascade StoryCreator.addElement applies to the default x/y.
+    const xPct = Math.min(60, 10 + nText * 5), yPct = Math.min(70, 40 + nText * 5);
+    const cardBg = resolveColor(currentCard?.background_token, tokens, currentCard?.background_color || '#FFFFFF');
+    const color = pickReadableTextColor(cardBg);
+    const { token, tokens: newTokens } = findOrCreateToken(color, tokens);
     if (newTokens.length > tokens.length) onSetTokens?.(newTokens);
-    onAddElement({
+    const behind = photoBehindText(els, xPct, yPct);
+    const newId = onAddElement({
       type: 'text',
       content: '',
       x: 10, y: 40,
       font_family: 'Inter',
-      font_size: '12',
+      // Default 20: readable and easy to tap. While typing, the text shrinks
+      // only if it runs out of room in the box (see DraggableElement's
+      // handleInput); once typing stops the size is locked for good.
+      font_size: '20',
       // Locked from the moment it's created: manually-added text boxes keep
-      // whatever size they're given (default 12, or whatever the user later
+      // whatever size they're given (default 20, or whatever the user later
       // sets via the size control) instead of being auto-resized to fit the
       // box once typing is done. The content-aware auto-estimate is for AI
       // Generate-mode's initial text shaping only — see computeEstimatedFontSize
@@ -185,10 +240,20 @@ export default function TextPanel({
       font_size_locked: true,
       font_weight: '400',
       font_italic: false, font_underline: false, font_strikethrough: false,
-      color: '#000000',
+      color,
       color_token: token.id,
     });
     setTab('format');
+    if (behind && newId && onUpdateElementById) {
+      sampleImageColor(resolveMediaUrl(behind.el.image_url), behind.rect).then((avg) => {
+        if (!avg) return;
+        const better = pickReadableTextColor(avg);
+        if (better === color) return;
+        const { token: t2, tokens: nt2 } = findOrCreateToken(better, tokensRef.current);
+        if (nt2.length > tokensRef.current.length) onSetTokens?.(nt2);
+        onUpdateElementById(newId, { color: better, color_token: t2.id });
+      });
+    }
   };
 
   // Font selection with card-level pairing enforcement:
@@ -290,24 +355,45 @@ export default function TextPanel({
                 <span className="text-[9px] text-white/20">Text</span>
               </div>
 
-              {/* Text thumbnails — one per text box across all cards */}
-              {allTextElements.map(({ el, cardIdx, cardBg: elCardBg }) => (
-                <div key={el.id} className="flex-shrink-0 flex flex-col items-center gap-1.5">
+              {/* Text thumbnails — one per text box across all cards. Green
+                  border = the box on the card you're viewing right now
+                  (solid once it's also the literally-selected box); the
+                  card-position badge + kebab sit to the right instead of
+                  centered below. */}
+              {allTextElements.map(({ el, cardIdx, cardBg: elCardBg }) => {
+                const isSelected = selectedElement?.id === el.id;
+                const onCurrentCard = cardIdx === currentCardIndex;
+                return (
+                <div key={el.id} className="flex-shrink-0 flex items-start gap-1">
                   <div
                     onClick={() => handleTextSelect(cardIdx, el.id)}
                     className={`rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
-                      selectedElement?.id === el.id ? 'border-white' : 'border-white/20 hover:border-white/50'
+                      isSelected ? 'border-emerald-400' : onCurrentCard ? 'border-emerald-400/40' : 'border-white/20 hover:border-white/50'
                     }`}
                     style={{ width: TILE, height: TILE }}
                   >
                     <TextThumb element={el} cardBg={elCardBg} tokens={tokens} />
                   </div>
-                  <ThumbMenu
-                    onDuplicate={() => onDuplicateElement?.(el)}
-                    onDelete={() => onDeleteElement?.(el.id)}
-                  />
+                  <div className="flex flex-col items-start gap-1 pt-0.5">
+                    <span
+                      className={`text-[9px] leading-none px-1 py-0.5 rounded font-mono ${
+                        onCurrentCard ? 'bg-emerald-400/20 text-emerald-300' : 'bg-white/10 text-white/40'
+                      }`}
+                    >
+                      {cardIdx + 1}/{cards.length}
+                    </span>
+                    <ThumbMenu
+                      onDelete={() => onDeleteElement?.(el.id)}
+                      addToCard={{
+                        cards,
+                        currentIndices: [cardIdx],
+                        onPick: (targetIndex) => onDuplicateElementToCard?.(el, targetIndex),
+                      }}
+                    />
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -318,72 +404,70 @@ export default function TextPanel({
         <div className="flex-1 min-h-0 relative">
           <div className={`absolute inset-0 overflow-y-auto overscroll-contain ${selectedElement ? '' : 'opacity-40 pointer-events-none'}`}>
             <div className="px-3 py-1.5 flex flex-col gap-1.5">
-              {/* Size — type-scale stepper (shared component) */}
-              <SizeStepper
-                label="Size"
-                value={formatEl.font_size}
-                min={8}
-                max={128}
-                step={8}
-                scaleSteps={TYPE_SCALE}
-                onChange={(v) => onUpdateElement({ font_size: v })}
-              />
-
-              {/* Font — dropdown picker */}
-              <div>
-                <label className="text-white/30 text-[9px] uppercase tracking-wider mb-0.5 block">Font</label>
-                <FontPicker
-                  currentFont={formatEl.font_family || 'Inter'}
-                  onSelect={handleFontSelect}
-                  textType={formatEl.text_type}
-                />
+              {/* Row 1: Font (fills the row) + Size stepper to its right. */}
+              <div className="flex items-end gap-2">
+                <div className="flex-1 min-w-0">
+                  <label className="text-white/30 text-[9px] uppercase tracking-wider mb-1 block">Font</label>
+                  <FontPicker
+                    currentFont={formatEl.font_family || 'Inter'}
+                    onSelect={handleFontSelect}
+                    textType={formatEl.text_type}
+                  />
+                </div>
+                <div className="flex-shrink-0">
+                  <SizeStepper
+                    label="Size"
+                    value={formatEl.font_size}
+                    min={8}
+                    max={128}
+                    step={8}
+                    scaleSteps={TYPE_SCALE}
+                    onChange={(v) => onUpdateElement({ font_size: v })}
+                  />
+                </div>
               </div>
 
-              {/* Style + Color (combined row — color swatch first, then B I U S) */}
-              <div className="flex items-center gap-1.5 mt-1">
+              {/* Row 2: color swatch, B I U S, then the three alignment
+                  buttons inline to the right (was a separate full-width row). */}
+              <div className="flex items-center gap-1 mt-1">
                 <button onClick={() => setShowColorPicker(true)}
                   className="w-7 h-7 rounded bg-white border border-white/40 flex-shrink-0 hover:scale-105 transition-transform"
                   title="Text color">
                   <div className="w-4 h-4 rounded-sm mx-auto border border-black/20" style={{ backgroundColor: resolveColor(formatEl.color_token, tokens, formatEl.color || '#000000') }} />
                 </button>
                 <button onClick={() => onUpdateElement({ font_weight: formatEl.font_weight === '700' ? '400' : '700' })}
-                  className={`w-8 h-7 rounded text-xs font-bold transition-colors ${formatEl.font_weight === '700' ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'}`}>
+                  className={`w-7 h-7 rounded text-xs font-bold transition-colors ${formatEl.font_weight === '700' ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'}`}>
                   B
                 </button>
                 <button onClick={() => onUpdateElement({ font_italic: !formatEl.font_italic })}
-                  className={`w-8 h-7 rounded text-xs italic transition-colors ${formatEl.font_italic ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'}`}>
+                  className={`w-7 h-7 rounded text-xs italic transition-colors ${formatEl.font_italic ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'}`}>
                   I
                 </button>
                 <button onClick={() => onUpdateElement({ font_underline: !formatEl.font_underline })}
-                  className={`w-8 h-7 rounded text-xs underline transition-colors ${formatEl.font_underline ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'}`}>
+                  className={`w-7 h-7 rounded text-xs underline transition-colors ${formatEl.font_underline ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'}`}>
                   U
                 </button>
                 <button onClick={() => onUpdateElement({ font_strikethrough: !formatEl.font_strikethrough })}
-                  className={`w-8 h-7 rounded text-xs line-through transition-colors ${formatEl.font_strikethrough ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'}`}>
+                  className={`w-7 h-7 rounded text-xs line-through transition-colors ${formatEl.font_strikethrough ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'}`}>
                   S
                 </button>
-              </div>
-
-              {/* Alignment */}
-              <div>
-                <label className="text-white/30 text-[9px] uppercase tracking-wider mb-0.5 block">Align</label>
-                <div className="flex gap-1">
-                  {[
-                    { val: 'left', Icon: AlignLeft },
-                    { val: 'center', Icon: AlignCenter },
-                    { val: 'right', Icon: AlignRight },
-                  ].map(({ val, Icon }) => (
-                    <button
-                      key={val}
-                      onClick={() => onUpdateElement({ text_align: val })}
-                      className={`flex-1 h-7 rounded flex items-center justify-center transition-colors ${
-                        (formatEl.text_align || 'left') === val ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'
-                      }`}
-                    >
-                      <Icon size={14} />
-                    </button>
-                  ))}
-                </div>
+                <div className="w-px h-5 bg-white/15 mx-1 flex-shrink-0" />
+                {[
+                  { val: 'left', Icon: AlignLeft, title: 'Align left' },
+                  { val: 'center', Icon: AlignCenter, title: 'Align center' },
+                  { val: 'right', Icon: AlignRight, title: 'Align right' },
+                ].map(({ val, Icon, title }) => (
+                  <button
+                    key={val}
+                    title={title}
+                    onClick={() => onUpdateElement({ text_align: val })}
+                    className={`w-7 h-7 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
+                      (formatEl.text_align || 'left') === val ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'
+                    }`}
+                  >
+                    <Icon size={13} />
+                  </button>
+                ))}
               </div>
 
               {/* Layer order */}

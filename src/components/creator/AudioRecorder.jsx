@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Mic, Square, Play, Pause, RotateCw, Check } from 'lucide-react';
+import { Mic, Square, Play, Pause, RotateCw, Check } from '@/components/icons';
 import { base44 } from '@/api/base44Client';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 

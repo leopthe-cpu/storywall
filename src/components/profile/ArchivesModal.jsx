@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, RotateCcw, Trash2 } from 'lucide-react';
+import { X, RotateCcw, Trash2 } from '@/components/icons';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import PixelSpinner from '@/components/ui/PixelSpinner';
@@ -89,7 +89,7 @@ export default function ArchivesModal({ onClose, onRestored }) {
         <div className="flex-1 overflow-y-auto px-5 py-4">
           {loading ? (
             <div className="flex justify-center py-12">
-              <PixelSpinner size={20} color="#9CA3AF" />
+              <PixelSpinner size={20} />
             </div>
           ) : archives.length === 0 ? (
             <div className="py-12 text-center">

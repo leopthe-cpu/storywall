@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown } from '@/components/icons';
 
 // Shared numeric stepper: minus button + number field + plus button.
 // Used for text size and image corner radius so both controls look and

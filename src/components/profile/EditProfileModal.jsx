@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { X } from 'lucide-react';
+import { X } from '@/components/icons';
 import { base44 } from '@/api/base44Client';
 import ProfilePhotoEditor from './ProfilePhotoEditor';
 import LinksEditor from './LinksEditor';

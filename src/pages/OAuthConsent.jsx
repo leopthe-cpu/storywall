@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { appParams } from "@/lib/app-params";
 import { Button } from "@/components/ui/button";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck } from '@/components/icons';
 import AuthLayout from "@/components/AuthLayout";
 import PixelSpinner from "@/components/ui/PixelSpinner";
+import useDocumentTitle from '@/lib/useDocumentTitle';
 
 // App-side OAuth consent page for the app's MCP server. The platform redirects
 // AI clients here (see base44/mcp/config.json `consent_path`) with an opaque
@@ -13,6 +14,7 @@ import PixelSpinner from "@/components/ui/PixelSpinner";
 // Do not change the fetch calls, headers, or the `ctx` handle handling — styling
 // and copy are safe to edit.
 export default function OAuthConsent() {
+  useDocumentTitle('Authorize | storywall');
   const ctx = new URLSearchParams(window.location.search).get("ctx");
   const [info, setInfo] = useState(null);
   const [checking, setChecking] = useState(true);
@@ -231,7 +233,7 @@ export default function OAuthConsent() {
           disabled={submitting}
           onClick={() => respond("approve")}
         >
-          {submitting ? <PixelSpinner size={16} className="mr-2" /> : null}
+          {submitting ? <PixelSpinner size={16} tone="light" className="mr-2" /> : null}
           Approve
         </Button>
       </div>

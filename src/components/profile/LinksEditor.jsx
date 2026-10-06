@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus, X } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 
 function getFaviconUrl(url) {
@@ -44,14 +44,14 @@ export default function LinksEditor({ links = [], onChange }) {
   return (
     <div className="space-y-2">
       {links.map((link, i) => (
-        <div key={i} className="flex items-center gap-2.5 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5">
+        <div key={i} className="flex items-center gap-2.5 bg-[#FAF9F5] border border-[#D6D2C7] rounded-xl px-3 py-2.5">
           {link.favicon ? (
             <img src={link.favicon} alt="" className="w-4 h-4 rounded-sm flex-shrink-0" onError={e => { e.target.style.display = 'none'; }} />
           ) : (
-            <div className="w-4 h-4 rounded-sm bg-gray-300 flex-shrink-0" />
+            <div className="w-4 h-4 rounded-sm bg-[#D6D2C7] flex-shrink-0" />
           )}
-          <span className="text-sm text-gray-700 flex-1 truncate">{link.label || link.url}</span>
-          <button onClick={() => handleRemove(i)} className="text-gray-400 hover:text-gray-700 flex-shrink-0">
+          <span className="text-sm text-[#3A3935] flex-1 truncate">{link.label || link.url}</span>
+          <button onClick={() => handleRemove(i)} className="text-[#8A877F] hover:text-[#3A3935] flex-shrink-0">
             <X size={14} />
           </button>
         </div>
@@ -65,20 +65,20 @@ export default function LinksEditor({ links = [], onChange }) {
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setShowInput(false); setInput(''); } }}
             placeholder="e.g. linkedin.com/in/you"
-            className="flex-1 border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-black/20"
+            className="flex-1 border border-[#D6D2C7] rounded-xl px-3 py-2.5 text-sm text-[#262624] placeholder:text-[#8A877F] focus:outline-none focus:ring-2 focus:ring-[#262624]/20"
           />
           <button
             onClick={handleAdd}
             disabled={adding || !input.trim()}
-            className="bg-black text-white px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 flex-shrink-0"
+            className="bg-[#262624] text-[#F4F2EC] px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 flex-shrink-0"
           >
-            {adding ? <PixelSpinner size={14} /> : 'Add'}
+            {adding ? <PixelSpinner size={14} tone="light" /> : 'Add'}
           </button>
         </div>
       ) : (
         <button
           onClick={() => setShowInput(true)}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors py-1"
+          className="flex items-center gap-2 text-sm text-[#6B6964] hover:text-[#262624] transition-colors py-1"
         >
           <Plus size={15} />
           <span>Add a link</span>

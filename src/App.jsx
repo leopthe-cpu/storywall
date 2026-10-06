@@ -41,7 +41,7 @@ function RequireAuth({ element }) {
   if (status === 'loading') {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-white">
-        <PixelSpinner size={24} color="#000" />
+        <PixelSpinner size={24} />
       </div>
     );
   }

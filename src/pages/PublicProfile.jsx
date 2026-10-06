@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Plus, Share2, Pencil, Menu } from 'lucide-react';
+import { Plus, Share2, Pencil, SelectFace3d } from '@/components/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import StoryCard from '@/components/profile/StoryCard';
 import StoryKebab from '@/components/profile/StoryKebab';
@@ -20,11 +20,15 @@ import NotFoundProfileState from '@/components/profile/NotFoundProfileState';
 import LazyMount from '@/components/profile/LazyMount';
 import { ProfileHeroCard, ProfileInfo } from '@/components/profile/ProfileHeader';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import useDocumentTitle from '@/lib/useDocumentTitle';
 
 // Desktop story-card width matches the desktop profile-picture column width
 // exactly (both reference this one constant) so the feed's cards read as the
 // same visual scale as the hero photo, rather than dwarfing it.
 const DESKTOP_CARD_MAX_WIDTH = 340;
+
+// Near-black used for the top bar's label and icons so they read as one set.
+const HEADER_INK = '#262624';
 
 // (Template demo content removed — every profile now shows only its own real data.)
 
@@ -49,6 +53,12 @@ export default function PublicProfile() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showNewStoryToggle, setShowNewStoryToggle] = useState(false);
   const { toast } = useToast();
+
+  // Falls back to the username while the profile is still loading, so the
+  // tab never briefly shows the bare "storywall" default title.
+  useDocumentTitle(
+    profileUser ? `${profileUser.display_name || profileUser.full_name || username} | storywall` : `${username} | storywall`
+  );
 
   // Safety net: clear any body scroll lock left by a previous component
   // (e.g. Onboarding) so the profile page scrolls naturally.
@@ -257,8 +267,8 @@ export default function PublicProfile() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#FAFAFA]">
-        <PixelSpinner size={24} color="#000" />
+      <div className="flex items-center justify-center min-h-screen bg-[#F4F2EC]">
+        <PixelSpinner size={24} />
       </div>
     );
   }
@@ -281,8 +291,8 @@ export default function PublicProfile() {
     <div
       className="min-h-screen relative"
       style={{
-        background: '#F7F7F5',
-        backgroundImage: 'linear-gradient(#E4E1DB 1px, transparent 1px), linear-gradient(90deg, #E4E1DB 1px, transparent 1px)',
+        background: '#F4F2EC',
+        backgroundImage: 'linear-gradient(#E6E0D2 1px, transparent 1px), linear-gradient(90deg, #E6E0D2 1px, transparent 1px)',
         backgroundSize: '38px 38px',
         backgroundPosition: 'center top',
       }}
@@ -296,21 +306,28 @@ export default function PublicProfile() {
           position: 'fixed',
           inset: 0,
           pointerEvents: 'none',
-          background: 'radial-gradient(120% 100% at 50% 0%, transparent 0%, #F7F7F5 72%)',
+          background: 'radial-gradient(120% 100% at 50% 0%, transparent 0%, #F4F2EC 72%)',
         }}
       />
 
       <div className="relative z-10">
 
       {/* ── STICKY TOP BAR ── */}
-      <div className="fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-2 py-1 bg-white/90 backdrop-blur border-b border-gray-100">
-        <span className="text-xs text-gray-400 font-mono tracking-tight">
-          storywall.io/{username}
-        </span>
-        <div className="flex items-center gap-1">
-          <IconBtn onClick={handleShare} title="Share"><Share2 size={16} /></IconBtn>
-          {isOwner && <IconBtn onClick={() => setShowEdit(true)} title="Edit profile"><Pencil size={16} /></IconBtn>}
-          {isOwner && <IconBtn onClick={() => setShowMenu(true)} title="Menu"><Menu size={16} /></IconBtn>}
+      {/* Inner row uses the same max-width + horizontal padding as the page
+          content below (px-4 mobile, max-w-[1200px] px-8 desktop), so the
+          storywall.io/username label lines up with the profile picture's left
+          edge instead of hugging the window edge. Label and icons share one
+          near-black ink colour (HEADER_INK). */}
+      <div className="fixed top-0 left-0 right-0 z-30 py-1 bg-[#FAF9F5]/90 backdrop-blur border-b border-[#E6E0D2]">
+        <div className="max-w-[1200px] mx-auto px-4 md:px-8 flex items-center justify-between">
+          <span className="text-sm font-mono tracking-tight" style={{ color: HEADER_INK }}>
+            storywall.io/{username}
+          </span>
+          <div className="flex items-center gap-1 -mr-3">
+            <IconBtn onClick={handleShare} title="Share"><Share2 size={18} /></IconBtn>
+            {isOwner && <IconBtn onClick={() => setShowEdit(true)} title="Edit profile"><Pencil size={18} /></IconBtn>}
+            {isOwner && <IconBtn onClick={() => setShowMenu(true)} title="Settings"><SelectFace3d size={18} /></IconBtn>}
+          </div>
         </div>
       </div>
 
@@ -327,7 +344,7 @@ export default function PublicProfile() {
             onToggleTag={toggleTag}
           />
         </div>
-        <div className="h-px bg-gray-200 mx-5 mt-5 mb-6" />
+        <div className="h-px bg-[#E6E0D2] mx-5 mt-5 mb-6" />
         <div className={`px-4 pb-20 ${visiblePosts.length === 0 ? 'flex flex-col items-center justify-center min-h-[45vh]' : ''}`}>
           {visiblePosts.length === 0 ? (
             <ProfileEmptyState isOwner={isOwner} hasTagFilter={selectedTags.length > 0} />
@@ -383,7 +400,7 @@ export default function PublicProfile() {
                     key={post.id}
                     data-story-id={post.id}
                     style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH }}
-                    placeholder={<div className="w-full rounded-2xl bg-gray-100 animate-pulse" style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH, aspectRatio: '1/1' }} />}
+                    placeholder={<div className="w-full rounded-2xl bg-[#ECE9E1] animate-pulse" style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH, aspectRatio: '1/1' }} />}
                   >
                     {() => (
                       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH }}>
@@ -402,7 +419,7 @@ export default function PublicProfile() {
       {isOwner && (
         <button
           onClick={() => aiCarouselBuilderEnabled ? setShowNewStoryToggle(true) : navigate('/create')}
-          className="fixed bottom-6 right-5 z-40 w-12 h-12 bg-black text-white rounded-full flex items-center justify-center shadow-lg hover:bg-gray-800 active:scale-95 transition-all"
+          className="fixed bottom-6 right-5 z-40 w-12 h-12 bg-[#262624] text-[#F4F2EC] rounded-full flex items-center justify-center shadow-lg hover:bg-[#30302E] active:scale-95 transition-all"
         >
           <Plus size={22} />
         </button>
@@ -486,7 +503,8 @@ function IconBtn({ onClick, title, children }) {
     <button
       onClick={onClick}
       title={title}
-      className="w-11 h-11 flex items-center justify-center rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+      className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-[#ECE9E1] active:bg-[#E6E0D2] transition-colors"
+      style={{ color: HEADER_INK }}
     >
       {children}
     </button>

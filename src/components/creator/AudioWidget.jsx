@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause } from '@/components/icons';
 
 function isDarkBg(hex) {
   if (!hex || !hex.startsWith('#')) return false;

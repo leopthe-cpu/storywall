@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { GripVertical, Check, X } from 'lucide-react';
+import { GripVertical, Check, X } from '@/components/icons';
 
 // Full-screen reorder mode for the stories on a profile. Stories become
 // vertically draggable; "Done" returns the new order to the parent.

@@ -1,5 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
+import MinimalSlider from '@/components/creator/MinimalSlider';
+import { Check, EmojiSad } from '@/components/icons';
+import PixelSpinner from '@/components/ui/PixelSpinner';
 
 const isTouchDevice = () => typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
 
@@ -121,11 +124,11 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
 
   return (
     <div className="flex flex-col items-center gap-3">
-      {/* Crop frame + optional vertical slider */}
+      {/* Crop frame */}
       <div className="flex items-center gap-2">
         <div
           ref={containerRef}
-          className="relative overflow-hidden rounded-2xl bg-gray-100 cursor-grab active:cursor-grabbing select-none flex-shrink-0"
+          className="relative overflow-hidden rounded-2xl bg-[#ECE9E1] cursor-grab active:cursor-grabbing select-none flex-shrink-0"
           style={{ width: size, height: size, touchAction: 'none' }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -150,62 +153,49 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
             }}
           />
           {/* Crop border hint */}
-          <div className="absolute inset-0 rounded-2xl ring-2 ring-black/30 pointer-events-none" />
+          <div className="absolute inset-0 rounded-2xl ring-2 ring-[#262624]/30 pointer-events-none" />
         </div>
-
-        {/* Vertical zoom slider — desktop only */}
-        {!isTouch && (
-          <div className="flex flex-col items-center" style={{ height: size }}>
-            <input
-              type="range"
-              min={1}
-              max={3}
-              step={0.01}
-              value={scale}
-              onChange={e => setScale(+e.target.value)}
-              className="flex-1"
-              style={{
-                writingMode: 'vertical-lr',
-                direction: 'rtl',
-                appearance: 'slider-vertical',
-                WebkitAppearance: 'slider-vertical',
-                width: 24,
-                height: '100%',
-                cursor: 'ns-resize',
-              }}
-            />
-          </div>
-        )}
       </div>
 
-      <p className="text-xs text-gray-400">
+      {/* Zoom — desktop only (touch uses pinch). Same slider as the rest of the product. */}
+      {!isTouch && (
+        <div style={{ width: size }}>
+          <MinimalSlider dark={false} min={1} max={3} step={0.01} value={scale} onChange={setScale} resetValue={1} ariaLabel="Zoom" />
+        </div>
+      )}
+
+      <p className="text-xs text-[#8A877F]">
         {isTouch
           ? 'Drag to reposition · Pinch to zoom'
           : 'Drag to reposition · Use slider to zoom'}
       </p>
 
-      {/* Action buttons */}
-      <div className="flex gap-2 w-full" style={{ maxWidth: size }}>
+      {/* Actions: Replace (text) · Discard (emoji) · Save (check, primary) */}
+      <div className="flex items-center gap-2 w-full" style={{ maxWidth: size }}>
         <button
-          onClick={handleSave}
+          onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="flex-1 bg-black text-white text-sm font-medium py-2 rounded-xl disabled:opacity-50 hover:bg-gray-900 transition-colors"
+          className="flex-1 h-11 bg-[#ECE9E1] text-[#3A3935] text-sm font-medium rounded-xl hover:bg-[#E6E0D2] active:scale-[0.98] transition-all disabled:opacity-50"
         >
-          {uploading ? '…' : 'Save'}
+          Replace
         </button>
         <button
           onClick={() => onDiscard(null)}
           disabled={uploading}
-          className="flex-1 bg-gray-100 text-gray-700 text-sm font-medium py-2 rounded-xl hover:bg-gray-200 transition-colors"
+          aria-label="Discard photo"
+          title="Discard"
+          className="h-11 w-11 shrink-0 flex items-center justify-center bg-[#ECE9E1] text-[#6B6964] rounded-xl hover:bg-[#E6E0D2] hover:text-[#262624] active:scale-[0.96] transition-all disabled:opacity-50"
         >
-          Discard
+          <EmojiSad size={22} />
         </button>
         <button
-          onClick={() => fileInputRef.current?.click()}
+          onClick={handleSave}
           disabled={uploading}
-          className="flex-1 bg-gray-100 text-gray-700 text-sm font-medium py-2 rounded-xl hover:bg-gray-200 transition-colors"
+          aria-label="Save photo"
+          title="Save"
+          className="h-11 w-11 shrink-0 flex items-center justify-center bg-[#262624] text-[#F4F2EC] rounded-xl hover:bg-[#30302E] active:scale-[0.96] transition-all disabled:opacity-50"
         >
-          Change
+          {uploading ? <PixelSpinner size={16} tone="light" /> : <Check size={22} strokeWidth={2.2} />}
         </button>
       </div>
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />

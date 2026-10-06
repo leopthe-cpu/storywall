@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 
 // Loading screen shown between the Story Builder and the Publish screen
@@ -38,7 +38,7 @@ export default function SkillsLoadingScreen({ onClose }) {
         <ChevronLeft size={22} />
       </button>
       <div className="flex flex-col items-center gap-4">
-        <PixelSpinner size={24} color="#111827" />
+        <PixelSpinner size={24} />
         <div className="text-3xl font-bold text-gray-900 tabular-nums">{pct}%</div>
         <div className="text-sm font-medium text-gray-600">
           Matching your story to skill tags…

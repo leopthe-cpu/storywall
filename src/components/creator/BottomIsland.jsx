@@ -1,5 +1,5 @@
 import { useRef, useCallback } from 'react';
-import { Palette, Type, ImageIcon } from 'lucide-react';
+import { Palette, Type, ImageIcon } from '@/components/icons';
 import ColorPanel from './panels/ColorPanel';
 import TextPanel from './panels/TextPanel';
 import MediaPanel from './panels/MediaPanel';
@@ -29,7 +29,7 @@ export default function BottomIsland({
   cards, currentCardIndex, onNavigate, onDeleteCard, onAddCard, onReorderCards, onDuplicateCard,
   activeTool, onToolChange, currentCard, onUpdateCard,
   selectedElement, onUpdateElement, onUpdateElementById, onAddElement, onApplyDraft, activeDraftId,
-  onSelectElement, onDeleteElement, onRemoveMediaByUrl, onDuplicateElement, onReorderElements,
+  onSelectElement, onDeleteElement, onRemoveMediaByUrl, onDuplicateElement, onDuplicateElementToCard, onReorderElements,
   onApplyTemplate,
   colorTokens, onApplyTokenColor, onPreviewColor, onSetTokens,
   initialCardsTab, cardResetToken, appliedTemplateId, appliedDraftId,
@@ -79,8 +79,10 @@ export default function BottomIsland({
           <button
             key={id}
             onClick={() => onToolChange(id)}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all ${
-              activeTool === id ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'
+            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl border transition-all ${
+              activeTool === id
+                ? 'bg-emerald-400/10 border-emerald-400 text-emerald-400'
+                : 'border-transparent text-white/40 hover:text-white/70'
             }`}
           >
             {id === 'cards' ? <Icon /> : <Icon size={20} />}
@@ -107,15 +109,18 @@ export default function BottomIsland({
             onUpdateCard={onUpdateCard}
             onAddElement={onAddElement}
             currentCard={currentCard}
+            currentCardIndex={currentCardIndex}
             onSelectElement={onSelectElement}
             onDeleteElement={onDeleteElement}
             onDuplicateElement={onDuplicateElement}
+            onDuplicateElementToCard={onDuplicateElementToCard}
             onReorderElements={onReorderElements}
             tokens={colorTokens}
             onSetTokens={onSetTokens}
             cards={cards}
             onNavigate={onNavigate}
             galleryResetToken={cardResetToken}
+            onUpdateElementById={onUpdateElementById}
           />
         )}
         {activeTool === 'media' && (
@@ -126,8 +131,10 @@ export default function BottomIsland({
             onAddElement={onAddElement}
             onDeleteElement={onDeleteElement}
             currentCard={currentCard}
+            currentCardIndex={currentCardIndex}
             onSelectElement={onSelectElement}
             onDuplicateElement={onDuplicateElement}
+            onDuplicateElementToCard={onDuplicateElementToCard}
             onUpdateCard={onUpdateCard}
             cards={cards}
             onNavigate={onNavigate}

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X } from 'lucide-react';
+import { X } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 
 // Custom eyedropper cursor (pipette SVG, hotspot at the tip)
@@ -115,7 +115,7 @@ export default function EyedropperOverlay({ onPick, onCancel }) {
     return (
       <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50">
         <div className="text-white text-sm flex items-center gap-2">
-          <PixelSpinner size={16} />
+          <PixelSpinner size={16} tone="light" />
           Tap to pick a color
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause } from '@/components/icons';
 
 function fmt(s) {
   if (!s || !isFinite(s)) return '0:00';

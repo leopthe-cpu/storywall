@@ -1,6 +1,6 @@
 // Standalone color picker panel — used inside TextPanel, MediaPanel, and ColorPanel
 import { useState, useRef, useCallback } from 'react';
-import { Clipboard, ChevronLeft, Pipette } from 'lucide-react';
+import { Clipboard, ChevronLeft, Pipette } from '@/components/icons';
 import EyedropperOverlay from './EyedropperOverlay';
 
 function hexToHsv(hex) {

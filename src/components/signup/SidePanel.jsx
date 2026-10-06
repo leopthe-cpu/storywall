@@ -6,7 +6,7 @@ import { useState } from 'react';
 // space with md:right-1/2 on their own content.
 export function SidePanelFrame({ children, blend = false }) {
   return (
-    <div className={`hidden md:flex fixed top-0 right-0 bottom-0 w-1/2 z-10 ${blend ? 'bg-[#F7F7F5]' : 'p-6 lg:p-8'}`} aria-hidden="true">
+    <div className={`hidden md:flex fixed top-0 right-0 bottom-0 w-1/2 z-10 ${blend ? 'bg-[#F4F2EC]' : 'p-6 lg:p-8'}`} aria-hidden="true">
       <div className={`relative w-full h-full overflow-hidden ${blend ? '' : 'rounded-3xl'}`}>
         {children}
       </div>
@@ -37,7 +37,7 @@ export function ImagePanel({ src = DEFAULT_PANEL_IMAGE, caption }) {
   );
 }
 
-// Grid background that blends into the page (same #F7F7F5 base, grid and
+// Grid background that blends into the page (same #F4F2EC base, grid and
 // fade as the public profile) — no visible panel edge or divider. Used for
 // the live profile preview.
 export function PreviewPanel({ caption, children }) {
@@ -46,14 +46,14 @@ export function PreviewPanel({ caption, children }) {
       <div
         className="absolute inset-0"
         style={{
-          backgroundImage: 'linear-gradient(#E4E1DB 1px, transparent 1px), linear-gradient(90deg, #E4E1DB 1px, transparent 1px)',
+          backgroundImage: 'linear-gradient(#E6E0D2 1px, transparent 1px), linear-gradient(90deg, #E6E0D2 1px, transparent 1px)',
           backgroundSize: '38px 38px',
           backgroundPosition: 'center top',
         }}
       />
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, transparent 25%, #F7F7F5 75%)' }} />
+      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at center, transparent 25%, #F4F2EC 75%)' }} />
       <div className="relative h-full overflow-y-auto flex flex-col items-center justify-center gap-6 px-8 py-10">
-        <p className="text-gray-900 text-2xl font-bold leading-tight tracking-tight text-center max-w-[22ch]">
+        <p className="text-[#262624] font-display font-medium text-[32px] leading-[1.15] text-center max-w-[20ch]">
           {caption}
         </p>
         {children}

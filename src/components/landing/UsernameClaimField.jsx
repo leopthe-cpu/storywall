@@ -62,7 +62,7 @@ export default function UsernameClaimField({ onClaim, autoFocus = false, buttonL
         }
       } catch {
         setState('taken');
-        setReason('Could not verify — try again');
+        setReason('Could not verify. Try again.');
       }
     }, 400);
 
@@ -75,23 +75,23 @@ export default function UsernameClaimField({ onClaim, autoFocus = false, buttonL
     onClaim(value.trim().toLowerCase());
   };
 
-  const fieldClass = `flex items-center bg-white border-[1.5px] rounded-[10px] px-3 py-0 font-mono transition-all ${
+  const fieldClass = `flex items-center bg-[#FAF9F5] border-[1.5px] rounded-[10px] px-3 py-0 font-mono transition-all ${
     state === 'available' ? 'border-[#1f9d55] shadow-[0_0_0_3px_rgba(31,157,85,0.12)]' :
     state === 'taken' ? 'border-[#d64545] shadow-[0_0_0_3px_rgba(214,69,69,0.12)]' :
-    'border-[#E4E1DB] focus-within:border-[#111] focus-within:shadow-[0_0_0_3px_rgba(17,17,17,0.08)]'
+    'border-[#D6D2C7] focus-within:border-[#262624] focus-within:shadow-[0_0_0_3px_rgba(17,17,17,0.08)]'
   }`;
 
   const statusClass = `font-mono text-xs min-h-[1.2em] ${
     state === 'available' ? 'text-[#1f9d55]' :
     state === 'taken' ? 'text-[#d64545]' :
-    'text-[#6B6864]'
+    'text-[#6B6964]'
   }`;
 
   return (
     <div>
       <div className="flex items-stretch gap-2.5 max-w-[440px] flex-wrap">
         <label className={fieldClass + ' flex-1 min-w-[240px]'}>
-          <span className="text-sm text-[#6B6864] whitespace-nowrap">storywall.io/</span>
+          <span className="text-sm text-[#6B6964] whitespace-nowrap">storywall.io/</span>
           <input
             type="text"
             value={value}
@@ -101,13 +101,13 @@ export default function UsernameClaimField({ onClaim, autoFocus = false, buttonL
             autoComplete="off"
             spellCheck="false"
             autoFocus={autoFocus}
-            className="border-0 outline-none font-mono text-sm text-[#111] py-3 px-1.5 w-full bg-transparent placeholder:text-[#B7B3AD]"
+            className="border-0 outline-none font-mono text-sm text-[#262624] py-3 px-1.5 w-full bg-transparent placeholder:text-[#8A877F]"
           />
         </label>
         <button
           onClick={handleClaim}
           disabled={state !== 'available' || claiming}
-          className="font-mono font-bold text-sm bg-[#111] text-[#FBFAF8] border-0 rounded-[10px] px-5 cursor-pointer whitespace-nowrap transition-all hover:opacity-90 hover:-translate-y-px disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0"
+          className="font-mono font-bold text-sm bg-[#262624] text-[#F4F2EC] border-0 rounded-[10px] px-5 cursor-pointer whitespace-nowrap transition-all hover:opacity-90 hover:-translate-y-px disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0"
         >
           {claiming ? claimingLabel : buttonLabel}
         </button>

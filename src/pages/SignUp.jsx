@@ -3,7 +3,9 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useAuth } from '@/lib/AuthContext';
 import { ImagePanel } from '@/components/signup/SidePanel';
-import { AuthColumn, AuthInput, AuthButton, VerifyCodeForm, authErrorMessage, finishAuth } from '@/components/auth/AuthShared';
+import { AuthColumn, AuthInput, AuthButton, VerifyCodeForm, FullBleedAuthScreen, authErrorMessage, finishAuth } from '@/components/auth/AuthShared';
+import { LogOut } from 'lucide-react';
+import useDocumentTitle from '@/lib/useDocumentTitle';
 
 // /signup — the single entry point for "Claim your wall" (homepage field,
 // username pre-filled via ?username=) and the nav's "Get started" link (no
@@ -17,6 +19,7 @@ import { AuthColumn, AuthInput, AuthButton, VerifyCodeForm, authErrorMessage, fi
 // straight into that existing account. Signing IN on purpose still works
 // exactly as before via the separate /signin page.
 export default function SignUp() {
+  useDocumentTitle('Sign Up | storywall');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, isAuthenticated, isLoadingAuth, logout } = useAuth();
@@ -62,74 +65,91 @@ export default function SignUp() {
   };
 
   if (isLoadingAuth) {
-    return <div className="fixed inset-0 bg-[#F7F7F5]" />;
+    return <div className="fixed inset-0 bg-[#F4F2EC]" />;
   }
 
   if (!isAuthenticated) {
+    // The email-code step renders itself as a standalone full-bleed screen,
+    // so it's returned outside the split-screen form layout below.
+    if (stage === 'verify') {
+      return <VerifyCodeForm email={email.trim()} password={password} target={target} onBack={() => setStage('form')} />;
+    }
     return (
-      <div className="min-h-screen bg-[#F7F7F5]">
-        <ImagePanel caption="Every career has a better story than its résumé." />
+      <div className="min-h-screen bg-[#F4F2EC]">
+        <ImagePanel caption="The space for your career stories." />
         <AuthColumn>
-          {stage === 'verify' ? (
-            <VerifyCodeForm email={email.trim()} password={password} target={target} onBack={() => setStage('form')} />
-          ) : (
-            <form onSubmit={handleRegister} className="flex flex-col gap-5">
-              <div className="text-center">
-                <h1 className="text-2xl font-bold text-gray-900">{username ? 'Claim your wall' : 'Create your account'}</h1>
-                <p className="text-gray-500 text-sm mt-1">
-                  {username ? `Create your account to make storywall.io/${username} yours.` : 'Next, you’ll pick your username and set up your wall.'}
-                </p>
-              </div>
-              <AuthInput label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" autoFocus />
-              <AuthInput label="Password" type="password" value={password} onChange={setPassword} placeholder="Create a password" autoComplete="new-password" />
-              {error && <p className="text-red-500 text-sm">{error}</p>}
-              <AuthButton disabled={!email.trim() || !password} busy={busy} busyLabel="Creating account…">Create account</AuthButton>
-              <p className="text-center text-sm text-gray-400">
-                Already have an account?{' '}
-                <Link to="/signin" className="text-gray-900 font-medium underline">Sign in</Link>
+          <form onSubmit={handleRegister} className="flex flex-col gap-5">
+            <div className="text-center">
+              <h1 className="font-display text-[28px] leading-tight font-medium text-[#262624]">{username ? 'Claim your wall' : 'Create your account'}</h1>
+              <p className="text-[#6B6964] text-sm mt-1">
+                {username ? `Create your account to make storywall.io/${username} yours.` : 'Next, you’ll pick your username and set up your wall.'}
               </p>
-            </form>
-          )}
+            </div>
+            <AuthInput label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" autoFocus />
+            <AuthInput label="Password" type="password" value={password} onChange={setPassword} placeholder="Create a password" autoComplete="new-password" />
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <AuthButton disabled={!email.trim() || !password} busy={busy} busyLabel="Creating account…">Create account</AuthButton>
+            <p className="text-center text-sm text-[#8A877F]">
+              Already have an account?{' '}
+              <Link to="/signin" className="text-[#262624] font-medium underline">Sign in</Link>
+            </p>
+          </form>
         </AuthColumn>
       </div>
     );
   }
 
-  // Already signed in — ask explicitly instead of silently reusing the session.
+  // Already signed in — ask explicitly instead of silently reusing the
+  // session. Full-bleed photo background (same image as the email-code
+  // screen), message centred on the image, and a composer-style action bar
+  // anchored to the bottom of the screen, floating over it.
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#F7F7F5] px-6 text-center">
-      <div className="w-full max-w-sm">
-        <img src="/logo-grey.png" alt="StoryWall" className="h-[22px] w-auto inline-block mb-6" />
-        <h1 className="text-xl font-bold text-gray-900">You're already signed in</h1>
-        <p className="text-gray-500 text-sm mt-2">
+    <FullBleedAuthScreen
+      footer={
+        <>
+          <div className="flex items-center gap-2 bg-[#FAF9F5]/95 backdrop-blur rounded-2xl p-2 shadow-2xl">
+            <button
+              onClick={handleSignOutAndCreate}
+              disabled={signingOut}
+              title="Sign out & create a new account"
+              aria-label="Sign out & create a new account"
+              className="group/logout shrink-0 h-12 w-12 hover:w-32 rounded-xl flex items-center justify-start gap-2 px-3.5 text-[#6B6964] hover:bg-[#ECE9E1] hover:text-[#262624] active:scale-[0.96] transition-all duration-300 ease-out disabled:opacity-40 overflow-hidden"
+            >
+              <LogOut className="w-5 h-5 shrink-0" strokeWidth={2} />
+              <span className="max-w-0 group-hover/logout:max-w-[4.5rem] overflow-hidden whitespace-nowrap text-sm font-semibold transition-all duration-300 ease-out">
+                Log out
+              </span>
+            </button>
+            <button
+              onClick={handleContinueAsExisting}
+              className="flex-1 min-w-0 h-12 px-4 bg-[#262624] text-[#F4F2EC] rounded-xl font-semibold text-base hover:bg-[#262624] active:scale-[0.98] transition-all whitespace-nowrap overflow-hidden text-ellipsis"
+            >
+              Continue as {user?.username ? `@${user.username}` : 'this account'}
+            </button>
+          </div>
+          <p className="text-center text-sm text-[#F4F2EC]/70 mt-4">
+            {signingOut ? (
+              'Signing out…'
+            ) : (
+              <>
+                Meant to sign in instead?{' '}
+                <Link to="/signin" className="text-[#F4F2EC] font-medium underline">Sign in</Link>
+              </>
+            )}
+          </p>
+        </>
+      }
+    >
+      <div>
+        <h1 className="font-display text-[26px] leading-tight font-medium text-[#F4F2EC]">You're already signed in</h1>
+        <p className="text-[#F4F2EC]/75 text-sm mt-2">
           {user?.username ? (
-            <>This browser is signed in as <span className="font-medium text-gray-700">@{user.username}</span>.</>
+            <>This browser is signed in as <span className="font-medium text-[#F4F2EC]">@{user.username}</span>.</>
           ) : (
             "This browser is already signed in to a StoryWall account."
           )}
         </p>
-
-        <div className="flex flex-col gap-3 mt-6">
-          <button
-            onClick={handleContinueAsExisting}
-            className="w-full bg-black text-white py-4 rounded-2xl font-semibold text-base hover:bg-gray-900 active:scale-[0.98] transition-all"
-          >
-            Continue as {user?.username ? `@${user.username}` : 'this account'}
-          </button>
-          <button
-            onClick={handleSignOutAndCreate}
-            disabled={signingOut}
-            className="w-full border border-gray-200 text-gray-700 py-4 rounded-2xl font-semibold text-base hover:bg-gray-100 active:scale-[0.98] transition-all disabled:opacity-50"
-          >
-            {signingOut ? 'Signing out…' : 'Sign out & create a new account'}
-          </button>
-        </div>
-
-        <p className="text-center text-sm text-gray-400 mt-6">
-          Meant to sign in instead?{' '}
-          <Link to="/signin" className="text-gray-900 font-medium underline">Sign in</Link>
-        </p>
       </div>
-    </div>
+    </FullBleedAuthScreen>
   );
 }
