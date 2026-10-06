@@ -35,6 +35,13 @@ Core pieces:
 - The client reads `PremiumGrant` only to show/hide the Generate UI (`PublicProfile.jsx`). Never gate premium features on client state alone, and never add access flags to the `User` entity.
 - The old `is_premium` field on `User` is being retired (Sept 2026) — don't use it in new code.
 
+## Card image export (admin-only, planned premium)
+
+- "Download all cards as images" button under the publish-flow preview (`PostFlowSheet.jsx`), shown only when `user.role === 'admin'`.
+- `src/components/creator/DownloadCardsButton.jsx` re-renders each card through `CardThumb` at 1080×1080 in a hidden layer and rasterises it with `html-to-image`; `src/lib/cardExport.js` saves a single PNG, a zip (desktop) or the share sheet (phones). Both libraries load lazily on click.
+- It refuses (with a message) rather than exporting broken cards when an image hasn't loaded or its host blocks CORS. Not captured: the "Blur" photo overlay (backdrop-filter); videos export their current frame.
+- When it becomes a premium feature, gate it with `PremiumGrant` like Generate — it's client-only, so there's no server check to add.
+
 ## ⚠️ Critical gotcha: the schema STRIPS undeclared fields
 
 Base44 silently drops any card/element field that is NOT declared in `base44/entities/Post.jsonc` when a story is saved — even though the schema says `additionalProperties: true`. This caused real bugs (text font sizes resetting after reload, Text FX disappearing, image settings lost).

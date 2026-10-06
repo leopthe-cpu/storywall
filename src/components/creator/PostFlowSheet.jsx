@@ -4,6 +4,8 @@ import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import CardCarousel from '@/components/creator/CardCarousel';
 import SkillsLoadingScreen from '@/components/creator/SkillsLoadingScreen';
+import DownloadCardsButton from '@/components/creator/DownloadCardsButton';
+import { useAuth } from '@/lib/AuthContext';
 
 const MAX_REFRESHES = 3;
 const MAX_TOTAL_SELECTED = 5;
@@ -56,6 +58,9 @@ async function fetchSuggestedSkills(text, tagCount, alreadySelectedTags) {
 
 export default function PostFlowSheet({ cards, editingPostId, draftId, initialTitle, initialTags, onClose, onPublished, onPublishStart, tokens }) {
   const [title, setTitle] = useState(initialTitle || '');
+  // Card image export is admin-only for now (planned premium feature).
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [allSuggestedTags, setAllSuggestedTags] = useState([]);
   const [suggestedSelected, setSuggestedSelected] = useState(() => new Set());
   const [customTags, setCustomTags] = useState(() => initialTags && initialTags.length ? initialTags.slice() : []);
@@ -353,6 +358,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
         {cards.length > 0 &&
         <div className="md:max-w-[340px] md:mx-auto">
           <CardCarousel cards={cards} tokens={tokens} />
+          {isAdmin && <DownloadCardsButton cards={cards} tokens={tokens} title={title} className="mt-3" />}
         </div>
         }
 
