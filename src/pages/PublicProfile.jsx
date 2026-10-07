@@ -27,6 +27,13 @@ import useDocumentTitle from '@/lib/useDocumentTitle';
 // exactly (both reference this one constant) so the feed's cards read as the
 // same visual scale as the hero photo, rather than dwarfing it.
 const DESKTOP_CARD_MAX_WIDTH = 340;
+// Desktop: the left column starts this far below the top of the page
+// (wrapper pt-[45px] under the fixed top bar + container py-8 = 32px).
+// Sticking at the same offset means it never moves when the page scrolls —
+// a smaller value let it travel up ~24px before locking.
+const DESKTOP_TOP_PAD = 45;
+const DESKTOP_CONTAINER_PAD = 32;
+const DESKTOP_STICKY_TOP = DESKTOP_TOP_PAD + DESKTOP_CONTAINER_PAD;
 
 // Near-black used for the top bar's label and icons so they read as one set.
 const HEADER_INK = '#262624';
@@ -369,16 +376,22 @@ export default function PublicProfile() {
       </div>
 
       {/* ── DESKTOP LAYOUT (hidden below md) ── */}
-      <div className="hidden md:block pt-[45px]">
-        <div className="max-w-[1200px] mx-auto px-8 py-8 flex gap-10 items-start">
+      <div className="hidden md:block" style={{ paddingTop: DESKTOP_TOP_PAD }}>
+        <div className="max-w-[1200px] mx-auto px-8 flex gap-10 items-start" style={{ paddingTop: DESKTOP_CONTAINER_PAD, paddingBottom: DESKTOP_CONTAINER_PAD }}>
 
-          {/* LEFT COLUMN — sticky */}
+          {/* LEFT COLUMN — sticky. On a short window it scrolls inside
+              itself so the bottom of the profile info stays reachable. */}
           <div
-            className="flex-shrink-0 flex flex-col gap-5"
+            // Children keep their size (no flex shrink) so a short window
+            // scrolls the column instead of squashing the square hero card.
+            className="flex-shrink-0 flex flex-col gap-5 [&>*]:flex-shrink-0"
             style={{
               width: DESKTOP_CARD_MAX_WIDTH,
               position: 'sticky',
-              top: 53,
+              top: DESKTOP_STICKY_TOP,
+              maxHeight: `calc(100vh - ${DESKTOP_STICKY_TOP}px)`,
+              overflowY: 'auto',
+              scrollbarWidth: 'none',
             }}
           >
             {/* Hero card — square */}
