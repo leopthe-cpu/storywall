@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'framer-motion';
+import Tag from '@/components/profile/Tag';
 
 // Landing hero card stack — auto-cycling "deal to back".
 //
@@ -41,7 +42,7 @@ function pose({ rotate, tx = 0, ty = 0, scale = 1, opacity, filter }) {
 // Slot poses, front → back (positions/angles/scales are the original stack's).
 // Back cards show their real image; BACK_LOOK picks how they recede.
 // Filters use the same function list in every slot so they interpolate.
-const BACK_LOOK = 'solid';
+const BACK_LOOK = 'faded';
 const LOOKS = {
   // Original fades: the page shows through the back cards.
   faded: [
@@ -68,18 +69,19 @@ const HIDDEN = { ...SLOTS[VISIBLE_SLOTS - 1], opacity: 0 };
 // Stored as 720px WebP in public/landing-cards/ (from 1080px PNGs: ~390 KB
 // total instead of ~11 MB) — enough for sharp 2–3× screens at this size.
 // Alt text is the card's own words so the stories stay readable to screen
-// readers.
+// readers. `tags` (max 2) are the front card's skill tags, shown with the
+// product's own Tag pill.
 const CARDS = [
-  { src: '/landing-cards/01.webp', alt: 'Unlocking customer insights' },
-  { src: '/landing-cards/02.webp', alt: 'We had years of viewing data and a ranking algorithm built on top of it. Then we added a simple thumbs up. It took one tap and gave us something the logs couldn\'t: a direct opinion. Whenever the data and the opinion disagreed, we let the opinion win.' },
-  { src: '/landing-cards/03.webp', alt: 'The 11s Bottleneck' },
-  { src: '/landing-cards/04.webp', alt: 'Everyone had a theory, but the data showed something simple: our checkout took eleven seconds to load. A single third-party script was hogging six of them. We cut it, and load times dropped to two seconds overnight.' },
-  { src: '/landing-cards/05.webp', alt: 'Less Volume, More Signal' },
-  { src: '/landing-cards/06.webp', alt: 'I stopped blasting hundreds of cold templates a week. I sent fewer emails and booked twice as many meetings.' },
-  { src: '/landing-cards/07.webp', alt: 'The Wrong Churn' },
-  { src: '/landing-cards/08.webp', alt: 'Customers weren\'t canceling over price. The data pointed to something else entirely.' },
-  { src: '/landing-cards/09.webp', alt: 'The 2 Week Drift' },
-  { src: '/landing-cards/10.webp', alt: 'Users open the app for one reason: the market. So we pushed identity checks to the exact moment someone actually tried to trade. Until then, anyone could watch prices, build a watchlist, and set alerts.' },
+  { src: '/landing-cards/01.webp', tags: ['Customer Research', 'Empathy'], alt: 'Unlocking customer insights' },
+  { src: '/landing-cards/02.webp', tags: ['Product Optimization', 'Data Analysis'], alt:'We had years of viewing data and a ranking algorithm built on top of it. Then we added a simple thumbs up. It took one tap and gave us something the logs couldn\'t: a direct opinion. Whenever the data and the opinion disagreed, we let the opinion win.' },
+  { src: '/landing-cards/03.webp', tags: ['Problem Solving'], alt: 'The 11s Bottleneck' },
+  { src: '/landing-cards/04.webp', tags: ['Data Analysis', 'Product Optimization'], alt:'Everyone had a theory, but the data showed something simple: our checkout took eleven seconds to load. A single third-party script was hogging six of them. We cut it, and load times dropped to two seconds overnight.' },
+  { src: '/landing-cards/05.webp', tags: ['Prioritization', 'Communication'], alt: 'Less Volume, More Signal' },
+  { src: '/landing-cards/06.webp', tags: ['Communication'], alt:'I stopped blasting hundreds of cold templates a week. I sent fewer emails and booked twice as many meetings.' },
+  { src: '/landing-cards/07.webp', tags: ['Critical Thinking', 'Customer Retention'], alt: 'The Wrong Churn' },
+  { src: '/landing-cards/08.webp', tags: ['Data Analysis'], alt:'Customers weren\'t canceling over price. The data pointed to something else entirely.' },
+  { src: '/landing-cards/09.webp', tags: ['Leadership', 'Accountability'], alt: 'The 2 Week Drift' },
+  { src: '/landing-cards/10.webp', tags: ['Product Optimization', 'User Empathy'], alt:'Users open the app for one reason: the market. So we pushed identity checks to the exact moment someone actually tried to trade. Until then, anyone could watch prices, build a watchlist, and set alerts.' },
 ];
 
 const SHADOW = '0 24px 60px -20px rgba(17,17,17,0.4), 0 4px 12px rgba(17,17,17,0.1)';
@@ -143,7 +145,8 @@ export default function SwipeableCards() {
   }, [reduceMotion, n]);
 
   return (
-    <div ref={rootRef} className="relative flex justify-center items-center min-h-[360px]">
+    // pb reserves room for up to two stacked tags under the stack.
+    <div ref={rootRef} className="relative flex justify-center items-center min-h-[360px] pb-[72px]">
       {/* Square cards to match the exported 1:1 story cards. */}
       <div className="relative w-[300px] h-[300px]">
         {CARDS.map((card, i) => {
@@ -190,9 +193,7 @@ export default function SwipeableCards() {
                 transformOrigin: '50% 50%',
               }}
             >
-              <div
-                className="flex flex-col h-full"
-              >
+              <div className="flex flex-col h-full">
                 {loadedRef.current.has(i) && (
                   <img
                     src={card.src}
@@ -208,14 +209,28 @@ export default function SwipeableCards() {
             </article>
           );
         })}
-        {/* Swipe note — stays put, above the stack */}
-        <div
-          className="absolute -bottom-1.5 -right-1.5 font-mono text-[11px] text-[#6B6964] bg-[#F4F2EC] border border-[#E6E0D2] px-3 py-1.5 rounded-full flex items-center gap-[7px]"
-          style={{ boxShadow: '0 6px 18px -8px rgba(17,17,17,0.25)', zIndex: n + 10 }}
-        >
-          <span>swipe the story</span>
-          <span style={{ animation: 'nudge-arrow 1.6s ease-in-out infinite' }}>→</span>
-        </div>
+        {/* Front card's skill tags — under the stack's right side, stacked with
+            left edges aligned. One group per card, crossfading with the
+            swap: the old front's tags fade out fast, the new ones fade in as
+            the card lands. They don't move with the cards. */}
+        {CARDS.map((card, i) => {
+          const isFront = order[0] === i;
+          const fade = swap?.incoming === i
+            ? 'opacity 250ms ease-out 100ms'
+            : swap?.outgoing === i ? 'opacity 150ms ease-out' : 'none';
+          return (
+            <div
+              key={`tags-${i}`}
+              aria-hidden={!isFront}
+              // Just below the card's bottom-right edge, not over it: card
+              // text often sits in that corner and tags on top hid it.
+              className="absolute top-[calc(100%+14px)] -right-1.5 flex flex-col items-start gap-1.5 pointer-events-none"
+              style={{ opacity: isFront ? 1 : 0, transition: fade, zIndex: n + 10 }}
+            >
+              {card.tags.map((t) => <Tag key={t} label={t} interactive={false} />)}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
