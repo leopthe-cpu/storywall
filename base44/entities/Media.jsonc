@@ -1,27 +1,26 @@
 {
   "name": "Media",
-  "type": "object",
   "properties": {
+    "duration": {
+      "description": "Duration in seconds for video/audio",
+      "type": "number"
+    },
     "image_url": {
-      "type": "string",
-      "description": "URL of the image, video or audio file"
+      "description": "URL of the image, video or audio file",
+      "type": "string"
     },
     "media_type": {
-      "type": "string",
+      "default": "image",
       "enum": [
         "image",
         "video",
         "audio"
       ],
-      "default": "image"
-    },
-    "duration": {
-      "type": "number",
-      "description": "Duration in seconds for video/audio"
+      "type": "string"
     },
     "user_id": {
-      "type": "string",
-      "description": "Owner user id"
+      "description": "Owner user id",
+      "type": "string"
     }
   },
   "required": [
@@ -30,7 +29,21 @@
   ],
   "rls": {
     "create": {
-      "data.user_id": "{{user.id}}"
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
     },
     "read": {
       "$or": [
@@ -45,28 +58,10 @@
       ]
     },
     "update": {
-      "$or": [
-        {
-          "data.user_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
-    },
-    "delete": {
-      "$or": [
-        {
-          "data.user_id": "{{user.id}}"
-        },
-        {
-          "user_condition": {
-            "role": "admin"
-          }
-        }
-      ]
+      "user_condition": {
+        "role": "admin"
+      }
     }
-  }
+  },
+  "type": "object"
 }
