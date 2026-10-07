@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "name": "UsernameClaim",
+  "title": "UsernameClaim",
+  "properties": {
+    "username": {
+      "type": "string",
+      "description": "Lowercase username. The claim (not the User record) decides who owns a username; only server functions (service role) write these."
+    },
+    "user_id": {
+      "type": "string",
+      "description": "ID of the User who owns this username"
+    }
+  },
+  "required": [
+    "username",
+    "user_id"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

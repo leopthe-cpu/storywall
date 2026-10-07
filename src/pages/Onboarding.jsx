@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { saveUsername } from '@/lib/usernameApi';
 import { useAuth } from '@/lib/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Check, X, AlertCircle } from '@/components/icons';
@@ -322,8 +323,12 @@ export default function Onboarding() {
       const v = payload[k];
       if (v === '' || (Array.isArray(v) && v.length === 0)) delete payload[k];
     });
+    // The username goes through setUsername (server-validated, claimed);
+    // everything else is plain profile data.
+    const { username, ...profileData } = payload;
     try {
-      await base44.auth.updateMe(payload);
+      if (username) await saveUsername(username);
+      if (Object.keys(profileData).length) await base44.auth.updateMe(profileData);
     } catch (e) {
       setSaving(false);
       setError(e?.message || 'Something went wrong. Please try again.');

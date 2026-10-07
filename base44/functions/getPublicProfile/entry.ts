@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 import { isRateLimited, getClientIP } from '../../shared/rateLimit.ts';
+import { normalizeUsername, isAllowedUsername, claimUsernameIfUnclaimed } from '../../shared/username.ts';
 
 // ── INTENTIONAL: no authentication required ──────────────────────────────
 // This function is intentionally callable without a logged-in user. It serves
@@ -22,14 +23,20 @@ export default async function(req) {
 
     const base44 = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
-    const username = typeof body?.username === "string" ? body.username.trim() : "";
-    if (!username) {
+    const username = normalizeUsername(body?.username);
+    // Reserved/invalid names are never served, even if some account wrote one
+    // onto its own User record directly.
+    if (!isAllowedUsername(username)) {
       return Response.json({ status: "not_found", user: null, posts: [] }, { status: 200 });
     }
 
-    const users = await base44.asServiceRole.entities.User.filter({ username });
-    const user = users[0] || null;
-    if (!user) {
+    // Resolve the name through its server-written claim (shared/username.ts):
+    // a username self-written to the User record can't hijack this page.
+    const claim = await claimUsernameIfUnclaimed(base44, username);
+    const owners = claim ? await base44.asServiceRole.entities.User.filter({ id: claim.user_id }) : [];
+    const user = owners[0] || null;
+    // The owner must still be using the name (a stale claim isn't served).
+    if (!user || normalizeUsername(user.username) !== username) {
       return Response.json({ status: "not_found", user: null, posts: [] }, { status: 200 });
     }
 

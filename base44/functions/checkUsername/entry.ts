@@ -1,23 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 import { isRateLimited, getClientIP } from '../../shared/rateLimit.ts';
-
-// Reserved usernames that collide with real routes or system files.
-const RESERVED = [
-  'signin', 'login', 'signup', 'register', 'get-started', 'dashboard',
-  'admin', 'settings', 'account', 'profile', 'explore', 'search', 'home',
-  'api', 'app', 'www', 'support', 'help', 'about', 'terms', 'privacy',
-  'blog', 'pricing', 'contact', 'storywall',
-  'sitemap', 'robots', 'favicon', 'manifest', 'well-known'
-];
-
-function isValidFormat(v: string): boolean {
-  if (!v) return false;
-  if (!/^[a-z0-9_-]+$/.test(v)) return false;
-  if (v.length < 3) return false;
-  if (v.length > 30) return false;
-  if (/^-|-$/.test(v)) return false;
-  return true;
-}
+import { normalizeUsername, isAllowedUsername, getUsernameClaim } from '../../shared/username.ts';
 
 // ── INTENTIONAL: no authentication required ──────────────────────────────
 // This function is intentionally callable without a logged-in user. It is
@@ -44,10 +27,10 @@ export default async function(req) {
 
     const base44 = createClientFromRequest(req);
     const body = await req.json().catch(() => ({}));
-    const username = typeof body?.username === "string" ? body.username.trim().toLowerCase() : "";
+    const username = normalizeUsername(body?.username);
 
     // All pre-check failures return identical shape — no distinguishing info.
-    if (!username || !isValidFormat(username) || RESERVED.includes(username)) {
+    if (!isAllowedUsername(username)) {
       return Response.json({ available: false }, { status: 200 });
     }
 
@@ -62,9 +45,17 @@ export default async function(req) {
       // Not authenticated — no self-exclusion (user has no record yet).
     }
 
-    // Check database (usernames are stored lowercase, so exact match = case-insensitive)
-    const existing = await base44.asServiceRole.entities.User.filter({ username });
-    const available = !existing.some(u => u.id !== excludeUserId);
+    // The claim is authoritative (see shared/username.ts). Names with no
+    // claim yet may still be held by a legacy account, so check User too.
+    // Read-only: this anonymous endpoint never creates claims.
+    const claim = await getUsernameClaim(base44, username);
+    let available: boolean;
+    if (claim) {
+      available = claim.user_id === excludeUserId;
+    } else {
+      const existing = await base44.asServiceRole.entities.User.filter({ username });
+      available = !existing.some(u => u.id !== excludeUserId);
+    }
 
     return Response.json({ available }, { status: 200 });
   } catch (error) {
