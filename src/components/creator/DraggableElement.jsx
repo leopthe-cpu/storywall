@@ -37,6 +37,11 @@ const CENTER_SNAP_PX = 6;
 // line on another text box / picture on the card.
 const ALIGN_SNAP_REF = 4;
 
+// Press-and-hold an element this long (without moving more than
+// HOLD_MOVE_PX) to hide every other element until release.
+const HOLD_MS = 1500;
+const HOLD_MOVE_PX = 6;
+
 // Best snap along one axis. `own` = [start, center, end] of the dragged box,
 // `targets` = [{ start, center, end }] of the others, all in % of the card.
 // Edges match edges (either side), centers match centers. Returns the shift
@@ -144,7 +149,7 @@ function computeEstimatedFontSize(content, displayWidth, availableHeight) {
   return Math.max(8, Math.min(128, estimated));
 }
 
-export default function DraggableElement({ element, scale = 1, isSelected, onSelect, onUpdate, canvasBounds, cardSize, autoEdit, onAutoEditConsumed, cardBg, onDragStateChange, onCenterGuideChange, onAlignGuideChange, availableHeight, tokens, isHovered, onHover }) {
+export default function DraggableElement({ element, scale = 1, isSelected, onSelect, onUpdate, canvasBounds, cardSize, autoEdit, onAutoEditConsumed, cardBg, onDragStateChange, onCenterGuideChange, onAlignGuideChange, onHoldChange, hiddenByHold = false, availableHeight, tokens, isHovered, onHover }) {
   const elRef = useRef(null);
   const contentRef = useRef(null);
   // Lazy-init: when this element mounts already flagged for auto-edit (a
@@ -170,6 +175,10 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
   const dragStart = useRef(null);
   const lastGuideRef = useRef({ v: false, h: false });
   const lastAlignKeyRef = useRef('');
+  // Hold-to-isolate: pending timer, and whether a press is in progress
+  // (used to suppress the touch long-press context menu).
+  const holdTimerRef = useRef(null);
+  const pressingRef = useRef(false);
   const prevContentRef = useRef(element.content || '');
   const hasSizedRef = useRef(false);
   // Mirrors of `editing` and the latest onUpdate, readable from the unmount
@@ -330,6 +339,20 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
   const getDisplayDims = () => getImageDisplayDims(element, REFERENCE_CARD_SIZE);
 
   // ── Move (drag body) — changes position (x/y) ──
+  // Clear a pending hold timer if the element unmounts mid-press.
+  useEffect(() => () => clearTimeout(holdTimerRef.current), []);
+
+  // Root-style additions for hold-to-isolate: fade out (and stop taking
+  // pointer events) while another element is held, and keep the touch
+  // long-press callout/selection from popping up on this element during a
+  // press (not while editing text, which needs normal selection).
+  const holdStyle = {
+    transition: 'opacity 150ms ease',
+    ...(hiddenByHold ? { opacity: 0, pointerEvents: 'none' } : null),
+    ...(editing ? null : { WebkitTouchCallout: 'none', userSelect: 'none', WebkitUserSelect: 'none' }),
+  };
+  const preventPressMenu = (e) => { if (pressingRef.current) e.preventDefault(); };
+
   const handlePointerDown = (e) => {
     if (editing) return;
     e.stopPropagation();
@@ -355,9 +378,34 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
     const handleEl = e.currentTarget;
     try { handleEl.setPointerCapture(e.pointerId); } catch {}
 
+    // Hold to isolate (text boxes and pictures): after HOLD_MS without
+    // moving, the canvas hides every other element until release. Purely
+    // visual — a quick tap or drag cancels it before it fires.
+    pressingRef.current = true;
+    let held = false;
+    clearTimeout(holdTimerRef.current);
+    holdTimerRef.current = (element.type === 'text' || isImageLike(element.type))
+      ? setTimeout(() => { holdTimerRef.current = null; held = true; onHoldChange?.(element.id); }, HOLD_MS)
+      : null;
+    const endHold = () => {
+      pressingRef.current = false;
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+      if (held) { held = false; onHoldChange?.(null); }
+    };
+    const onCancel = () => {
+      window.removeEventListener('pointercancel', onCancel);
+      endHold();
+    };
+    window.addEventListener('pointercancel', onCancel);
+
     const onMove = (ev) => {
       const clientX = ev.touches?.[0]?.clientX ?? ev.clientX;
       const clientY = ev.touches?.[0]?.clientY ?? ev.clientY;
+      if (holdTimerRef.current && Math.hypot(clientX - dragStart.current.startX, clientY - dragStart.current.startY) > HOLD_MOVE_PX) {
+        clearTimeout(holdTimerRef.current);
+        holdTimerRef.current = null;
+      }
       if (!dragStart.current.moved) {
         if (Math.abs(clientX - dragStart.current.startX) < 8 && Math.abs(clientY - dragStart.current.startY) < 8) return;
         dragStart.current.moved = true;
@@ -443,6 +491,8 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
       try { handleEl.releasePointerCapture(e.pointerId); } catch {}
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onCancel);
+      endHold();
       if (dragStart.current.moved) onDragStateChange?.(false);
       if (lastGuideRef.current.v || lastGuideRef.current.h) {
         lastGuideRef.current = { v: false, h: false };
@@ -1041,7 +1091,9 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
           height: visibleH * sf,
           zIndex: element.z_index ?? 1,
           userSelect: 'none',
+          ...holdStyle,
         }}
+        onContextMenu={preventPressMenu}
         onPointerDown={handlePointerDown}
         onMouseEnter={() => onHover?.(element.id)}
         onMouseLeave={() => onHover?.(null)}
@@ -1129,7 +1181,9 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
           height: visibleH * sf,
           zIndex: element.z_index ?? 1,
           userSelect: 'none',
+          ...holdStyle,
         }}
+        onContextMenu={preventPressMenu}
         onPointerDown={handlePointerDown}
         onMouseEnter={() => onHover?.(element.id)}
         onMouseLeave={() => onHover?.(null)}
@@ -1199,7 +1253,9 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
         top: `${adjY}%`,
         width: textWidthPx,
         zIndex: element.z_index ?? 1000,
+        ...holdStyle,
       }}
+      onContextMenu={preventPressMenu}
       onPointerDown={handlePointerDown}
       onMouseEnter={() => onHover?.(element.id)}
       onMouseLeave={() => onHover?.(null)}

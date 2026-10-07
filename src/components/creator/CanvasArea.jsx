@@ -18,6 +18,9 @@ export default function CanvasArea({ card, cardSize, selectedElementId, onSelect
   const [centerGuides, setCenterGuides] = useState({ v: false, h: false });
   // Element-to-element alignment lines while dragging, in % of the card.
   const [alignGuides, setAlignGuides] = useState({ v: [], h: [] });
+  // Press-and-hold on an element hides all the others (incl. a background
+  // picture) until release — display only, element data is untouched.
+  const [heldElementId, setHeldElementId] = useState(null);
 
   // Compute available height for each text element based on the group layout.
   // Each text box gets the space from its y position to the next text box's y
@@ -115,6 +118,8 @@ export default function CanvasArea({ card, cardSize, selectedElementId, onSelect
             onDragStateChange={setIsDragging}
             onCenterGuideChange={setCenterGuides}
             onAlignGuideChange={setAlignGuides}
+            onHoldChange={setHeldElementId}
+            hiddenByHold={!!heldElementId && heldElementId !== el.id}
             availableHeight={textAvailableHeights[el.id]}
             tokens={tokens}
             isHovered={!selectedElementId && hoveredElementId === el.id}
