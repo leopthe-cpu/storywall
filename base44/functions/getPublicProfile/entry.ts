@@ -65,7 +65,9 @@ export default async function(req) {
 
     return Response.json({ status: "public", user: publicUser, posts }, { status: 200 });
   } catch (error) {
+    // Log the detail server-side only: this endpoint is anonymous, so raw
+    // exception text must never reach the caller.
     console.log(`[getPublicProfile] error: ${error?.message || error}`);
-    return Response.json({ error: error?.message || "failed" }, { status: 500 });
+    return Response.json({ status: "error", user: null, posts: [] }, { status: 500 });
   }
 }
