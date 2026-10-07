@@ -48,58 +48,25 @@ const SLOTS = [
 // Cards beyond the visible slots wait, invisible, exactly behind the back card.
 const HIDDEN = { ...SLOTS[VISIBLE_SLOTS - 1], opacity: 0 };
 
-// Placeholder stories — replace with real ones any time.
+// Real story cards (exported from StoryWall), in Oz's chosen order.
+// Stored as 720px WebP in public/landing-cards/ (from 1080px PNGs: ~390 KB
+// total instead of ~11 MB) — enough for sharp 2–3× screens at this size.
+// Alt text is the card's own words so the stories stay readable to screen
+// readers.
 const CARDS = [
-  { tag: 'Product Design', eyebrow: 'Chapter 03 · The turning point', title: 'Rebuilt onboarding and cut drop-off in half', step: 1 },
-  { tag: 'Growth', eyebrow: 'Chapter 02 · The drift', title: 'Sent fewer emails and booked twice as many meetings', step: 2 },
-  { tag: 'Data', eyebrow: 'Chapter 04 · The signal', title: 'Let one thumbs-up beat years of viewing logs', step: 3 },
-  { tag: 'Engineering', eyebrow: 'Chapter 01 · The bottleneck', title: 'Cut checkout load time from 11 seconds to 2', step: 0 },
+  { src: '/landing-cards/01.webp', alt: 'Unlocking customer insights' },
+  { src: '/landing-cards/02.webp', alt: 'We had years of viewing data and a ranking algorithm built on top of it. Then we added a simple thumbs up. It took one tap and gave us something the logs couldn\'t: a direct opinion. Whenever the data and the opinion disagreed, we let the opinion win.' },
+  { src: '/landing-cards/03.webp', alt: 'The 11s Bottleneck' },
+  { src: '/landing-cards/04.webp', alt: 'Everyone had a theory, but the data showed something simple: our checkout took eleven seconds to load. A single third-party script was hogging six of them. We cut it, and load times dropped to two seconds overnight.' },
+  { src: '/landing-cards/05.webp', alt: 'Less Volume, More Signal' },
+  { src: '/landing-cards/06.webp', alt: 'I stopped blasting hundreds of cold templates a week. I sent fewer emails and booked twice as many meetings.' },
+  { src: '/landing-cards/07.webp', alt: 'The Wrong Churn' },
+  { src: '/landing-cards/08.webp', alt: 'Customers weren\'t canceling over price. The data pointed to something else entirely.' },
+  { src: '/landing-cards/09.webp', alt: 'The 2 Week Drift' },
+  { src: '/landing-cards/10.webp', alt: 'Users open the app for one reason: the market. So we pushed identity checks to the exact moment someone actually tried to trade. Until then, anyone could watch prices, build a watchlist, and set alerts.' },
 ];
 
 const SHADOW = '0 24px 60px -20px rgba(17,17,17,0.4), 0 4px 12px rgba(17,17,17,0.1)';
-
-function CardFace({ card }) {
-  return (
-    <>
-      {/* Media area */}
-      <div
-        className="h-[56%] relative flex items-end p-[18px]"
-        style={{
-          background: 'radial-gradient(140% 120% at 20% 10%, #3a3532 0%, transparent 55%), linear-gradient(135deg, #1b1917 0%, #2f2b28 100%)',
-        }}
-      >
-        <div
-          className="absolute inset-0 opacity-50"
-          style={{
-            mixBlendMode: 'overlay',
-            backgroundImage: 'radial-gradient(rgba(255,255,255,0.14) 1px, transparent 1.4px)',
-            backgroundSize: '14px 14px',
-          }}
-        />
-        <span className="relative font-mono text-[10.5px] font-bold tracking-[0.08em] uppercase bg-white/15 backdrop-blur-sm border border-white/20 text-white px-2.5 py-1.5 rounded-full">
-          {card.tag}
-        </span>
-      </div>
-      {/* Body */}
-      <div className="flex-1 pt-5 px-5">
-        <p className="font-mono text-[10.5px] tracking-[0.12em] uppercase text-white/50 mb-2">
-          {card.eyebrow}
-        </p>
-        <h2 className="font-mono font-bold text-[19px] leading-[1.22] tracking-[-0.01em]">
-          {card.title}
-        </h2>
-      </div>
-      {/* Footer with page dots */}
-      <div className="flex items-center gap-[7px] px-5 pt-4 pb-[18px] mt-auto">
-        {[0, 1, 2, 3].map((i) => (
-          i === card.step
-            ? <span key={i} className="w-5 h-1.5 rounded-[3px] bg-white" />
-            : <span key={i} className="w-1.5 h-1.5 rounded-full bg-white/28" />
-        ))}
-      </div>
-    </>
-  );
-}
 
 export default function SwipeableCards() {
   const n = CARDS.length;
@@ -112,6 +79,12 @@ export default function SwipeableCards() {
   // and which one is arriving (it goes over everything).
   const [swap, setSwap] = useState(null); // { outgoing, incoming } | null
   const rootRef = useRef(null);
+  // Load an image only once its card is within one step of being visible
+  // (front, the two back slots, or next in line). The first four load up
+  // front; each later card loads three swaps before it reaches the front.
+  // Once requested it stays loaded.
+  const loadedRef = useRef(new Set());
+  order.slice(0, VISIBLE_SLOTS + 1).forEach((i) => loadedRef.current.add(i));
 
   useEffect(() => {
     if (reduceMotion || n < 2) return undefined;
@@ -154,8 +127,9 @@ export default function SwipeableCards() {
   }, [reduceMotion, n]);
 
   return (
-    <div ref={rootRef} className="relative flex justify-center items-center min-h-[440px]">
-      <div className="relative w-[300px] h-[400px]">
+    <div ref={rootRef} className="relative flex justify-center items-center min-h-[360px]">
+      {/* Square cards to match the exported 1:1 story cards. */}
+      <div className="relative w-[300px] h-[300px]">
         {CARDS.map((card, i) => {
           const slot = order.indexOf(i);
           const isOutgoing = swap?.outgoing === i;
@@ -219,7 +193,17 @@ export default function SwipeableCards() {
                 className="flex flex-col h-full"
                 style={{ opacity: front ? 1 : 0, transition: contentTransition }}
               >
-                <CardFace card={card} />
+                {loadedRef.current.has(i) && (
+                  <img
+                    src={card.src}
+                    alt={card.alt}
+                    width={720}
+                    height={720}
+                    decoding="async"
+                    draggable={false}
+                    className="w-full h-full object-cover select-none"
+                  />
+                )}
               </div>
             </article>
           );
