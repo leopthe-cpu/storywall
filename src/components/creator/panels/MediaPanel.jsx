@@ -45,6 +45,26 @@ const OVERLAY_TYPES = ['None', 'Dark', 'Color', 'Blur'];
 const OVERLAY_POSITIONS = ['Bottom', 'Top', 'Left', 'Right', 'Full'];
 const TILE = 64;
 
+// Active = the builder's green "selected" style (same as BottomIsland and
+// the galleries). Idle buttons carry a transparent border so turning one on
+// doesn't change its size.
+const ACTIVE_BTN = 'bg-emerald-400/10 border border-emerald-400 text-emerald-400';
+const IDLE_BTN = 'bg-white/10 border border-transparent text-white/60 hover:bg-white/15';
+
+// A tab turns green when something non-default is applied inside it. The
+// edits are split over two tabs: Sizing (crop, zoom, rotate, flip, corners)
+// and Overlay. Gallery, Trim and Position never turn green.
+function tabHasChanges(tab, el) {
+  if (!el) return false;
+  if (tab === 'sizing') {
+    return ['clipTop', 'clipBottom', 'clipLeft', 'clipRight'].some((k) => (el[k] || 0) > 0)
+      || (el.zoom ?? 100) !== 100 || (el.rotation || 0) !== 0
+      || !!el.flipH || !!el.flipV || (el.borderRadius || 0) > 0;
+  }
+  if (tab === 'overlay') return (el.overlay_type || 'None') !== 'None';
+  return false;
+}
+
 const DEFAULT_IMG_PROPS = {
   x: 20, y: 20, z_index: 1,
   displayWidth: 192, displayHeight: 192,
@@ -521,12 +541,18 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
 
       {/* Tab bar */}
       <div className="flex border-b border-white/10 flex-shrink-0">
-        {tabs.map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 py-2 text-xs font-medium transition-colors ${tab === t ? 'text-white border-b-2 border-white' : 'text-white/40'}`}>
-            {TAB_LABELS[t] || t}
-          </button>
-        ))}
+        {tabs.map(t => {
+          const changed = tabHasChanges(t, selectedElement);
+          return (
+            <button key={t} onClick={() => setTab(t)}
+              className={`flex-1 py-2 text-xs font-medium transition-colors ${
+                tab === t
+                  ? `border-b-2 ${changed ? 'text-emerald-400 border-emerald-400' : 'text-white border-white'}`
+                  : changed ? 'text-emerald-400/70' : 'text-white/40'}`}>
+              {TAB_LABELS[t] || t}
+            </button>
+          );
+        })}
       </div>
 
       {/* GALLERY */}
@@ -687,7 +713,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                 {CROP_OPTIONS.map(opt => (
                   <button key={opt.value} onClick={() => applyCropRatio(opt.value)}
                     className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                      selectedRatio === opt.value ? 'bg-white text-black font-medium' : 'bg-white/10 text-white/60 hover:bg-white/15'
+                      selectedRatio === opt.value ? `${ACTIVE_BTN} font-medium` : IDLE_BTN
                     }`}>
                     {opt.label}
                   </button>
@@ -723,7 +749,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                   <button
                     onClick={() => onUpdateElement({ flipH: !selectedElement?.flipH })}
                     className={`w-8 h-8 rounded-lg transition-colors flex items-center justify-center ${
-                      selectedElement?.flipH ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'
+                      selectedElement?.flipH ? ACTIVE_BTN : IDLE_BTN
                     }`}
                     title="Flip horizontal"
                   >
@@ -732,7 +758,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                   <button
                     onClick={() => onUpdateElement({ flipV: !selectedElement?.flipV })}
                     className={`w-8 h-8 rounded-lg transition-colors flex items-center justify-center ${
-                      selectedElement?.flipV ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'
+                      selectedElement?.flipV ? ACTIVE_BTN : IDLE_BTN
                     }`}
                     title="Flip vertical"
                   >
@@ -781,7 +807,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                           if (t === 'Color') setShowColorPicker(true);
                         }}
                         className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${
-                          overlayType === t ? 'bg-white text-black font-medium' : 'bg-white/10 text-white/60 hover:bg-white/15'
+                          overlayType === t ? `${ACTIVE_BTN} font-medium` : IDLE_BTN
                         }`}>
                         {t}
                       </button>
@@ -804,7 +830,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                       {OVERLAY_POSITIONS.map(p => (
                         <button key={p} onClick={() => onUpdateElement({ overlay_position: p })}
                           className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${
-                            overlayPosition === p ? 'bg-white text-black font-medium' : 'bg-white/10 text-white/60 hover:bg-white/15'
+                            overlayPosition === p ? `${ACTIVE_BTN} font-medium` : IDLE_BTN
                           }`}>
                           {p}
                         </button>

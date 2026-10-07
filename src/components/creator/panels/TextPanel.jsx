@@ -47,13 +47,26 @@ function photoBehindText(elements, xPct, yPct) {
   return null;
 }
 
-// Effects/Warp pill styling: every pill that's in use (non-zero) is white;
-// the one whose slider is currently open additionally gets a ring so you can
-// still tell which one the slider below belongs to. Unused pills stay dim.
+// Active = the builder's green "selected" style (same as BottomIsland and
+// the galleries). Idle buttons carry a transparent border so turning one on
+// doesn't change its size.
+const ACTIVE_BTN = 'bg-emerald-400/10 border border-emerald-400 text-emerald-400';
+const IDLE_BTN = 'bg-white/10 border border-transparent text-white/60 hover:bg-white/15';
+
+// Effects/Warp pill styling: every pill that's in use (non-zero) is green;
+// the one whose slider is currently open additionally gets a stronger green
+// ring so you can still tell which one the slider below belongs to (an open
+// pill at 0 shows the ring alone). Unused pills stay dim.
 function pillClass(inUse, isOpen) {
-  if (isOpen) return 'bg-white text-black font-medium ring-2 ring-white/70 ring-offset-2 ring-offset-black';
-  if (inUse) return 'bg-white text-black';
-  return 'bg-white/10 text-white/60 hover:bg-white/15';
+  if (isOpen) return `${ACTIVE_BTN} font-medium ring-1 ring-emerald-400`;
+  if (inUse) return ACTIVE_BTN;
+  return IDLE_BTN;
+}
+
+// The Effects tab turns green when any text effect or warp is applied.
+function hasTextEffects(el) {
+  if (!el) return false;
+  return TEXT_FX_LIST.some((fx) => (el[fx.intensityField] || 0) !== 0) || (el.text_warp_amount || 0) !== 0;
 }
 
 const TILE = 64;
@@ -330,12 +343,18 @@ export default function TextPanel({
     <div className="flex flex-col flex-1 min-h-0">
       {/* Tabs — fixed */}
       <div className="flex border-b border-white/10 flex-shrink-0">
-        {['gallery', 'format', 'effects'].map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`flex-1 py-2 text-xs font-medium capitalize transition-colors ${tab === t ? 'text-white border-b-2 border-white' : 'text-white/40'}`}>
-            {t}
-          </button>
-        ))}
+        {['gallery', 'format', 'effects'].map(t => {
+          const changed = t === 'effects' && hasTextEffects(selectedElement);
+          return (
+            <button key={t} onClick={() => setTab(t)}
+              className={`flex-1 py-2 text-xs font-medium capitalize transition-colors ${
+                tab === t
+                  ? `border-b-2 ${changed ? 'text-emerald-400 border-emerald-400' : 'text-white border-white'}`
+                  : changed ? 'text-emerald-400/70' : 'text-white/40'}`}>
+              {t}
+            </button>
+          );
+        })}
       </div>
 
       {/* GALLERY — all text boxes across every card */}
@@ -430,25 +449,27 @@ export default function TextPanel({
               {/* Row 2: color swatch, B I U S, then the three alignment
                   buttons inline to the right (was a separate full-width row). */}
               <div className="flex items-center gap-1 mt-1">
+                {/* Shows the current colour; green outline (never a fill) while
+                    its picker is open. */}
                 <button onClick={() => setShowColorPicker(true)}
-                  className="w-7 h-7 rounded bg-white border border-white/40 flex-shrink-0 hover:scale-105 transition-transform"
+                  className={`w-7 h-7 rounded bg-white/10 border border-white/40 flex-shrink-0 hover:scale-105 transition-transform ${showColorPicker ? 'ring-2 ring-emerald-400' : ''}`}
                   title="Text color">
                   <div className="w-4 h-4 rounded-sm mx-auto border border-black/20" style={{ backgroundColor: resolveColor(formatEl.color_token, tokens, formatEl.color || '#000000') }} />
                 </button>
                 <button onClick={() => onUpdateElement({ font_weight: formatEl.font_weight === '700' ? '400' : '700' })}
-                  className={`w-7 h-7 rounded text-xs font-bold transition-colors ${formatEl.font_weight === '700' ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'}`}>
+                  className={`w-7 h-7 rounded text-xs font-bold transition-colors ${formatEl.font_weight === '700' ? ACTIVE_BTN : IDLE_BTN}`}>
                   B
                 </button>
                 <button onClick={() => onUpdateElement({ font_italic: !formatEl.font_italic })}
-                  className={`w-7 h-7 rounded text-xs italic transition-colors ${formatEl.font_italic ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'}`}>
+                  className={`w-7 h-7 rounded text-xs italic transition-colors ${formatEl.font_italic ? ACTIVE_BTN : IDLE_BTN}`}>
                   I
                 </button>
                 <button onClick={() => onUpdateElement({ font_underline: !formatEl.font_underline })}
-                  className={`w-7 h-7 rounded text-xs underline transition-colors ${formatEl.font_underline ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'}`}>
+                  className={`w-7 h-7 rounded text-xs underline transition-colors ${formatEl.font_underline ? ACTIVE_BTN : IDLE_BTN}`}>
                   U
                 </button>
                 <button onClick={() => onUpdateElement({ font_strikethrough: !formatEl.font_strikethrough })}
-                  className={`w-7 h-7 rounded text-xs line-through transition-colors ${formatEl.font_strikethrough ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'}`}>
+                  className={`w-7 h-7 rounded text-xs line-through transition-colors ${formatEl.font_strikethrough ? ACTIVE_BTN : IDLE_BTN}`}>
                   S
                 </button>
                 <div className="w-px h-5 bg-white/15 mx-1 flex-shrink-0" />
@@ -462,7 +483,7 @@ export default function TextPanel({
                     title={title}
                     onClick={() => onUpdateElement({ text_align: val })}
                     className={`w-7 h-7 rounded flex items-center justify-center flex-shrink-0 transition-colors ${
-                      (formatEl.text_align || 'left') === val ? 'bg-white text-black' : 'bg-white/10 text-white/60 hover:bg-white/15'
+                      (formatEl.text_align || 'left') === val ? ACTIVE_BTN : IDLE_BTN
                     }`}
                   >
                     <Icon size={13} />
@@ -497,7 +518,7 @@ export default function TextPanel({
         <div className="flex-1 min-h-0 relative">
           <div className={`absolute inset-0 overflow-y-auto overscroll-contain px-3 py-2 flex flex-col gap-3 ${selectedElement ? '' : 'opacity-40 pointer-events-none'}`}>
             {/* One pill per effect — always shows its own live %. Only the
-                currently-OPEN effect (tapped most recently) highlights white
+                currently-OPEN effect (tapped most recently) gets the strong green ring
                 and shows a slider; every other pill — whether it's actually
                 active/compounded or still off — stays the same regular/dim
                 color, just displaying whatever % it's currently at (0% if
