@@ -5,6 +5,7 @@ import AudioWidget from './AudioWidget';
 import { useDraftMedia } from './DraftMediaContext';
 import { resolveColor } from '@/lib/colorTokens';
 import { getTextEffectStyle, hasTextWarp } from '@/lib/textEffects';
+import { getTextBoxLayout } from '@/lib/textLayout';
 import WarpedText from './WarpedText';
 import ImageSkeleton from '@/components/ui/ImageSkeleton';
 import PixelSpinner from '@/components/ui/PixelSpinner';
@@ -1115,25 +1116,9 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
   // wrapper clips the text content. displayWidth is stored unclamped — visual
   // clamping to the safe zone happens in the render with position adjustment.
   const baseFontSize = element.font_size ? parseInt(element.font_size) : 14;
-  const defaultTextWidth = REFERENCE_CARD_SIZE * 0.8;
-  const rawWidth = element.displayWidth || defaultTextWidth;
-  const rawHeight = element.displayHeight || 0;
-
-  // Visual dimensions: clamp to safe zone
-  const visWidth = Math.min(rawWidth, safeZoneSize);
-  const visHeight = rawHeight > 0 ? Math.min(rawHeight, safeZoneSize) : 0;
-
-  // Adjust position to keep box within safe zone bounds
-  const elLeftPx = ((element.x ?? 16) / 100) * REFERENCE_CARD_SIZE;
-  const elTopPx = ((element.y ?? 20) / 100) * REFERENCE_CARD_SIZE;
-  let adjX = element.x ?? 16;
-  let adjY = element.y ?? 20;
-  if (elLeftPx + visWidth > REFERENCE_CARD_SIZE - SAFE_ZONE_INSET) {
-    adjX = Math.max(SAFE_ZONE_INSET, REFERENCE_CARD_SIZE - SAFE_ZONE_INSET - visWidth) / REFERENCE_CARD_SIZE * 100;
-  }
-  if (visHeight > 0 && elTopPx + visHeight > REFERENCE_CARD_SIZE - SAFE_ZONE_INSET) {
-    adjY = Math.max(SAFE_ZONE_INSET, REFERENCE_CARD_SIZE - SAFE_ZONE_INSET - visHeight) / REFERENCE_CARD_SIZE * 100;
-  }
+  // Safe-zone clamping of size and position — shared with CardThumb so the
+  // published card places the box exactly where the editor shows it.
+  const { xPct: adjX, yPct: adjY, width: visWidth, height: visHeight } = getTextBoxLayout(element);
 
   const textDeco = [
     element.font_underline ? 'underline' : '',

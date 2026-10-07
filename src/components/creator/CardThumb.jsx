@@ -4,6 +4,7 @@ import TrimmedVideo from './TrimmedVideo';
 import { useDraftMedia } from './DraftMediaContext';
 import { resolveColor } from '@/lib/colorTokens';
 import { getTextEffectStyle, hasTextWarp } from '@/lib/textEffects';
+import { getTextBoxLayout } from '@/lib/textLayout';
 import WarpedText from './WarpedText';
 
 // Replicates buildOverlayStyle from DraggableElement (non-interactive thumbnail version)
@@ -151,7 +152,10 @@ export default function CardThumb({ card, displaySize = 64, autoplay = false, to
           // preview and on the published card. maxHeight stays only as a
           // generous safety cap, same value the editor itself uses.
           const baseFontSize = el.font_size ? parseInt(el.font_size) : 14;
-          const textWidth = el.displayWidth || (refSize * 0.8);
+          // Same safe-zone clamping of position and width as the editor
+          // (shared helper) — using the raw stored x/displayWidth here made
+          // boxes near the edge jump and re-wrap on publish.
+          const { xPct, yPct, width: textWidth } = getTextBoxLayout(el);
           const textDeco = [
             el.font_underline ? 'underline' : '',
             el.font_strikethrough ? 'line-through' : '',
@@ -161,10 +165,9 @@ export default function CardThumb({ card, displaySize = 64, autoplay = false, to
           return (
             <div key={el.id} className="absolute"
             style={{
-              left: `${el.x ?? 16}%`,
-              top: `${el.y ?? 20}%`,
+              left: `${xPct}%`,
+              top: `${yPct}%`,
               width: textWidth,
-              maxWidth: refSize - 2 * SAFE_ZONE_INSET,
               maxHeight: refSize - 2 * SAFE_ZONE_INSET,
               zIndex: el.z_index ?? 1000,
               padding: 2,
