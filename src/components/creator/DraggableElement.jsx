@@ -32,6 +32,42 @@ const EDGE_HANDLES = [
 // px), so it feels consistent regardless of zoom/card size.
 const CENTER_SNAP_PX = 6;
 
+// Element-to-element alignment guides: snap when an edge (or center) of the
+// dragged element comes within this many REFERENCE px of the same kind of
+// line on another text box / picture on the card.
+const ALIGN_SNAP_REF = 4;
+
+// Best snap along one axis. `own` = [start, center, end] of the dragged box,
+// `targets` = [{ start, center, end }] of the others, all in % of the card.
+// Edges match edges (either side), centers match centers. Returns the shift
+// to apply, or null if nothing is within `tol`.
+function findAlignSnap(own, targets, tol) {
+  let best = null;
+  const consider = (from, to) => {
+    const d = to - from;
+    if (Math.abs(d) < tol && (best === null || Math.abs(d) < Math.abs(best))) best = d;
+  };
+  for (const t of targets) {
+    for (const o of [own[0], own[2]]) { consider(o, t.start); consider(o, t.end); }
+    consider(own[1], t.center);
+  }
+  return best;
+}
+
+// Every line the (already snapped) box sits exactly on, for drawing guides.
+function alignLines(own, targets) {
+  const hit = (a, b) => Math.abs(a - b) < 0.01;
+  const lines = new Set();
+  for (const t of targets) {
+    for (const o of [own[0], own[2]]) {
+      if (hit(o, t.start)) lines.add(t.start);
+      if (hit(o, t.end)) lines.add(t.end);
+    }
+    if (hit(own[1], t.center)) lines.add(t.center);
+  }
+  return [...lines].sort((a, b) => a - b);
+}
+
 // Handles are positioned so their CENTER lands exactly on the true corner
 // (half in, half out) — not flush against it. Flush positioning was shifting
 // every handle a full half-size inward from the point it's supposed to sit
@@ -108,7 +144,7 @@ function computeEstimatedFontSize(content, displayWidth, availableHeight) {
   return Math.max(8, Math.min(128, estimated));
 }
 
-export default function DraggableElement({ element, scale = 1, isSelected, onSelect, onUpdate, canvasBounds, cardSize, autoEdit, onAutoEditConsumed, cardBg, onDragStateChange, onCenterGuideChange, availableHeight, tokens, isHovered, onHover }) {
+export default function DraggableElement({ element, scale = 1, isSelected, onSelect, onUpdate, canvasBounds, cardSize, autoEdit, onAutoEditConsumed, cardBg, onDragStateChange, onCenterGuideChange, onAlignGuideChange, availableHeight, tokens, isHovered, onHover }) {
   const elRef = useRef(null);
   const contentRef = useRef(null);
   // Lazy-init: when this element mounts already flagged for auto-edit (a
@@ -133,6 +169,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
   const [, setLoadTick] = useState(0);
   const dragStart = useRef(null);
   const lastGuideRef = useRef({ v: false, h: false });
+  const lastAlignKeyRef = useRef('');
   const prevContentRef = useRef(element.content || '');
   const hasSizedRef = useRef(false);
   // Mirrors of `editing` and the latest onUpdate, readable from the unmount
@@ -325,6 +362,18 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
         if (Math.abs(clientX - dragStart.current.startX) < 8 && Math.abs(clientY - dragStart.current.startY) < 8) return;
         dragStart.current.moved = true;
         onDragStateChange?.(true);
+        // Measure the other alignment targets once per drag (they don't move
+        // while this one is dragged), as boxes in % of the card.
+        const targets = { x: [], y: [] };
+        canvasBounds.current?.querySelectorAll('[data-align-id]').forEach((node) => {
+          if (node === elRef.current) return;
+          const r = node.getBoundingClientRect();
+          const l = ((r.left - canvas.left) / canvas.width) * 100, w = (r.width / canvas.width) * 100;
+          const t = ((r.top - canvas.top) / canvas.height) * 100, h = (r.height / canvas.height) * 100;
+          targets.x.push({ start: l, center: l + w / 2, end: l + w });
+          targets.y.push({ start: t, center: t + h / 2, end: t + h });
+        });
+        dragStart.current.alignTargets = targets;
       }
       const dx = ((clientX - dragStart.current.startX) / canvas.width) * 100;
       const dy = ((clientY - dragStart.current.startY) / canvas.height) * 100;
@@ -355,6 +404,33 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
       if (snapV) newX = 50 - widthPct / 2;
       if (snapH) newY = 50 - heightPct / 2;
 
+      // Alignment with other elements, on any axis the card-center snap
+      // didn't already take (card center wins). A snap that would push the
+      // element past its drag limits is ignored.
+      const targets = dragStart.current.alignTargets || { x: [], y: [] };
+      const tol = (ALIGN_SNAP_REF / REFERENCE_CARD_SIZE) * 100;
+      let alignV = [], alignH = [];
+      if (!snapV && targets.x.length) {
+        const d = findAlignSnap([newX, newX + widthPct / 2, newX + widthPct], targets.x, tol);
+        if (d !== null && newX + d >= minX && newX + d <= 90) {
+          newX += d;
+          alignV = alignLines([newX, newX + widthPct / 2, newX + widthPct], targets.x);
+        }
+      }
+      if (!snapH && targets.y.length) {
+        const d = findAlignSnap([newY, newY + heightPct / 2, newY + heightPct], targets.y, tol);
+        if (d !== null && newY + d >= minY && newY + d <= 90) {
+          newY += d;
+          alignH = alignLines([newY, newY + heightPct / 2, newY + heightPct], targets.y);
+        }
+      }
+      // Only tell the canvas when the set of lines changes, not every move.
+      const alignKey = `${alignV.join(',')}|${alignH.join(',')}`;
+      if (alignKey !== lastAlignKeyRef.current) {
+        lastAlignKeyRef.current = alignKey;
+        onAlignGuideChange?.({ v: alignV, h: alignH });
+      }
+
       if (snapV !== lastGuideRef.current.v || snapH !== lastGuideRef.current.h) {
         lastGuideRef.current = { v: snapV, h: snapH };
         onCenterGuideChange?.({ v: snapV, h: snapH });
@@ -372,6 +448,10 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
         lastGuideRef.current = { v: false, h: false };
         onCenterGuideChange?.({ v: false, h: false });
       }
+      if (lastAlignKeyRef.current !== '' && lastAlignKeyRef.current !== '|') {
+        onAlignGuideChange?.({ v: [], h: [] });
+      }
+      lastAlignKeyRef.current = '';
       // Tap detection: if pointer didn't move beyond the 8px threshold and was
       // released within 300ms, treat as a tap → enter edit mode for text elements.
       // This makes single-tap-to-edit work on touch (double-tap is unreliable).
@@ -933,6 +1013,13 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
     const visibleW = Math.max(20, displayWidth - clipLeft - clipRight);
     const visibleH = Math.max(20, displayHeight - clipTop - clipBottom);
 
+    // A picture covering the whole card (e.g. "Fit to card") is a
+    // background, not something to align other elements with.
+    const imgLeft = ((element.x ?? 0) / 100) * REFERENCE_CARD_SIZE;
+    const imgTop = ((element.y ?? 0) / 100) * REFERENCE_CARD_SIZE;
+    const coversCard = imgLeft <= 0.5 && imgTop <= 0.5
+      && imgLeft + visibleW >= REFERENCE_CARD_SIZE - 0.5 && imgTop + visibleH >= REFERENCE_CARD_SIZE - 0.5;
+
     const handlePos = imageHandlePositions({
       left: ((element.x ?? 0) / 100) * REFERENCE_CARD_SIZE,
       top: ((element.y ?? 0) / 100) * REFERENCE_CARD_SIZE,
@@ -945,6 +1032,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
       <div
         ref={elRef}
         data-canvas-el
+        data-align-id={coversCard ? undefined : element.id}
         className={`absolute cursor-move ${isSelected ? 'ring-2 ring-blue-400 rounded' : (isHovered ? 'ring-1 ring-blue-400/40 rounded' : '')}`}
         style={{
           left: `${element.x ?? 0}%`,
@@ -1104,6 +1192,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
       ref={elRef}
       data-canvas-el
       data-text-element-id={element.id}
+      data-align-id={element.id}
       className={`absolute cursor-move ${isSelected ? 'ring-1 ring-blue-400/60 rounded' : (isHovered ? 'ring-1 ring-blue-400/40 rounded' : '')}`}
       style={{
         left: `${adjX}%`,

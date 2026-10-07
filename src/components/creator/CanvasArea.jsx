@@ -16,6 +16,8 @@ export default function CanvasArea({ card, cardSize, selectedElementId, onSelect
   const [isDragging, setIsDragging] = useState(false);
   const [hoveredElementId, setHoveredElementId] = useState(null);
   const [centerGuides, setCenterGuides] = useState({ v: false, h: false });
+  // Element-to-element alignment lines while dragging, in % of the card.
+  const [alignGuides, setAlignGuides] = useState({ v: [], h: [] });
 
   // Compute available height for each text element based on the group layout.
   // Each text box gets the space from its y position to the next text box's y
@@ -112,6 +114,7 @@ export default function CanvasArea({ card, cardSize, selectedElementId, onSelect
             cardBg={resolveColor(card.background_token, tokens, card.background_color || '#FFFFFF')}
             onDragStateChange={setIsDragging}
             onCenterGuideChange={setCenterGuides}
+            onAlignGuideChange={setAlignGuides}
             availableHeight={textAvailableHeights[el.id]}
             tokens={tokens}
             isHovered={!selectedElementId && hoveredElementId === el.id}
@@ -160,6 +163,23 @@ export default function CanvasArea({ card, cardSize, selectedElementId, onSelect
           style={{ top: '50%', left: 0, right: 0, height: 1, background: '#32CD32', transform: 'translateY(-50%)', zIndex: 9998 }}
         />
       )}
+
+      {/* Alignment guides — same look as the center guides, drawn where the
+          dragged element lines up with another element's edge or center. */}
+      {isDragging && alignGuides.v.map((p) => (
+        <div
+          key={`av${p}`}
+          className="absolute pointer-events-none"
+          style={{ left: `${p}%`, top: 0, bottom: 0, width: 1, background: '#32CD32', transform: 'translateX(-50%)', zIndex: 9998 }}
+        />
+      ))}
+      {isDragging && alignGuides.h.map((p) => (
+        <div
+          key={`ah${p}`}
+          className="absolute pointer-events-none"
+          style={{ top: `${p}%`, left: 0, right: 0, height: 1, background: '#32CD32', transform: 'translateY(-50%)', zIndex: 9998 }}
+        />
+      ))}
 
       {/* Safe zone guide — rendered AFTER content so it's always on top of
           any background image. Lime green (#32CD32) with a subtle dark outline
