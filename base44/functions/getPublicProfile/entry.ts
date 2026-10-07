@@ -33,8 +33,9 @@ export default async function(req) {
     // Resolve the name through its server-written claim (shared/username.ts):
     // a username self-written to the User record can't hijack this page.
     const claim = await claimUsernameIfUnclaimed(base44, username);
-    const owners = claim ? await base44.asServiceRole.entities.User.filter({ id: claim.user_id }) : [];
-    const user = owners[0] || null;
+    const user = claim
+      ? await base44.asServiceRole.entities.User.get(claim.user_id).catch(() => null)
+      : null;
     // The owner must still be using the name (a stale claim isn't served).
     if (!user || normalizeUsername(user.username) !== username) {
       return Response.json({ status: "not_found", user: null, posts: [] }, { status: 200 });
