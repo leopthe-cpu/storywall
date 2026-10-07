@@ -42,7 +42,7 @@ const CROP_OPTIONS = [
   { label: '9:16', value: '9/16' },
 ];
 const OVERLAY_TYPES = ['None', 'Dark', 'Color', 'Blur'];
-const OVERLAY_POSITIONS = ['Bottom', 'Top', 'Left', 'Right'];
+const OVERLAY_POSITIONS = ['Bottom', 'Top', 'Left', 'Right', 'Full'];
 const TILE = 64;
 
 const DEFAULT_IMG_PROPS = {

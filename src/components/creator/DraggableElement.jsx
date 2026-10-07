@@ -7,28 +7,10 @@ import { resolveColor } from '@/lib/colorTokens';
 import { getTextEffectStyle, hasTextWarp } from '@/lib/textEffects';
 import { getTextBoxLayout } from '@/lib/textLayout';
 import { getImageDisplayDims } from '@/lib/imageLayout';
+import { buildOverlayStyle, buildBlurOverlayStyle } from '@/lib/mediaOverlay';
 import WarpedText from './WarpedText';
 import ImageSkeleton from '@/components/ui/ImageSkeleton';
 import PixelSpinner from '@/components/ui/PixelSpinner';
-
-function buildOverlayStyle(element) {
-  const { overlay_type, overlay_position, overlay_intensity, overlay_color } = element;
-  if (!overlay_type || overlay_type === 'None') return null;
-  const intensity = (overlay_intensity ?? 50) / 100;
-  const dir = ({ Bottom: 'to top', Top: 'to bottom', Left: 'to right', Right: 'to left' })[overlay_position || 'Bottom'] || 'to top';
-
-  if (overlay_type === 'Dark') {
-    return { background: `linear-gradient(${dir}, rgba(0,0,0,${intensity}) 0%, transparent 100%)` };
-  }
-  if (overlay_type === 'Color') {
-    const hex = overlay_color || '#000000';
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return { background: `linear-gradient(${dir}, rgba(${r},${g},${b},${intensity}) 0%, transparent 100%)` };
-  }
-  return null;
-}
 
 // Corner handles (blue circles) resize the display box (displayWidth/Height).
 // Edge handles (green pills) crop (clipTop/Bottom/Left/Right). The two sets
@@ -911,9 +893,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
     const cropRatio = element.crop_ratio || 'fill';
     const zoom = element.zoom ?? 100;
     const overlayStyle = buildOverlayStyle(element);
-    const isBlur = element.overlay_type === 'Blur';
-    const blurStrength = ((element.overlay_intensity ?? 50) / 100) * 12;
-    const blurDir = ({ Bottom: 'to top', Top: 'to bottom', Left: 'to right', Right: 'to left' })[element.overlay_position || 'Bottom'];
+    const blurStyle = buildBlurOverlayStyle(element);
     const isVideo = element.type === 'video';
     const focalX = element.focalX ?? 50;
     const focalY = element.focalY ?? 50;
@@ -992,11 +972,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
             {renderMedia({ width: '100%', height: '100%', objectPosition: `${focalX}% ${focalY}%`, transform: `scale(${zoom / 100}) rotate(${element.rotation || 0}deg) scale(${element.flipH ? -1 : 1}, ${element.flipV ? -1 : 1})`, transformOrigin: 'center center' })}
           </div>
           {overlayStyle && <div className="absolute inset-0 pointer-events-none" style={overlayStyle} />}
-          {isBlur && (
-            <div className="absolute inset-0 pointer-events-none"
-              style={{ backdropFilter: `blur(${blurStrength}px)`, WebkitBackdropFilter: `blur(${blurStrength}px)`,
-                background: `linear-gradient(${blurDir}, rgba(0,0,0,0.01) 0%, transparent 60%)` }} />
-          )}
+          {blurStyle && <div className="absolute inset-0 pointer-events-none" style={blurStyle} />}
           <ImageSkeleton loaded={mediaLoaded} />
           {showSpinner && !mediaLoaded && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">

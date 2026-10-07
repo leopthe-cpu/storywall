@@ -6,26 +6,8 @@ import { resolveColor } from '@/lib/colorTokens';
 import { getTextEffectStyle, hasTextWarp } from '@/lib/textEffects';
 import { getTextBoxLayout } from '@/lib/textLayout';
 import { getImageDisplayDims } from '@/lib/imageLayout';
+import { buildOverlayStyle, buildBlurOverlayStyle } from '@/lib/mediaOverlay';
 import WarpedText from './WarpedText';
-
-// Replicates buildOverlayStyle from DraggableElement (non-interactive thumbnail version)
-function buildOverlayStyle(element) {
-  const { overlay_type, overlay_position, overlay_intensity, overlay_color } = element;
-  if (!overlay_type || overlay_type === 'None') return null;
-  const intensity = (overlay_intensity ?? 50) / 100;
-  const dir = { Bottom: 'to top', Top: 'to bottom', Left: 'to right', Right: 'to left' }[overlay_position || 'Bottom'] || 'to top';
-  if (overlay_type === 'Dark') {
-    return { background: `linear-gradient(${dir}, rgba(0,0,0,${intensity}) 0%, transparent 100%)` };
-  }
-  if (overlay_type === 'Color') {
-    const hex = overlay_color || '#000000';
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return { background: `linear-gradient(${dir}, rgba(${r},${g},${b},${intensity}) 0%, transparent 100%)` };
-  }
-  return null;
-}
 
 const isImageLike = (t) => t === 'image' || t === 'video';
 
@@ -62,9 +44,7 @@ export default function CardThumb({ card, displaySize = 64, autoplay = false, to
             const focalX = el.focalX ?? 50;
             const focalY = el.focalY ?? 50;
             const overlayStyle = buildOverlayStyle(el);
-            const isBlur = el.overlay_type === 'Blur';
-            const blurStrength = (el.overlay_intensity ?? 50) / 100 * 12;
-            const blurDir = { Bottom: 'to top', Top: 'to bottom', Left: 'to right', Right: 'to left' }[el.overlay_position || 'Bottom'];
+            const blurStyle = buildBlurOverlayStyle(el);
             const isVideo = el.type === 'video';
 
             // Non-fill — outer visible area + inner media translated for crop.
@@ -97,11 +77,7 @@ export default function CardThumb({ card, displaySize = 64, autoplay = false, to
                   }
                 </div>
                 {overlayStyle && <div className="absolute inset-0 pointer-events-none" style={overlayStyle} />}
-                {isBlur &&
-                <div className="absolute inset-0 pointer-events-none"
-                style={{ backdropFilter: `blur(${blurStrength}px)`, WebkitBackdropFilter: `blur(${blurStrength}px)`,
-                  background: `linear-gradient(${blurDir}, rgba(0,0,0,0.01) 0%, transparent 60%)` }} />
-                }
+                {blurStyle && <div className="absolute inset-0 pointer-events-none" style={blurStyle} />}
               </div>);
 
           }
