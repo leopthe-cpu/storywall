@@ -38,12 +38,28 @@ function pose({ rotate, tx = 0, ty = 0, scale = 1, opacity, filter }) {
   };
 }
 
-// Slot poses, front → back. Background stays #262624/#2A2724 as before; the
-// lighter greys of the back cards come from their opacity over the page.
+// Slot poses, front → back (positions/angles/scales are the original stack's).
+// Back cards show their real image; BACK_LOOK picks how they recede.
+// Filters use the same function list in every slot so they interpolate.
+const BACK_LOOK = 'solid';
+const LOOKS = {
+  // Original fades: the page shows through the back cards.
+  faded: [
+    { opacity: 1, filter: 'brightness(1) saturate(1)' },
+    { opacity: 0.8, filter: 'brightness(1) saturate(1)' },
+    { opacity: 0.55, filter: 'brightness(1) saturate(0.8)' },
+  ],
+  // Fully opaque, dimmed with depth.
+  solid: [
+    { opacity: 1, filter: 'brightness(1) saturate(1)' },
+    { opacity: 1, filter: 'brightness(0.82) saturate(0.9)' },
+    { opacity: 1, filter: 'brightness(0.65) saturate(0.8)' },
+  ],
+};
 const SLOTS = [
-  { ...pose({ rotate: 2.5, opacity: 1, filter: 'saturate(1)' }), bg: '#262624' },
-  { ...pose({ rotate: -4, tx: -15, ty: 7, scale: 0.97, opacity: 0.8, filter: 'saturate(1)' }), bg: '#2A2724' },
-  { ...pose({ rotate: -8, tx: -30, ty: 14, scale: 0.94, opacity: 0.55, filter: 'saturate(0.8)' }), bg: '#262624' },
+  { ...pose({ rotate: 2.5, ...LOOKS[BACK_LOOK][0] }), bg: '#262624' },
+  { ...pose({ rotate: -4, tx: -15, ty: 7, scale: 0.97, ...LOOKS[BACK_LOOK][1] }), bg: '#2A2724' },
+  { ...pose({ rotate: -8, tx: -30, ty: 14, scale: 0.94, ...LOOKS[BACK_LOOK][2] }), bg: '#262624' },
 ];
 // Cards beyond the visible slots wait, invisible, exactly behind the back card.
 const HIDDEN = { ...SLOTS[VISIBLE_SLOTS - 1], opacity: 0 };
@@ -135,24 +151,16 @@ export default function SwipeableCards() {
           const isOutgoing = swap?.outgoing === i;
           const isIncoming = swap?.incoming === i;
 
-          // The outgoing card stays visible while it travels to the back
-          // pose, even if its new slot is a hidden one; at the end of the
-          // swap it vanishes in the same frame the next card appears in that
-          // identical back pose, so the hand-off can't be seen.
-          let target;
-          if (slot < VISIBLE_SLOTS) target = SLOTS[slot];
-          else if (isOutgoing) target = SLOTS[VISIBLE_SLOTS - 1];
-          else target = HIDDEN;
-          // The card stepping into the back slot from hiding waits invisible
-          // until the outgoing card has landed (see above).
-          const appearingFromHidden = swap && !isOutgoing && slot === VISIBLE_SLOTS - 1 && n > VISIBLE_SLOTS;
-          if (appearingFromHidden) target = HIDDEN;
+          // Back cards show their real image, so a card can't be silently
+          // swapped for another at the back. With more cards than visible
+          // slots, the outgoing card fades out as it slips under to the back
+          // pose (it's going to a hidden slot) while the next card fades in
+          // at the back slot — both on the same curve as the movement.
+          const target = slot < VISIBLE_SLOTS ? SLOTS[slot] : HIDDEN;
 
           // CSS transitions, not Framer Motion: Framer's accelerated opacity
           // tween painted one frame at full opacity when it finished, which
-          // flashed the back card (and the outgoing text) once per cycle.
-          // Outside a swap there is no transition, so the end-of-swap hand-off
-          // happens within a single frame.
+          // flashed a card once per cycle.
           const delay = swap && !isOutgoing && !isIncoming ? STAGGER_S * slot : 0;
           const move = swap
             ? ['transform', 'opacity', 'filter', 'background-color']
@@ -164,13 +172,6 @@ export default function SwipeableCards() {
           const zIndex = isOutgoing ? 0 : isIncoming ? n + 2 : n + 1 - slot;
 
           const front = slot === 0;
-          // Content fades on its own, shorter timings (see the move above
-          // for why this is CSS rather than Framer Motion).
-          const contentTransition = isIncoming
-            ? 'opacity 250ms ease-out 100ms'
-            : isOutgoing
-              ? 'opacity 150ms ease-out'
-              : 'none';
 
           return (
             <article
@@ -191,7 +192,6 @@ export default function SwipeableCards() {
             >
               <div
                 className="flex flex-col h-full"
-                style={{ opacity: front ? 1 : 0, transition: contentTransition }}
               >
                 {loadedRef.current.has(i) && (
                   <img
