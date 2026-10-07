@@ -1,4 +1,5 @@
 import { base44 } from '@/api/base44Client';
+import { registerMedia } from '@/lib/mediaLibrary';
 import { buildAICards } from '@/lib/aiStyleTemplates';
 
 // Backstop: scan non-cover card prompts for face/person-descriptive language.
@@ -145,11 +146,7 @@ export async function runGeneratePipeline({ text, attachments, onProgress, editM
           // Save to media gallery so it appears in the user's library
           if (userId) {
             try {
-              await base44.entities.Media.create({
-                image_url: imageUrl,
-                user_id: userId,
-                media_type: 'image',
-              });
+              await registerMedia({ image_url: imageUrl, media_type: 'image' });
             } catch (e) {
               console.log(`[generate-pipeline] card ${cardIndex}: media gallery save failed: ${e?.message || e}`);
             }

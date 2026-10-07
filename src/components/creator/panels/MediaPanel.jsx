@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, Camera, FolderOpen, Image as ImageIcon, Mic, Play, Film, Music, RefreshCw, RotateCw, FlipHorizontal, FlipVertical, Eraser } from '@/components/icons';
 import { base44 } from '@/api/base44Client';
+import { registerMedia } from '@/lib/mediaLibrary';
 import { useDraftMedia } from '@/components/creator/DraftMediaContext';
 import ColorPicker from '@/components/creator/ColorPicker';
 import MinimalSlider from '@/components/creator/MinimalSlider';
@@ -175,8 +176,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
       );
       const duration = (mtype === 'video' || mtype === 'audio') ? await getMediaDuration(file) : 0;
       try {
-        const user = await base44.auth.me();
-        await base44.entities.Media.create({ image_url: file_uri, user_id: user.id, media_type: mtype, duration });
+        await registerMedia({ image_url: file_uri, media_type: mtype, duration });
       } catch (e) {
         console.error('Media library save failed', e);
       }
@@ -248,8 +248,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
         'Upload timed out'
       );
       try {
-        const user = await base44.auth.me();
-        await base44.entities.Media.create({ image_url: file_uri, user_id: user.id, media_type: 'image' });
+        await registerMedia({ image_url: file_uri, media_type: 'image' });
       } catch (e) {
         console.error('Media library save failed', e);
       }
@@ -275,8 +274,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
     setRecording(false);
     setUploading(true);
     try {
-      const user = await base44.auth.me();
-      await base44.entities.Media.create({ image_url: file_uri, user_id: user.id, media_type: 'audio', duration });
+      await registerMedia({ image_url: file_uri, media_type: 'audio', duration });
     } catch (e) {
       console.error('Media library save failed', e);
     }

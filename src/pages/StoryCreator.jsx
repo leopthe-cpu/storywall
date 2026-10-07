@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2, PerspectiveView } from '@/components/icons';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
 import { base44 } from '@/api/base44Client';
+import { registerMedia } from '@/lib/mediaLibrary';
 import CanvasArea, { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/components/creator/CanvasArea';
 import BottomIsland, { ISLAND_CHROME } from '@/components/creator/BottomIsland';
 import PostFlowSheet from '@/components/creator/PostFlowSheet';
@@ -272,10 +273,7 @@ export default function StoryCreator() {
         } : c));
 
         try {
-          const user = await base44.auth.me();
-          if (user?.id) {
-            await base44.entities.Media.create({ image_url: imageUrl, user_id: user.id, media_type: 'image' });
-          }
+          await registerMedia({ image_url: imageUrl, media_type: 'image' });
         } catch {}
       } else {
         setCards(prev => prev.map((c, i) => i === cardIndex ? { ...c, imageGenerationFailed: true, imageRetrying: false } : c));
@@ -951,9 +949,8 @@ export default function StoryCreator() {
             if ((el.type === 'image' || el.type === 'video') && el.image_url && !seen.has(el.image_url)) {
               seen.add(el.image_url);
               try {
-                await base44.entities.Media.create({
+                await registerMedia({
                   image_url: el.image_url,
-                  user_id: user.id,
                   media_type: el.type === 'video' ? 'video' : 'image',
                 });
               } catch (e) {
