@@ -5,6 +5,7 @@ import { useDraftMedia } from './DraftMediaContext';
 import { resolveColor } from '@/lib/colorTokens';
 import { getTextEffectStyle, hasTextWarp } from '@/lib/textEffects';
 import { getTextBoxLayout } from '@/lib/textLayout';
+import { getImageDisplayDims } from '@/lib/imageLayout';
 import WarpedText from './WarpedText';
 
 // Replicates buildOverlayStyle from DraggableElement (non-interactive thumbnail version)
@@ -57,7 +58,6 @@ export default function CardThumb({ card, displaySize = 64, autoplay = false, to
         
         {elements.map((el) => {
           if (isImageLike(el.type)) {
-            const cropRatio = el.crop_ratio || 'fill';
             const zoom = el.zoom ?? 100;
             const focalX = el.focalX ?? 50;
             const focalY = el.focalY ?? 50;
@@ -68,17 +68,7 @@ export default function CardThumb({ card, displaySize = 64, autoplay = false, to
             const isVideo = el.type === 'video';
 
             // Non-fill — outer visible area + inner media translated for crop.
-            const hasNewModel = el.displayWidth != null;
-            let displayWidth, displayHeight;
-            if (hasNewModel) {
-              displayWidth = el.displayWidth;
-              displayHeight = el.displayHeight ?? displayWidth;
-            } else {
-              displayWidth = (el.width ?? 80) / 100 * refSize;
-              const ratioParts = cropRatio !== 'original' && cropRatio !== 'fill' ? cropRatio.split('/').map(Number) : null;
-              const aspect = ratioParts && ratioParts[0] && ratioParts[1] ? ratioParts[0] / ratioParts[1] : null;
-              displayHeight = el.height != null ? el.height / 100 * refSize : aspect ? displayWidth / aspect : displayWidth;
-            }
+            const { displayWidth, displayHeight } = getImageDisplayDims(el, refSize);
             const clipTop = el.clipTop || 0,clipBottom = el.clipBottom || 0;
             const clipLeft = el.clipLeft || 0,clipRight = el.clipRight || 0;
             const visibleW = Math.max(20, displayWidth - clipLeft - clipRight);

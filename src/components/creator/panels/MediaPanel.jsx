@@ -11,6 +11,7 @@ import TrimPanel from '@/components/creator/panels/TrimPanel';
 import SizeStepper from '@/components/creator/SizeStepper';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 import { REFERENCE_CARD_SIZE } from '@/components/creator/CanvasArea';
+import { getImageDisplayDims } from '@/lib/imageLayout';
 import { ENABLE_VIDEO_AND_AUDIO } from '@/lib/featureFlags';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { optimizeImageFile, withTimeout } from '@/lib/imageOptimize';
@@ -451,6 +452,21 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
         if (a >= 1) { updates.displayWidth = 192; updates.displayHeight = Math.round(192 / a); }
         else { updates.displayWidth = Math.round(192 * a); updates.displayHeight = 192; }
       } else { updates.displayWidth = 192; updates.displayHeight = 192; }
+    }
+    // Keep the picture where it was: the new (uncropped) box is centred on
+    // the centre of the box the user currently sees. x/y are the visible
+    // box's top-left in % of the card. Without this, changing the ratio
+    // after "Fit to card" (x/y negative, box bigger than the card) left the
+    // smaller box stuck near the top-left corner, partly off the card.
+    if (selectedElement && updates.displayWidth != null) {
+      const ref = REFERENCE_CARD_SIZE;
+      const { displayWidth: oldW, displayHeight: oldH } = getImageDisplayDims(selectedElement, ref);
+      const visW = Math.max(20, oldW - (selectedElement.clipLeft || 0) - (selectedElement.clipRight || 0));
+      const visH = Math.max(20, oldH - (selectedElement.clipTop || 0) - (selectedElement.clipBottom || 0));
+      const cx = (selectedElement.x ?? 0) + (visW / ref * 100) / 2;
+      const cy = (selectedElement.y ?? 0) + (visH / ref * 100) / 2;
+      updates.x = Math.round((cx - (updates.displayWidth / ref * 100) / 2) * 100) / 100;
+      updates.y = Math.round((cy - (updates.displayHeight / ref * 100) / 2) * 100) / 100;
     }
     onUpdateElement(updates);
   };

@@ -6,6 +6,7 @@ import { useDraftMedia } from './DraftMediaContext';
 import { resolveColor } from '@/lib/colorTokens';
 import { getTextEffectStyle, hasTextWarp } from '@/lib/textEffects';
 import { getTextBoxLayout } from '@/lib/textLayout';
+import { getImageDisplayDims } from '@/lib/imageLayout';
 import WarpedText from './WarpedText';
 import ImageSkeleton from '@/components/ui/ImageSkeleton';
 import PixelSpinner from '@/components/ui/PixelSpinner';
@@ -307,18 +308,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
 
   // Resolve display dimensions in reference px (with migration fallback for
   // older elements that only stored width/height as percentages).
-  const getDisplayDims = () => {
-    const refSize = REFERENCE_CARD_SIZE;
-    const cropRatio = element.crop_ratio || 'fill';
-    if (element.displayWidth != null) {
-      return { displayWidth: element.displayWidth, displayHeight: element.displayHeight ?? element.displayWidth };
-    }
-    const dw = ((element.width ?? 80) / 100) * refSize;
-    const ratioParts = (cropRatio !== 'original' && cropRatio !== 'fill') ? cropRatio.split('/').map(Number) : null;
-    const aspect = ratioParts && ratioParts[0] && ratioParts[1] ? ratioParts[0] / ratioParts[1] : null;
-    const dh = element.height != null ? ((element.height) / 100) * refSize : (aspect ? dw / aspect : dw);
-    return { displayWidth: dw, displayHeight: dh };
-  };
+  const getDisplayDims = () => getImageDisplayDims(element, REFERENCE_CARD_SIZE);
 
   // ── Move (drag body) — changes position (x/y) ──
   const handlePointerDown = (e) => {
