@@ -60,6 +60,22 @@ async function findUnfetchableImages(node) {
   return results.filter(Boolean);
 }
 
+// document.fonts.ready only covers fonts the browser has already decided to
+// fetch. Ask for every family/weight/style the cards use explicitly, so a
+// font that appears only on a later card is loaded before capture.
+async function loadCardFonts(cards) {
+  if (!document.fonts?.load) return;
+  const specs = new Set();
+  cards.forEach((card) => (card.elements || []).forEach((el) => {
+    // Not filtered by type: CardThumb renders anything that isn't media as
+    // text, and an extra request for an already-loaded font costs nothing.
+    if (!el) return;
+    const family = (el.font_family || 'Inter').replace(/["']/g, '');
+    specs.add(`${el.font_italic ? 'italic ' : ''}${el.font_weight || '400'} 16px "${family}"`);
+  }));
+  await Promise.all([...specs].map((spec) => document.fonts.load(spec).catch(() => null)));
+}
+
 // autoStart: begin exporting on mount (used by the profile story menu, where
 // the menu tap itself is the intent). onDone: called after files are saved.
 export default function DownloadCardsButton({ cards, tokens, title, className = '', autoStart = false, onDone }) {
@@ -89,6 +105,7 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
         const layer = layerRef.current;
         if (!layer) throw new Error('Export layer did not mount');
 
+        await loadCardFonts(exportable);
         await document.fonts?.ready;
         await waitForImages(layer);
 
@@ -117,8 +134,11 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
           includeQueryParams: true,
         };
         // Embed fonts once and reuse for every card (otherwise each card
-        // re-downloads every font file).
-        options.fontEmbedCSS = await getFontEmbedCSS(nodes[0], options);
+        // re-downloads every font file). Collect them from the whole layer:
+        // html-to-image only embeds the families used inside the node it's
+        // given, and it walks that node's subtree — passing the first card
+        // dropped any font used only on later cards.
+        options.fontEmbedCSS = await getFontEmbedCSS(layer, options);
 
         const blobs = [];
         for (let i = 0; i < nodes.length; i++) {
