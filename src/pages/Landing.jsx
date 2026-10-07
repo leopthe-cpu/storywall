@@ -165,17 +165,10 @@ export default function Landing() {
         {/* Desktop: copy column left, card stack right (unchanged).
             Mobile: the copy column uses `contents`, so each piece becomes its
             own grid row and can be ordered around the stack:
-            headline → cards → subcopy → platform pill → claim field. */}
+            headline → cards → subcopy → claim field. */}
         <main className="grid grid-cols-1 md:grid-cols-[1.05fr_0.95fr] gap-0 md:gap-16 items-center min-h-[calc(100vh-90px)] py-10 pb-16">
           {/* Copy */}
           <div className="contents md:block">
-            <span className="order-4 md:order-none w-fit inline-flex items-center gap-2 font-mono text-xs tracking-[0.14em] uppercase text-[#6B6964] mb-6 bg-[#FBFAF8] border border-[#E6E0D2] rounded-full px-3 py-1.5">
-              <span
-                className="w-[7px] h-[7px] rounded-full bg-[#3FA34D]"
-                style={{ animation: 'pulse-dot 2.4s ease-in-out infinite' }}
-              />
-              A social career platform
-            </span>
             {/* The invisible finished headline holds the final height; the
                 typed text draws on top of it at the same width, so it wraps
                 identically and the layout never shifts while typing. */}
@@ -193,11 +186,13 @@ export default function Landing() {
                 {cursor}
               </span>
             </h1>
-            <p className="order-3 md:order-none text-[clamp(1.02rem,1.5vw,1.18rem)] text-[#6B6964] max-w-[38ch] mb-6 md:mb-[34px]">
-              The stories behind the bullet points.<br />
+            {/* Mobile: one paragraph across the full width. Desktop keeps the
+                two-line break inside the narrower column. */}
+            <p className="order-3 md:order-none text-[clamp(1.02rem,1.5vw,1.18rem)] text-[#6B6964] md:max-w-[38ch] mb-6 md:mb-[34px]">
+              The stories behind the bullet points.{' '}<br className="hidden md:inline" />
               All your projects, one simple link.
             </p>
-            <div className="order-5 md:order-none">
+            <div className="order-4 md:order-none">
               <UsernameClaimField onClaim={handleClaim} autoFocus />
               <p className="font-mono text-xs text-[#6B6964] mt-3.5">
                 Best ones are still available!

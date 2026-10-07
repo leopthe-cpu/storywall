@@ -145,8 +145,8 @@ export default function SwipeableCards() {
   }, [reduceMotion, n]);
 
   return (
-    // pb reserves room for up to two stacked tags under the stack.
-    <div ref={rootRef} className="relative flex justify-center items-center min-h-[360px] pb-[72px]">
+    // pb reserves room for the part of two stacked tags that hangs below the stack.
+    <div ref={rootRef} className="relative flex justify-center items-center min-h-[360px] pb-[44px]">
       {/* Square cards to match the exported 1:1 story cards. */}
       <div className="relative w-[300px] h-[300px]">
         {CARDS.map((card, i) => {
@@ -209,7 +209,7 @@ export default function SwipeableCards() {
             </article>
           );
         })}
-        {/* Front card's skill tags — under the stack's right side, stacked with
+        {/* Front card's skill tags — overlapping the stack's bottom-right edge, stacked with
             left edges aligned. One group per card, crossfading with the
             swap: the old front's tags fade out fast, the new ones fade in as
             the card lands. They don't move with the cards. */}
@@ -222,9 +222,10 @@ export default function SwipeableCards() {
             <div
               key={`tags-${i}`}
               aria-hidden={!isFront}
-              // Just below the card's bottom-right edge, not over it: card
-              // text often sits in that corner and tags on top hid it.
-              className="absolute top-[calc(100%+14px)] -right-1.5 flex flex-col items-start gap-1.5 pointer-events-none"
+              // Overlapping the card's bottom edge just slightly: the first
+              // tag sits half on the card, so it reads as attached to it
+              // without hiding much of the card's own text.
+              className="absolute top-[calc(100%-14px)] -right-1.5 flex flex-col items-start gap-1.5 pointer-events-none"
               style={{ opacity: isFront ? 1 : 0, transition: fade, zIndex: n + 10 }}
             >
               {card.tags.map((t) => <Tag key={t} label={t} interactive={false} />)}
