@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { Plus, Share2, Pencil, SelectFace3d } from '@/components/icons';
+import { Plus, Share2, Pencil, SelectFace3d, X } from '@/components/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import StoryCard from '@/components/profile/StoryCard';
 import StoryKebab from '@/components/profile/StoryKebab';
@@ -14,6 +14,7 @@ import ProfileEmptyState from '@/components/profile/ProfileEmptyState';
 import ShareUrlModal from '@/components/profile/ShareUrlModal';
 import CopyToast from '@/components/profile/CopyToast';
 import WriteGenerateToggle from '@/components/creator/WriteGenerateToggle';
+import DownloadCardsButton from '@/components/creator/DownloadCardsButton';
 import { aiCarouselBuilderEnabled } from '@/lib/featureFlags';
 import PrivateProfileState from '@/components/profile/PrivateProfileState';
 import NotFoundProfileState from '@/components/profile/NotFoundProfileState';
@@ -46,6 +47,8 @@ export default function PublicProfile() {
   const [profile, setProfile] = useState(null);
   const [reorderMode, setReorderMode] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
+  // Story whose cards are being exported as images (admin-only).
+  const [downloadPost, setDownloadPost] = useState(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
   const [authUserId, setAuthUserId] = useState(null);
@@ -262,6 +265,7 @@ export default function PublicProfile() {
       onEdit={() => handleEditStory(post)}
       onDelete={() => setPendingDelete(post)}
       onArchive={() => handleArchiveStory(post)}
+      onDownload={isAdmin ? () => setDownloadPost(post) : undefined}
     />
   ) : null;
 
@@ -473,6 +477,29 @@ export default function PublicProfile() {
           onSave={saveReorder}
           onCancel={() => setReorderMode(false)}
         />
+      )}
+
+      {/* CARD IMAGE EXPORT (admin-only) — starts on open, closes itself
+          once the files are saved; stays open to show any error. */}
+      {downloadPost && (
+        <div className="fixed inset-x-0 bottom-0 z-50 p-4 flex justify-center pointer-events-none">
+          <div className="pointer-events-auto w-full max-w-sm bg-white rounded-2xl shadow-xl border border-gray-100 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-gray-900 truncate">{downloadPost.title || 'Story'} — card images</p>
+              <button onClick={() => setDownloadPost(null)} className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100" title="Close">
+                <X size={16} />
+              </button>
+            </div>
+            <DownloadCardsButton
+              key={downloadPost.id}
+              cards={downloadPost.cards}
+              tokens={downloadPost.color_tokens}
+              title={downloadPost.title}
+              autoStart
+              onDone={() => setDownloadPost(null)}
+            />
+          </div>
+        </div>
       )}
 
       {/* DELETE STORY CONFIRMATION */}

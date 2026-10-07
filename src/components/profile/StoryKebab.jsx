@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { MoreHorizontal, Pencil, Trash2, Archive } from '@/components/icons';
+import { MoreHorizontal, Pencil, Trash2, Archive, Download } from '@/components/icons';
 
 // Kebab menu for a story entry on the profile. Owner-only; renders nothing for visitors.
-export default function StoryKebab({ onEdit, onDelete, onArchive }) {
+// onDownload is passed only for admins (card image export, planned premium).
+export default function StoryKebab({ onEdit, onDelete, onArchive, onDownload }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -42,6 +43,7 @@ export default function StoryKebab({ onEdit, onDelete, onArchive }) {
         <div className="absolute right-0 bottom-full mb-1 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-30 w-44">
           {item(<Pencil size={15} />, 'Edit', onEdit)}
           {onArchive && item(<Archive size={15} />, 'Archive', onArchive)}
+          {onDownload && item(<Download size={15} />, 'Download images', onDownload)}
           {item(<Trash2 size={15} />, 'Delete', onDelete, true)}
         </div>
       )}

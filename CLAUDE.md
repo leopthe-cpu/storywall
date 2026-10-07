@@ -37,7 +37,7 @@ Core pieces:
 
 ## Card image export (admin-only, planned premium)
 
-- "Download all cards as images" button under the publish-flow preview (`PostFlowSheet.jsx`), shown only when `user.role === 'admin'`.
+- "Download all cards as images" button under the publish-flow preview (`PostFlowSheet.jsx`), and "Download images" in a published story's ⋯ menu on the profile (`StoryKebab` → sheet in `PublicProfile.jsx`, auto-starts). Both shown only when `user.role === 'admin'`.
 - `src/components/creator/DownloadCardsButton.jsx` re-renders each card through `CardThumb` at 1080×1080 in a hidden layer and rasterises it with `html-to-image`; `src/lib/cardExport.js` saves a single PNG, a zip (desktop) or the share sheet (phones). Both libraries load lazily on click.
 - It refuses (with a message) rather than exporting broken cards when an image hasn't loaded or its host blocks CORS. Not captured: the "Blur" photo overlay (backdrop-filter); videos export their current frame.
 - When it becomes a premium feature, gate it with `PremiumGrant` like Generate — it's client-only, so there's no server check to add.
@@ -58,6 +58,7 @@ Base44 silently drops any card/element field that is NOT declared in `base44/ent
 
   Shared helpers exist precisely for this (`src/lib/textEffects.js`, `src/components/creator/WarpedText.jsx`). Put logic in a shared helper, never copy it per file.
 - **Images:** `displayWidth/displayHeight` = full image box; `clipTop/Bottom/Left/Right` = crop insets (ref px) → visible box. `zoom` = extra scale. `focalX/focalY` = object-position (legacy pan; no UI gesture anymore).
+- **Text position/width:** stored `x`/`displayWidth` are unclamped; the visible box is clamped into the safe zone by `getTextBoxLayout()` (`src/lib/textLayout.js`). Every renderer must use it — CardThumb once used raw values and text jumped on publish (fixed Oct 2026).
 - **Text:** `font_size_locked` (true once a human created/edited the box — never auto-resize), `font_size_estimated` (one-time AI auto-size already ran). `CanvasArea.jsx` has a "coordinated shrink" that only runs while every text box on a card is still unlocked (fresh AI output).
 
 ## Recent changes (Sept 2026)

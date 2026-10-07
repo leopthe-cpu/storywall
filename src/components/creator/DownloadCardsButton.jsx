@@ -60,8 +60,10 @@ async function findUnfetchableImages(node) {
   return results.filter(Boolean);
 }
 
-export default function DownloadCardsButton({ cards, tokens, title, className = '' }) {
-  const [status, setStatus] = useState('idle'); // idle | rendering | error
+// autoStart: begin exporting on mount (used by the profile story menu, where
+// the menu tap itself is the intent). onDone: called after files are saved.
+export default function DownloadCardsButton({ cards, tokens, title, className = '', autoStart = false, onDone }) {
+  const [status, setStatus] = useState(autoStart ? 'rendering' : 'idle'); // idle | rendering | error
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
   const layerRef = useRef(null);
@@ -70,6 +72,8 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
   // restart (and strand) the running export.
   const titleRef = useRef(title);
   titleRef.current = title;
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
   const exportable = (cards || []).filter(Boolean);
 
@@ -128,6 +132,7 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
         setProgress(nodes.length);
         await saveCardImages(blobs, titleRef.current);
         setStatus('idle');
+        onDoneRef.current?.();
       } catch (e) {
         console.error('[DownloadCardsButton] export failed:', e);
         if (!cancelled) {
@@ -141,7 +146,9 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
       }
     })();
 
-    return () => { cancelled = true; };
+    // Release the guard too, so a remount (e.g. React dev double-mount)
+    // starts a fresh run; the cancelled one stops before saving anything.
+    return () => { cancelled = true; runRef.current = false; };
   }, [status]);
 
   if (!exportable.length) return null;
