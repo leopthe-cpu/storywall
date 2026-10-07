@@ -102,6 +102,15 @@ export default function Landing() {
     const markPart = typed.slice(pre.length);
     return pre.replace('\n', '<br/>') + `<span class="landing-mark${markLit ? ' lit' : ''}">${markPart}</span>`;
   };
+  // The finished headline, used invisibly to reserve its final height so
+  // nothing below it (the card stack on mobile) moves while it types.
+  const finalHeadline = pre.replace('\n', '<br/>') + `<span class="landing-mark">${mark}</span>`;
+  const cursor = (
+    <span
+      className="inline-block w-[0.07em] h-[0.92em] bg-[#262624] ml-[0.06em]"
+      style={{ animation: 'blink-cursor 1s step-end infinite', transform: 'translateY(0.1em)' }}
+    />
+  );
 
   return (
     <div
@@ -153,38 +162,51 @@ export default function Landing() {
         </header>
 
         {/* Hero */}
-        <main className="grid grid-cols-1 md:grid-cols-[1.05fr_0.95fr] gap-4 md:gap-16 items-center min-h-[calc(100vh-90px)] py-10 pb-16">
+        {/* Desktop: copy column left, card stack right (unchanged).
+            Mobile: the copy column uses `contents`, so each piece becomes its
+            own grid row and can be ordered around the stack:
+            headline → cards → subcopy → platform pill → claim field. */}
+        <main className="grid grid-cols-1 md:grid-cols-[1.05fr_0.95fr] gap-0 md:gap-16 items-center min-h-[calc(100vh-90px)] py-10 pb-16">
           {/* Copy */}
-          <div>
-            <span className="inline-flex items-center gap-2 font-mono text-xs tracking-[0.14em] uppercase text-[#6B6964] mb-6 bg-[#FBFAF8] border border-[#E6E0D2] rounded-full px-3 py-1.5">
+          <div className="contents md:block">
+            <span className="order-4 md:order-none w-fit inline-flex items-center gap-2 font-mono text-xs tracking-[0.14em] uppercase text-[#6B6964] mb-6 bg-[#FBFAF8] border border-[#E6E0D2] rounded-full px-3 py-1.5">
               <span
                 className="w-[7px] h-[7px] rounded-full bg-[#3FA34D]"
                 style={{ animation: 'pulse-dot 2.4s ease-in-out infinite' }}
               />
               A social career platform
             </span>
+            {/* The invisible finished headline holds the final height; the
+                typed text draws on top of it at the same width, so it wraps
+                identically and the layout never shifts while typing. */}
             <h1
-              className="font-display font-medium leading-[1.04] tracking-[-0.01em] mb-6"
+              className="order-1 md:order-none relative font-display font-medium leading-[1.04] tracking-[-0.01em] mb-6"
               style={{ fontSize: 'clamp(2.6rem, 6vw, 4.75rem)' }}
+              aria-label={full.replace('\n', ' ')}
             >
-              <span dangerouslySetInnerHTML={{ __html: renderTyped() }} />
-              <span
-                className="inline-block w-[0.07em] h-[0.92em] bg-[#262624] ml-[0.06em]"
-                style={{ animation: 'blink-cursor 1s step-end infinite', transform: 'translateY(0.1em)' }}
-              />
+              <span aria-hidden="true" className="invisible block">
+                <span dangerouslySetInnerHTML={{ __html: finalHeadline }} />
+                {cursor}
+              </span>
+              <span aria-hidden="true" className="absolute inset-x-0 top-0">
+                <span dangerouslySetInnerHTML={{ __html: renderTyped() }} />
+                {cursor}
+              </span>
             </h1>
-            <p className="text-[clamp(1.02rem,1.5vw,1.18rem)] text-[#6B6964] max-w-[38ch] mb-[34px]">
+            <p className="order-3 md:order-none text-[clamp(1.02rem,1.5vw,1.18rem)] text-[#6B6964] max-w-[38ch] mb-6 md:mb-[34px]">
               The stories behind the bullet points.<br />
               All your projects, one simple link.
             </p>
-            <UsernameClaimField onClaim={handleClaim} autoFocus />
-            <p className="font-mono text-xs text-[#6B6964] mt-3.5">
-              Best ones are still available!
-            </p>
+            <div className="order-5 md:order-none">
+              <UsernameClaimField onClaim={handleClaim} autoFocus />
+              <p className="font-mono text-xs text-[#6B6964] mt-3.5">
+                Best ones are still available!
+              </p>
+            </div>
           </div>
 
           {/* Card stack */}
-          <div className="order-first md:order-last">
+          <div className="order-2 md:order-last">
             <SwipeableCards />
           </div>
         </main>
