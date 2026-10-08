@@ -58,6 +58,15 @@ export default function PublicProfile() {
   const [loading, setLoading] = useState(true);
   const [profileStatus, setProfileStatus] = useState('loading');
   const [showEdit, setShowEdit] = useState(false);
+  // Top bar: invisible over the page at rest, frosted glass once the page
+  // scrolls (see the bar below).
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   const [showMenu, setShowMenu] = useState(false);
   const [profile, setProfile] = useState(null);
   const [reorderMode, setReorderMode] = useState(false);
@@ -337,7 +346,19 @@ export default function PublicProfile() {
           the storywall.io/username label lines up with the profile picture's
           left edge and the buttons with the feed's right edge. Label and
           icons share one near-black ink colour (HEADER_INK). */}
-      <div className="fixed top-0 left-0 right-0 z-30 py-1 bg-[#FAF9F5]/90 backdrop-blur border-b border-[#E6E0D2]">
+      {/* Glass, Apple-style: at the top of the page the bar is fully
+          transparent (it reads as part of the background, grid and all). Once
+          the page scrolls it becomes a translucent tint of the page colour
+          with a strong blur + saturation boost, so the cards' colours glow
+          through it as they pass underneath, plus a hairline edge. */}
+      <div
+        className={`fixed top-0 left-0 right-0 z-30 py-1 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
+          scrolled ? 'bg-[#F4F2EC]/55 border-[#E6E0D2]/70 shadow-[0_1px_12px_rgba(38,38,36,0.06)]' : 'bg-transparent border-transparent'
+        }`}
+        style={scrolled
+          ? { backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)' }
+          : { backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
+      >
         {/* Logo (wide desktop only): centred halfway between the window's
             left edge and the username, i.e. at a quarter of the left margin.
             Hidden below lg, where that margin is too narrow for it. */}
