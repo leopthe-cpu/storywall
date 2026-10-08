@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useReducer } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2, PerspectiveView } from '@/components/icons';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
@@ -57,6 +57,10 @@ const DESKTOP_PANEL_WIDTH = 360;
 const TOP_PROFILE_CENTER = 16 + 16;
 // How far the add-card button reaches past the card's right edge.
 const ADD_CARD_REACH = 46;
+// Desktop card size range (px): largest = Oz's reference layout; smallest ≈
+// the regular mobile card (73% of a 390px phone).
+const DESKTOP_CARD_MAX = 434;
+const DESKTOP_CARD_MIN = 285;
 const CARD_MIN_RATIO = 0.55;
 const CARD_MAX_RATIO = 0.75;
 
@@ -192,6 +196,23 @@ export default function StoryCreator() {
 
   const screenH = typeof window !== 'undefined' ? window.innerHeight : 800;
   const screenW = typeof window !== 'undefined' ? window.innerWidth : 390;
+  // The sizes above are read on every render, but nothing used to re-render
+  // on a window resize — so a desktop card kept the size it had when the
+  // page first drew. Re-render on resize for desktop-width windows and on any
+  // width change (rotation, crossing the breakpoint). A height-only change on
+  // a phone (keyboard opening, URL bar) deliberately doesn't force one, to
+  // keep the mobile card exactly as it has always behaved.
+  const [, forceResizeRender] = useReducer((n) => n + 1, 0);
+  useEffect(() => {
+    let lastW = window.innerWidth;
+    const onResize = () => {
+      const w = window.innerWidth;
+      if (w >= 769 || w !== lastW) forceResizeRender();
+      lastW = w;
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   // Island constraints — no nav row anymore, just chrome
   const islandMinH = ISLAND_CHROME + 40;
@@ -208,11 +229,13 @@ export default function StoryCreator() {
   const isDesktop = screenW >= 769;
 
   const availableForCard = screenH - TOP_BAR_HEIGHT - islandHeight - 16;
-  // Desktop: the card takes ~56% of the window height (Oz's layout on a
-  // 15.6" screen), capped so it never crowds the area right of the panel.
-  // Mobile sizing is untouched.
+  // Desktop: the card takes ~56% of the window height, limited by the width
+  // right of the panel, and shrinks with the window down to about the mobile
+  // card's size. DESKTOP_CARD_MAX is the size in Oz's reference layout (15.6"
+  // laptop, ~1560x780 window): the biggest it should ever get, so it stops
+  // growing on larger screens. Mobile sizing is untouched.
   const cardSize = isDesktop
-    ? clamp(Math.round(Math.min(screenH * 0.56, (screenW - DESKTOP_PANEL_WIDTH) * 0.6)), 260, 760)
+    ? clamp(Math.round(Math.min(screenH * 0.56, (screenW - DESKTOP_PANEL_WIDTH) * 0.6)), DESKTOP_CARD_MIN, DESKTOP_CARD_MAX)
     : clamp(availableForCard, Math.round(screenW * CARD_MIN_RATIO), Math.round(screenW * CARD_MAX_RATIO));
   // Desktop optical balance: centre the card + add-card button as one group
   // (the button hangs ADD_CARD_REACH px off the card's right side), and sit
