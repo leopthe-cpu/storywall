@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { X, ChevronLeft, RotateCw, Plus } from '@/components/icons';
+import { X, RotateCw, Plus } from '@/components/icons';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
 import CardCarousel from '@/components/creator/CardCarousel';
 import SkillsLoadingScreen from '@/components/creator/SkillsLoadingScreen';
+import GridBackdrop from '@/components/ui/GridBackdrop';
+import BackButton from '@/components/ui/BackButton';
 import DownloadCardsButton from '@/components/creator/DownloadCardsButton';
 import { useAuth } from '@/lib/AuthContext';
 
@@ -323,17 +325,17 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
       transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-      className="fixed inset-0 z-50 flex flex-col bg-[#F7F7F5]">
+      className="fixed inset-0 z-50 flex flex-col">
+      {/* Same paper grid as the profile, behind everything. */}
+      <GridBackdrop />
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-900 transition-colors">
-          <ChevronLeft size={22} />
-        </button>
+      <div className="relative flex items-center gap-3 px-5 py-4 border-b border-[#E6E0D2]">
+        <BackButton onClick={onClose} />
         <h2 className="font-semibold text-gray-900 text-base">{editingPostId ? 'Update story' : 'Publish story'}</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-6 px-8">
+      <div className="relative flex-1 overflow-y-auto space-y-6 px-8">
         {/* 1. Story Title */}
         <div ref={titleRef}>
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block my-4">STORY TITLE</label>
@@ -455,7 +457,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
       </div>
 
       {/* 4. Publish button */}
-      <div className="px-5 pb-8 pt-4 border-t border-gray-100">
+      <div className="relative px-5 pb-8 pt-4 border-t border-[#E6E0D2]">
         <button
           onClick={handleButtonClick}
           disabled={publishing}
