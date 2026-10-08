@@ -55,6 +55,8 @@ const TOP_BAR_HEIGHT = 56;
 const DESKTOP_PANEL_WIDTH = 360;
 // Centre of the top bar's profile button: left-4 (16px) + half its 32px.
 const TOP_PROFILE_CENTER = 16 + 16;
+// How far the add-card button reaches past the card's right edge.
+const ADD_CARD_REACH = 46;
 const CARD_MIN_RATIO = 0.55;
 const CARD_MAX_RATIO = 0.75;
 
@@ -206,11 +208,19 @@ export default function StoryCreator() {
   const isDesktop = screenW >= 769;
 
   const availableForCard = screenH - TOP_BAR_HEIGHT - islandHeight - 16;
-  // Desktop card viewer is rendered at half its previously-computed size —
-  // it was dwarfing the rest of the editor UI. Mobile sizing is untouched.
+  // Desktop: the card takes ~56% of the window height (Oz's layout on a
+  // 15.6" screen), capped so it never crowds the area right of the panel.
+  // Mobile sizing is untouched.
   const cardSize = isDesktop
-    ? Math.max(200, Math.min(screenW - 360, screenH - TOP_BAR_HEIGHT) - 64) * 0.5
+    ? clamp(Math.round(Math.min(screenH * 0.56, (screenW - DESKTOP_PANEL_WIDTH) * 0.6)), 260, 760)
     : clamp(availableForCard, Math.round(screenW * CARD_MIN_RATIO), Math.round(screenW * CARD_MAX_RATIO));
+  // Desktop optical balance: centre the card + add-card button as one group
+  // (the button hangs ADD_CARD_REACH px off the card's right side), and sit
+  // it a little above the middle of the WINDOW rather than of the area under
+  // the top bar.
+  const desktopCardShift = isDesktop
+    ? `translate(${-ADD_CARD_REACH / 2}px, ${-Math.round(TOP_BAR_HEIGHT / 2 + screenH * 0.02)}px)`
+    : undefined;
 
   const currentCard = cards[currentCardIndex];
 
@@ -1234,7 +1244,7 @@ export default function StoryCreator() {
       {/* Card canvas area */}
       <div className="flex items-center justify-center flex-shrink-0 order-1 md:order-2 md:flex-1" style={{ flex: 1, minHeight: 0 }}>
         {!showPostFlow &&
-        <div className="relative" style={{ width: cardSize, height: cardSize }}>
+        <div className="relative" style={{ width: cardSize, height: cardSize, transform: desktopCardShift }}>
           <CanvasArea
             card={currentCard}
             cardSize={cardSize}
@@ -1260,7 +1270,7 @@ export default function StoryCreator() {
             onClick={addCard}
             title="Add card"
             className="absolute top-1/2 -translate-y-1/2 w-8 h-8 rounded-[6px] border border-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 text-emerald-400 flex items-center justify-center transition-colors active:scale-95 mr-2"
-            style={{ right: -46 }}>
+            style={{ right: -ADD_CARD_REACH }}>
             
             <Plus size={16} />
           </button>
