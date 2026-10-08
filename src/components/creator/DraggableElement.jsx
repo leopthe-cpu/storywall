@@ -1083,7 +1083,9 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
         ref={elRef}
         data-canvas-el
         data-align-id={coversCard ? undefined : element.id}
-        className={`absolute cursor-move ${isSelected ? 'ring-2 ring-blue-400 rounded' : (isHovered ? 'ring-1 ring-blue-400/40 rounded' : '')}`}
+        // Pictures use the builder's green for selection (outline, corner
+        // circles and crop pills); text keeps its own blue.
+        className={`absolute cursor-move ${isSelected ? 'ring-2 ring-emerald-400 rounded' : (isHovered ? 'ring-1 ring-emerald-400/40 rounded' : '')}`}
         style={{
           left: `${element.x ?? 0}%`,
           top: `${element.y ?? 0}%`,
@@ -1130,7 +1132,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
                 className="absolute flex items-center justify-center"
                 style={{ width: 28, height: 28, cursor: h.cursor, zIndex: 10, touchAction: 'none', ...handlePos[h.id] }}
               >
-                <div className="bg-white border-2 border-blue-500 rounded-full pointer-events-none" style={{ width: 12, height: 12 }} />
+                <div className="bg-white border-2 border-emerald-400 rounded-full pointer-events-none" style={{ width: 12, height: 12 }} />
               </div>
             ))}
             {EDGE_HANDLES.map(h => {
@@ -1150,7 +1152,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
                   }}
                 >
                   <div
-                    className="bg-white border-2 border-emerald-500 rounded-full pointer-events-none"
+                    className="bg-white border-2 border-emerald-400 rounded-full pointer-events-none"
                     style={{ width: vertical ? 22 : 6, height: vertical ? 6 : 22 }}
                   />
                 </div>
