@@ -563,7 +563,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
             {isImageLikeSel && !reorderMode && (
               <label
                 htmlFor="media-replace"
-                className={`flex items-center justify-center gap-2 w-full mb-3 py-2.5 rounded-xl bg-white/10 text-white/80 text-sm font-medium hover:bg-white/15 transition-colors cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
+                className={`flex items-center justify-center gap-2 w-full mb-3 py-2.5 rounded bg-white/10 text-white/80 text-sm font-medium hover:bg-white/15 transition-colors cursor-pointer ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
               >
                 <RefreshCw size={14} />
                 Replace image
@@ -712,7 +712,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
               <div className="flex flex-wrap gap-1.5 items-center">
                 {CROP_OPTIONS.map(opt => (
                   <button key={opt.value} onClick={() => applyCropRatio(opt.value)}
-                    className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                    className={`px-3 py-1.5 text-xs rounded transition-colors ${
                       selectedRatio === opt.value ? `${ACTIVE_BTN} font-medium` : IDLE_BTN
                     }`}>
                     {opt.label}
@@ -737,7 +737,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                 <label className="text-white/30 text-[9px] uppercase tracking-wider mb-1 block">Rotate</label>
                 <button
                   onClick={() => onUpdateElement({ rotation: ((selectedElement?.rotation || 0) + 90) % 360 })}
-                  className="w-8 h-8 rounded-lg bg-white/10 text-white/60 hover:bg-white/15 transition-colors flex items-center justify-center"
+                  className="w-8 h-8 rounded bg-white/10 text-white/60 hover:bg-white/15 transition-colors flex items-center justify-center"
                   title="Rotate 90°"
                 >
                   <RotateCw size={16} />
@@ -748,7 +748,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                 <div className="flex gap-1">
                   <button
                     onClick={() => onUpdateElement({ flipH: !selectedElement?.flipH })}
-                    className={`w-8 h-8 rounded-lg transition-colors flex items-center justify-center ${
+                    className={`w-8 h-8 rounded transition-colors flex items-center justify-center ${
                       selectedElement?.flipH ? ACTIVE_BTN : IDLE_BTN
                     }`}
                     title="Flip horizontal"
@@ -757,7 +757,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                   </button>
                   <button
                     onClick={() => onUpdateElement({ flipV: !selectedElement?.flipV })}
-                    className={`w-8 h-8 rounded-lg transition-colors flex items-center justify-center ${
+                    className={`w-8 h-8 rounded transition-colors flex items-center justify-center ${
                       selectedElement?.flipV ? ACTIVE_BTN : IDLE_BTN
                     }`}
                     title="Flip vertical"
@@ -770,7 +770,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                 <label className="text-white/30 text-[9px] uppercase tracking-wider mb-1 block">Reset changes</label>
                 <button
                   onClick={handleReset}
-                  className="w-8 h-8 rounded-lg bg-white/10 text-white/60 hover:bg-white/15 transition-colors flex items-center justify-center"
+                  className="w-8 h-8 rounded bg-white/10 text-white/60 hover:bg-white/15 transition-colors flex items-center justify-center"
                   title="Reset all image adjustments"
                 >
                   <Eraser size={16} />
@@ -806,7 +806,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                           onUpdateElement({ overlay_type: t });
                           if (t === 'Color') setShowColorPicker(true);
                         }}
-                        className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${
+                        className={`flex-1 py-1.5 text-xs rounded transition-colors ${
                           overlayType === t ? `${ACTIVE_BTN} font-medium` : IDLE_BTN
                         }`}>
                         {t}
@@ -817,7 +817,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
 
                 {overlayType === 'Color' && (
                   <button onClick={() => setShowColorPicker(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 transition-colors w-fit">
+                    className="flex items-center gap-2 px-3 py-1.5 rounded bg-white/10 hover:bg-white/15 transition-colors w-fit">
                     <div className="w-5 h-5 rounded border border-white/20" style={{ backgroundColor: overlayColor }} />
                     <span className="text-white/60 text-xs font-mono">{overlayColor}</span>
                   </button>
@@ -829,7 +829,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                     <div className="flex gap-1.5">
                       {OVERLAY_POSITIONS.map(p => (
                         <button key={p} onClick={() => onUpdateElement({ overlay_position: p })}
-                          className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${
+                          className={`flex-1 py-1.5 text-xs rounded transition-colors ${
                             overlayPosition === p ? `${ACTIVE_BTN} font-medium` : IDLE_BTN
                           }`}>
                           {p}
@@ -856,11 +856,11 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
         <div className="flex-1 min-h-0 relative">
           <div className={`absolute inset-0 overflow-y-auto overscroll-contain px-4 py-3 flex flex-col gap-2 ${hasSelection ? '' : 'opacity-40 pointer-events-none'}`}>
             <button onClick={() => onUpdateElement({ z_index: Math.min(999, (selectedElement?.z_index ?? 1) + 10) })}
-              className="w-full py-3 bg-white/10 text-white/70 text-sm rounded-xl hover:bg-white/15 transition-colors">
+              className="w-full py-3 bg-white/10 text-white/70 text-sm rounded hover:bg-white/15 transition-colors">
               Bring forward
             </button>
             <button onClick={() => onUpdateElement({ z_index: Math.max(1, (selectedElement?.z_index ?? 1) - 10) })}
-              className="w-full py-3 bg-white/10 text-white/70 text-sm rounded-xl hover:bg-white/15 transition-colors">
+              className="w-full py-3 bg-white/10 text-white/70 text-sm rounded hover:bg-white/15 transition-colors">
               Send backward
             </button>
           </div>

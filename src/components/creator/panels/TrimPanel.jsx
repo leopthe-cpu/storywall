@@ -179,7 +179,7 @@ export default function TrimPanel({ element, onUpdateElement }) {
         <button
           onClick={reset}
           disabled={!hasMedia}
-          className="w-full py-2.5 bg-white/10 text-white/70 text-sm rounded-xl hover:bg-white/15 transition-colors disabled:opacity-40"
+          className="w-full py-2.5 bg-white/10 text-white/70 text-sm rounded hover:bg-white/15 transition-colors disabled:opacity-40"
         >
           Reset trim
         </button>

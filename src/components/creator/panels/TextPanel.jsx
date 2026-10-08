@@ -534,7 +534,7 @@ export default function TextPanel({
                   <button
                     key={fx.key}
                     onClick={() => handleFxPillClick(fx)}
-                    className={`px-2.5 py-1.5 text-xs rounded-lg transition-colors ${pillClass(value !== 0, isOpen)}`}
+                    className={`px-2.5 py-1.5 text-xs rounded transition-colors ${pillClass(value !== 0, isOpen)}`}
                   >
                     {fx.label}: {value}%
                   </button>
@@ -551,7 +551,7 @@ export default function TextPanel({
               <div key={fx.key} className="flex flex-col items-center gap-1.5 py-1">
                 {fx.needsColor && (
                   <button onClick={() => setEffectColorField(fx.colorField)}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/15 transition-colors">
+                    className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/10 hover:bg-white/15 transition-colors">
                     <div className="w-4 h-4 rounded border border-white/20" style={{ backgroundColor: formatEl[fx.colorField] || '#000000' }} />
                     <span className="text-white/60 text-[10px] font-mono">{formatEl[fx.colorField] || '#000000'}</span>
                   </button>
@@ -579,7 +579,7 @@ export default function TextPanel({
                     <button
                       key={w.key}
                       onClick={() => handleWarpPillClick(w)}
-                      className={`px-2.5 py-1.5 text-xs rounded-lg transition-colors ${pillClass(isActive, isOpen)}`}
+                      className={`px-2.5 py-1.5 text-xs rounded transition-colors ${pillClass(isActive, isOpen)}`}
                     >
                       {w.label}: {value}%
                     </button>
