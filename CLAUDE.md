@@ -81,6 +81,7 @@ Base44 silently drops any card/element field that is NOT declared in `base44/ent
 
 - Autosave: 4s debounce, 30s ceiling, plus on tab-hide/unload/back.
 - `persistDraft` snapshots state synchronously before any await; opening a draft saves the old story in the background (with a `storyEpochRef` guard) and shows `DraftLoadingOverlay` (defined inside `StoryCreator.jsx`). Blob (unfinished upload) URLs are never persisted.
+- Applying a template starts a NEW story (Oct 2026 fix): it saves the current one, then detaches from its draft/post id (`draftId`, `editingPostId`, title, tags, epoch bump). It used to keep the old draft id, so the next autosave overwrote the user's draft with the template. If the save fails or is skipped, the template is not applied and a toast says so. Anything that replaces a whole story must do the same.
 
 **Other:** app-wide `PixelSpinner` (8-bit style), center-snap smart guides while dragging, "already signed in" choice screen on sign-up, real logo PNGs in `public/`, skills keyword fast-path.
 

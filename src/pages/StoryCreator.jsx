@@ -17,6 +17,7 @@ import { runGeneratePipeline } from '@/lib/generatePipeline';
 import { migrateToTokens, applyTokenColorChange, findOrCreateToken, resolveColor } from '@/lib/colorTokens';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 import useDocumentTitle from '@/lib/useDocumentTitle';
+import { useToast } from '@/components/ui/use-toast';
 
 // Dimmed overlay + spinner shown over the card while a draft is being opened.
 // Waits ~150ms before appearing so a fast open doesn't flash it.
@@ -121,6 +122,7 @@ export default function StoryCreator() {
   // until the publish flow at the end, so there's nothing to show earlier.
   useDocumentTitle('Builder | storywall');
   const navigate = useNavigate();
+  const { toast } = useToast();
   const location = useLocation();
   const editStory = location.state?.editStory;
 
@@ -929,9 +931,34 @@ export default function StoryCreator() {
   const applyTemplateContent = useCallback(async (template, cardIndex = 0) => {
     await flushActiveTextEdit();
     await cancelAutosave();
-    await persistDraft();
+    // The template replaces the whole story, so the current one must be safely
+    // stored first. If that save failed (offline) or was skipped (a photo still
+    // uploading), keep the story on screen and say so instead of losing it.
+    const savedId = await persistDraft();
+    if (!savedId && hasRealContent(cardsRef.current)) {
+      toast({
+        variant: 'destructive',
+        title: "Couldn't save your story",
+        description: 'Your story is still here. Wait for uploads to finish or check your connection, then try the template again.',
+      });
+      return;
+    }
     const newCards = applyTemplateToStory(template, cardsRef.current, true);
     const { cards: migratedCards, tokens: migratedTokens } = migrateToTokens(newCards, colorTokensRef.current);
+    // A template replaces every card, so it starts a NEW story: detach from
+    // the draft (or published story) that was open. The story being left was
+    // just saved above and stays in Drafts untouched. Without this, the next
+    // autosave wrote the template's cards into the old story's draft row and
+    // the user's work was lost; and Post would have overwritten the published
+    // story being edited. The epoch bump stops a save of the old story that's
+    // still finishing from adopting ids or baselines for this one (same as
+    // opening a draft).
+    storyEpochRef.current += 1;
+    setDraftId(null);
+    draftIdRef.current = null;
+    setEditingPostId(null);
+    setInitialTitle('');
+    setInitialTags([]);
     setCards(migratedCards);
     setColorTokens(migratedTokens);
     setCurrentCardIndex(Math.min(cardIndex, migratedCards.length - 1));
@@ -963,7 +990,7 @@ export default function StoryCreator() {
     } catch (e) {
       console.error('Template media save failed:', e);
     }
-  }, [flushActiveTextEdit, cancelAutosave, persistDraft, resetBaseline]);
+  }, [flushActiveTextEdit, cancelAutosave, persistDraft, resetBaseline, toast]);
 
   const applyDraftContent = useCallback(async (draft, cardIndex = 0) => {
     // Tapping the draft that's already open: just jump to the card. Reloading
