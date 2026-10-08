@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Plus, Share2, Pencil, SelectFace3d, X } from '@/components/icons';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -34,6 +34,14 @@ const DESKTOP_CARD_MAX_WIDTH = 340;
 const DESKTOP_TOP_PAD = 45;
 const DESKTOP_CONTAINER_PAD = 32;
 const DESKTOP_STICKY_TOP = DESKTOP_TOP_PAD + DESKTOP_CONTAINER_PAD;
+// Desktop: picture column + feed form one block centred on the page, so the
+// left and right margins match. Gap between them = gap-10 (40) + the feed's
+// pl-6 (24); the block is exactly column + gap + one story card wide.
+const DESKTOP_COLUMN_GAP = 40 + 24;
+const DESKTOP_BLOCK_WIDTH = DESKTOP_CARD_MAX_WIDTH * 2 + DESKTOP_COLUMN_GAP;
+// Container = block + px-8 on each side; the top bar uses the same width so
+// the username and the buttons line up with the picture and the feed.
+const DESKTOP_CONTAINER_WIDTH = DESKTOP_BLOCK_WIDTH + 2 * 32;
 
 // Near-black used for the top bar's label and icons so they read as one set.
 const HEADER_INK = '#262624';
@@ -324,13 +332,24 @@ export default function PublicProfile() {
       <div className="relative z-10">
 
       {/* ── STICKY TOP BAR ── */}
-      {/* Inner row uses the same max-width + horizontal padding as the page
-          content below (px-4 mobile, max-w-[1200px] px-8 desktop), so the
-          storywall.io/username label lines up with the profile picture's left
-          edge instead of hugging the window edge. Label and icons share one
-          near-black ink colour (HEADER_INK). */}
+      {/* Inner row uses the same width + horizontal padding as the page
+          content below (px-4 mobile, DESKTOP_CONTAINER_WIDTH px-8 desktop), so
+          the storywall.io/username label lines up with the profile picture's
+          left edge and the buttons with the feed's right edge. Label and
+          icons share one near-black ink colour (HEADER_INK). */}
       <div className="fixed top-0 left-0 right-0 z-30 py-1 bg-[#FAF9F5]/90 backdrop-blur border-b border-[#E6E0D2]">
-        <div className="max-w-[1200px] mx-auto px-4 md:px-8 flex items-center justify-between">
+        {/* Logo (wide desktop only): centred halfway between the window's
+            left edge and the username, i.e. at a quarter of the left margin.
+            Hidden below lg, where that margin is too narrow for it. */}
+        <Link
+          to="/"
+          aria-label="StoryWall home"
+          className="hidden lg:block absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{ left: `calc((100% - ${DESKTOP_BLOCK_WIDTH}px) / 4)` }}
+        >
+          <img src="/logo-slash-ink.png" alt="StoryWall" className="h-[18px] w-auto" />
+        </Link>
+        <div className="mx-auto px-4 md:px-8 flex items-center justify-between" style={{ maxWidth: DESKTOP_CONTAINER_WIDTH }}>
           <span className="text-sm font-mono tracking-tight" style={{ color: HEADER_INK }}>
             storywall.io/{username}
           </span>
@@ -377,7 +396,7 @@ export default function PublicProfile() {
 
       {/* ── DESKTOP LAYOUT (hidden below md) ── */}
       <div className="hidden md:block" style={{ paddingTop: DESKTOP_TOP_PAD }}>
-        <div className="max-w-[1200px] mx-auto px-8 flex gap-10 items-start" style={{ paddingTop: DESKTOP_CONTAINER_PAD, paddingBottom: DESKTOP_CONTAINER_PAD }}>
+        <div className="mx-auto px-8 flex gap-10 items-start" style={{ maxWidth: DESKTOP_CONTAINER_WIDTH, paddingTop: DESKTOP_CONTAINER_PAD, paddingBottom: DESKTOP_CONTAINER_PAD }}>
 
           {/* LEFT COLUMN — sticky. On a short window it scrolls inside
               itself so the bottom of the profile info stays reachable. */}
