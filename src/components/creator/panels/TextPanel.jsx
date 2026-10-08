@@ -526,7 +526,9 @@ export default function TextPanel({
                 be active/compounded at once, but only one slider is ever on
                 screen, so re-tapping the open one is always "erase this
                 effect", never ambiguous with adjusting a different one. */}
-            <div className="flex flex-wrap gap-1.5">
+            {/* Equal-width pills on a 3-column grid (shared with Warp below)
+                so the two groups line up as one tidy grid. */}
+            <div className="grid grid-cols-3 gap-1.5">
               {TEXT_FX_LIST.map(fx => {
                 const value = formatEl[fx.intensityField] || 0;
                 const isOpen = openFxKey === fx.key;
@@ -534,7 +536,7 @@ export default function TextPanel({
                   <button
                     key={fx.key}
                     onClick={() => handleFxPillClick(fx)}
-                    className={`px-2.5 py-1.5 text-xs rounded transition-colors ${pillClass(value !== 0, isOpen)}`}
+                    className={`w-full px-1.5 py-1.5 text-xs text-center whitespace-nowrap rounded transition-colors ${pillClass(value !== 0, isOpen)}`}
                   >
                     {fx.label}: {value}%
                   </button>
@@ -570,7 +572,7 @@ export default function TextPanel({
                 box, compounds with every effect above. */}
             <div>
               <label className="text-white/30 text-[9px] uppercase tracking-wider mb-1 block">Warp</label>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="grid grid-cols-3 gap-1.5">
                 {TEXT_WARP_LIST.map(w => {
                   const isActive = formatEl.text_warp === w.key && (formatEl.text_warp_amount || 0) !== 0;
                   const value = isActive ? formatEl.text_warp_amount : 0;
@@ -579,7 +581,7 @@ export default function TextPanel({
                     <button
                       key={w.key}
                       onClick={() => handleWarpPillClick(w)}
-                      className={`px-2.5 py-1.5 text-xs rounded transition-colors ${pillClass(isActive, isOpen)}`}
+                      className={`w-full px-1.5 py-1.5 text-xs text-center whitespace-nowrap rounded transition-colors ${pillClass(isActive, isOpen)}`}
                     >
                       {w.label}: {value}%
                     </button>
