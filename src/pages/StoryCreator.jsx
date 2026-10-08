@@ -61,6 +61,8 @@ const ADD_CARD_REACH = 46;
 // the regular mobile card (73% of a 390px phone).
 const DESKTOP_CARD_MAX = 434;
 const DESKTOP_CARD_MIN = 285;
+// Same as Tailwind's `md` breakpoint (the layout's md: classes).
+const DESKTOP_BREAKPOINT = 768;
 const CARD_MIN_RATIO = 0.55;
 const CARD_MAX_RATIO = 0.75;
 
@@ -207,7 +209,7 @@ export default function StoryCreator() {
     let lastW = window.innerWidth;
     const onResize = () => {
       const w = window.innerWidth;
-      if (w >= 769 || w !== lastW) forceResizeRender();
+      if (w >= DESKTOP_BREAKPOINT || w !== lastW) forceResizeRender();
       lastW = w;
     };
     window.addEventListener('resize', onResize);
@@ -226,7 +228,10 @@ export default function StoryCreator() {
   const islandHeightRef = useRef(islandHeight);
   islandHeightRef.current = islandHeight;
 
-  const isDesktop = screenW >= 769;
+  // Must match Tailwind's md breakpoint (768px), which switches the layout
+  // to panel-left. It used to be 769, so at exactly 768px (a common tablet
+  // width) the desktop layout got the phone card size: far too big.
+  const isDesktop = screenW >= DESKTOP_BREAKPOINT;
 
   const availableForCard = screenH - TOP_BAR_HEIGHT - islandHeight - 16;
   // Desktop: the card takes ~56% of the window height, limited by the width
@@ -236,7 +241,9 @@ export default function StoryCreator() {
   // growing on larger screens. Mobile sizing is untouched.
   const cardSize = isDesktop
     ? clamp(Math.round(Math.min(screenH * 0.56, (screenW - DESKTOP_PANEL_WIDTH) * 0.6)), DESKTOP_CARD_MIN, DESKTOP_CARD_MAX)
-    : clamp(availableForCard, Math.round(screenW * CARD_MIN_RATIO), Math.round(screenW * CARD_MAX_RATIO));
+    // Phone layout: unchanged for phones; on wider portrait screens (small
+    // tablets) it's capped at the same maximum as desktop.
+    : Math.min(DESKTOP_CARD_MAX, clamp(availableForCard, Math.round(screenW * CARD_MIN_RATIO), Math.round(screenW * CARD_MAX_RATIO)));
   // Desktop optical balance: centre the card + add-card button as one group
   // (the button hangs ADD_CARD_REACH px off the card's right side), and sit
   // it a little above the middle of the WINDOW rather than of the area under
