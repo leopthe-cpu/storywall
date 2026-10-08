@@ -50,16 +50,28 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
     <div className="fixed inset-0 z-50 flex">
       {!showArchives && (
         <>
-      {/* Backdrop */}
-      <div className="flex-1 bg-black/30" onClick={onClose} />
+      {/* Backdrop — fades with the panel. It used to be a plain div that
+          stayed fully dark until the panel's spring finished settling (a
+          second or more after closing), while the panel's emptied slot next
+          to it showed the page undimmed: a bright rectangle on a dark page.
+          It now covers the whole screen and fades out as the panel leaves. */}
+      <motion.div
+        className="absolute inset-0 bg-black/30"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0, transition: { duration: 0.18, ease: 'easeIn' } }}
+        transition={{ duration: 0.2 }}
+      />
 
-      {/* Slide-in panel from right */}
+      {/* Slide-in panel from right: spring in, short ease out (a spring's
+          long settle kept the menu mounted after it looked closed). */}
       <motion.div
         initial={{ x: '100%' }}
         animate={{ x: 0 }}
-        exit={{ x: '100%' }}
+        exit={{ x: '100%', transition: { duration: 0.2, ease: 'easeIn' } }}
         transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-        className="w-72 bg-white h-full flex flex-col shadow-xl"
+        className="absolute right-0 top-0 w-72 bg-white h-full flex flex-col shadow-xl"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
