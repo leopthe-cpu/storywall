@@ -1265,7 +1265,14 @@ export default function StoryCreator() {
       ) : (
       <div className="flex-1 flex flex-col md:flex-row min-h-0">
       {/* Card canvas area */}
-      <div className="flex items-center justify-center flex-shrink-0 order-1 md:order-2 md:flex-1" style={{ flex: 1, minHeight: 0 }}>
+      {/* Tapping the empty area around the card deselects, like tapping the
+          card's own background (CanvasArea). The panel doesn't, since it
+          edits the selection. */}
+      <div
+        className="flex items-center justify-center flex-shrink-0 order-1 md:order-2 md:flex-1"
+        style={{ flex: 1, minHeight: 0 }}
+        onPointerDown={(e) => { if (e.target === e.currentTarget) setSelectedElementId(null); }}
+      >
         {!showPostFlow &&
         <div className="relative" style={{ width: cardSize, height: cardSize, transform: desktopCardShift }}>
           <CanvasArea

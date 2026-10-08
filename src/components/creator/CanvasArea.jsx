@@ -70,8 +70,11 @@ export default function CanvasArea({ card, cardSize, selectedElementId, onSelect
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textSig, scale]);
 
+  // Tapping anywhere on the card that isn't an element deselects. It used to
+  // check only for the canvas node itself, but the full-size content layer
+  // sits on top of it, so taps on empty card space never deselected.
   const handleCanvasClick = (e) => {
-    if (e.target === canvasRef.current || e.target.classList.contains('canvas-bg')) {
+    if (!e.target.closest('[data-canvas-el]')) {
       onSelectElement(null);
     }
   };
