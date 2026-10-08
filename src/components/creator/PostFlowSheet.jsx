@@ -329,13 +329,27 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
       {/* Same paper grid as the profile, behind everything. */}
       <GridBackdrop />
 
-      {/* Header */}
-      <div className="relative flex items-center gap-3 px-5 py-4 border-b border-[#E6E0D2]">
+      {/* Header: back on the left, and the same Post/Update action as the
+          bottom button on the right — styled like the builder's Post button
+          but in brand ink, since this screen is light. No title. */}
+      <div className="relative flex items-center justify-between px-5 py-4 border-b border-[#E6E0D2]">
         <BackButton onClick={onClose} />
-        <h2 className="font-semibold text-gray-900 text-base">{editingPostId ? 'Update story' : 'Publish story'}</h2>
+        <button
+          onClick={handleButtonClick}
+          disabled={publishing}
+          className={`bg-[#262624] text-[#F4F2EC] font-semibold text-sm px-4 py-1.5 rounded-[6px] transition-all ${
+            (publishing || missingSkill) ? 'opacity-50' : 'hover:bg-[#30302E] active:scale-95'
+          }`}>
+          {publishing
+            ? (editingPostId ? 'Updating…' : 'Posting…')
+            : (editingPostId ? 'Update →' : 'Post →')}
+        </button>
       </div>
 
-      <div className="relative flex-1 overflow-y-auto space-y-6 px-8">
+      {/* Content and the bottom button sit in one centred column, half the
+          screen wide on desktop (full width on phones). */}
+      <div className="relative flex-1 overflow-y-auto px-8">
+        <div className="mx-auto w-full md:w-1/2 md:max-w-[800px] space-y-6">
         {/* 1. Story Title */}
         <div ref={titleRef}>
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block my-4">STORY TITLE</label>
@@ -454,10 +468,12 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
           }
 
         </div>
+        </div>
       </div>
 
       {/* 4. Publish button */}
       <div className="relative px-5 pb-8 pt-4 border-t border-[#E6E0D2]">
+        <div className="mx-auto w-full md:w-1/2 md:max-w-[800px]">
         <button
           onClick={handleButtonClick}
           disabled={publishing}
@@ -470,6 +486,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
               ? 'Select a Skill'
               : (editingPostId ? 'Update' : 'Publish')}
         </button>
+        </div>
       </div>
     </motion.div>);
 }
