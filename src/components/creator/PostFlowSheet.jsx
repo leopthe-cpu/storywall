@@ -76,6 +76,9 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
   const [manualTagDraft, setManualTagDraft] = useState('');
   const titleRef = useRef(null);
   const skillsRef = useRef(null);
+  // Header: invisible over the page at rest, frosted glass once the content
+  // scrolls under it (same treatment as the profile and landing headers).
+  const [scrolled, setScrolled] = useState(false);
 
   const extractedText = useMemo(() => extractText(cards), [cards]);
   const extractedTextRef = useRef(extractedText);
@@ -329,10 +332,18 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
       {/* Same paper grid as the profile, behind everything. */}
       <GridBackdrop />
 
-      {/* Header: back on the left, and the same Post/Update action as the
-          bottom button on the right — styled like the builder's Post button
-          but in brand ink, since this screen is light. No title. */}
-      <div className="relative flex items-center justify-between px-5 py-4 border-b border-[#E6E0D2]">
+      {/* Header: back on the left, Post on the right (the only publish
+          button — styled like the builder's, in brand ink since this screen is
+          light). It floats over the scrolling content: transparent at the
+          top, glass once the content scrolls under it. */}
+      <div
+        className={`absolute top-0 inset-x-0 z-10 flex items-center justify-between px-5 py-4 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
+          scrolled ? 'bg-[#F4F2EC]/55 border-[#E6E0D2]/70 shadow-[0_1px_12px_rgba(38,38,36,0.06)]' : 'bg-transparent border-transparent'
+        }`}
+        style={scrolled
+          ? { backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)' }
+          : { backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
+      >
         <BackButton onClick={onClose} />
         <button
           onClick={handleButtonClick}
@@ -340,16 +351,17 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
           className={`bg-[#262624] text-[#F4F2EC] font-semibold text-sm px-4 py-1.5 rounded-[6px] transition-all ${
             (publishing || missingSkill) ? 'opacity-50' : 'hover:bg-[#30302E] active:scale-95'
           }`}>
-          {publishing
-            ? (editingPostId ? 'Updating…' : 'Posting…')
-            : (editingPostId ? 'Update →' : 'Post →')}
+          {publishing ? 'Posting…' : 'Post →'}
         </button>
       </div>
 
-      {/* Content and the bottom button sit in one centred column, half the
-          screen wide on desktop (full width on phones). */}
-      <div className="relative flex-1 overflow-y-auto px-8">
-        <div className="mx-auto w-full md:w-1/2 md:max-w-[800px] space-y-6">
+      {/* Content: one centred column, half the screen wide on desktop (full
+          width on phones), starting below the floating header (pt-16). */}
+      <div
+        className="relative flex-1 overflow-y-auto px-8"
+        onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 4)}
+      >
+        <div className="mx-auto w-full md:w-1/2 md:max-w-[800px] space-y-6 pt-16 pb-12">
         {/* 1. Story Title */}
         <div ref={titleRef}>
           <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider block my-4">STORY TITLE</label>
@@ -471,22 +483,5 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
         </div>
       </div>
 
-      {/* 4. Publish button */}
-      <div className="relative px-5 pb-8 pt-4 border-t border-[#E6E0D2]">
-        <div className="mx-auto w-full md:w-1/2 md:max-w-[800px]">
-        <button
-          onClick={handleButtonClick}
-          disabled={publishing}
-          className={`w-full bg-black text-white py-4 rounded-2xl font-semibold text-base transition-all ${
-            (publishing || missingSkill) ? 'opacity-50' : 'hover:bg-gray-900 active:scale-[0.98]'
-          }`}>
-          {publishing
-            ? (editingPostId ? 'Updating...' : 'Publishing...')
-            : missingSkill
-              ? 'Select a Skill'
-              : (editingPostId ? 'Update' : 'Publish')}
-        </button>
-        </div>
-      </div>
     </motion.div>);
 }
