@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Globe, Link } from '@/components/icons';
 import Tag from '@/components/profile/Tag';
 import ImageSkeleton from '@/components/ui/ImageSkeleton';
+import { isSafeHttpUrl } from '@/lib/safeUrl';
 
 // Profile hero card + info block, shared by the public profile page and the
 // onboarding live preview so the preview is exactly what the profile renders.
@@ -113,7 +114,7 @@ export function ProfileInfo({ profile, visibleSkills = [], selectedTags = [], on
         <div className="flex items-center mb-4 flex-wrap gap-3">
           {profileLinks.map((link, i) => {
             // Only allow http(s) URLs in href — reject javascript:, data:, etc.
-            const safe = typeof link.url === 'string' && /^https?:\/\//i.test(link.url);
+            const safe = isSafeHttpUrl(link.url);
             const content = (
               <>
                 {link.favicon ? (
