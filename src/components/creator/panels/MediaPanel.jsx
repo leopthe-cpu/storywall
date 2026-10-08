@@ -767,7 +767,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                 </div>
               </div>
               <div>
-                <label className="text-white/30 text-[9px] uppercase tracking-wider mb-1 block">Reset changes</label>
+                <label className="text-white/30 text-[9px] uppercase tracking-wider mb-1 block">Reset</label>
                 <button
                   onClick={handleReset}
                   className="w-8 h-8 rounded bg-white/10 text-white/60 hover:bg-white/15 transition-colors flex items-center justify-center"
