@@ -79,7 +79,7 @@ export default function BottomIsland({
           <button
             key={id}
             onClick={() => onToolChange(id)}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl border transition-all ${
+            className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-[6px] border transition-all ${
               activeTool === id
                 ? 'bg-emerald-400/10 border-emerald-400 text-emerald-400'
                 : 'border-transparent text-white/40 hover:text-white/70'
