@@ -6,16 +6,21 @@ import { validateUsernameFormat, isReservedUsername } from '@/lib/usernameValida
 // Debounces ~400ms, validates format + reserved words client-side,
 // then checks the database via the checkUsername backend function.
 // Calls onClaim(username) when the "Claim your wall" button is pressed.
-export default function UsernameClaimField({ onClaim, autoFocus = false, buttonLabel = 'Claim your wall', claimingLabel = 'Taking you to sign up…', initialValue = '' }) {
+// `hint` (optional) shows under the field until the user starts typing; it
+// comes back only if they leave the field without having typed anything.
+export default function UsernameClaimField({ onClaim, autoFocus = false, buttonLabel = 'Claim your wall', claimingLabel = 'Taking you to sign up…', initialValue = '', hint = '' }) {
   const [value, setValue] = useState(initialValue);
   // 'idle' | 'checking' | 'available' | 'taken'
   const [state, setState] = useState('idle');
   const [reason, setReason] = useState('');
   const [claiming, setClaiming] = useState(false);
   const timerRef = useRef(null);
+  // True from the first keystroke until the field is left empty (blur).
+  const [typed, setTyped] = useState(!!initialValue);
+  const showHint = !!hint && !value && !typed;
   // Long usernames: once the typed name no longer fits next to the
-  // "storywall.io/" prefix, the prefix is dropped so the whole name stays
-  // visible. It only comes back when the field is emptied (re-showing it
+  // "storywall.io/" prefix, the prefix shrinks to just "/" so more of the
+  // name stays visible. It only comes back when the field is emptied (re-showing it
   // as soon as the name fits again would flicker, since dropping the prefix
   // is what made it fit).
   const inputRef = useRef(null);
@@ -106,19 +111,22 @@ export default function UsernameClaimField({ onClaim, autoFocus = false, buttonL
     <div>
       <label className={fieldClass + ' max-w-[440px]'}>
         <span className="flex-1 min-w-0 flex items-center font-mono">
-          {!hidePrefix && <span className="text-[13px] sm:text-sm text-[#6B6964] whitespace-nowrap">storywall.io/</span>}
+          <span className="text-[13px] sm:text-sm text-[#6B6964] whitespace-nowrap">{hidePrefix ? '/' : 'storywall.io/'}</span>
           <input
             ref={inputRef}
             type="text"
             value={value}
-            onChange={e => setValue(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+            onChange={e => { setTyped(true); setValue(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '')); }}
+            onBlur={() => { if (!value) setTyped(false); }}
             onKeyDown={e => e.key === 'Enter' && handleClaim()}
             placeholder="yourname"
             autoComplete="off"
             spellCheck="false"
             autoFocus={autoFocus}
             aria-label="Username"
-            className="border-0 outline-none font-mono text-[13px] sm:text-sm text-[#262624] py-2 px-0.5 sm:px-1 w-full min-w-0 bg-transparent placeholder:text-[#8A877F]"
+            // Phones: no placeholder (the button leaves no room for it) —
+            // just "storywall.io/" with the caret right after the slash.
+            className="border-0 outline-none font-mono text-[13px] sm:text-sm text-[#262624] py-2 px-0.5 sm:px-1 w-full min-w-0 bg-transparent placeholder:text-transparent sm:placeholder:text-[#8A877F]"
           />
         </span>
         <button
@@ -136,6 +144,13 @@ export default function UsernameClaimField({ onClaim, autoFocus = false, buttonL
          state === 'checking' ? <span className="mr-1">⋯</span> : null}
         {reason || '\u00A0'}
       </p>
+      {/* The hint keeps its line even while hidden, so nothing below the
+          field moves as it appears/disappears. */}
+      {hint && (
+        <p className={`font-mono text-xs text-[#6B6964] mt-1.5 ${showHint ? '' : 'invisible'}`} aria-hidden={!showHint}>
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

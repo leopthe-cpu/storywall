@@ -193,10 +193,7 @@ export default function Landing() {
               All your projects, one simple link.
             </p>
             <div className="order-4 md:order-none">
-              <UsernameClaimField onClaim={handleClaim} autoFocus />
-              <p className="font-mono text-xs text-[#6B6964] mt-3.5">
-                Best ones are still available!
-              </p>
+              <UsernameClaimField onClaim={handleClaim} autoFocus hint="Best ones are still available!" />
             </div>
           </div>
 
