@@ -3,15 +3,20 @@
 // or fixed) parent; content above it needs `relative` (z-auto is enough
 // since this comes first in the DOM). Values match PublicProfile.jsx.
 // fade={false} keeps the grid at full strength over the whole screen.
+// drift slowly moves the grid downward forever (see .grid-drift in
+// index.css); the base colour stays put, only the lines move.
 export const GRID_BASE = '#F4F2EC';
 
-export default function GridBackdrop({ fade = true }) {
+export default function GridBackdrop({ fade = true, drift = false }) {
   return (
     <div aria-hidden="true" className="absolute inset-0 pointer-events-none overflow-hidden">
+      <div className="absolute inset-0" style={{ background: GRID_BASE }} />
       <div
-        className="absolute inset-0"
+        className={`absolute inset-x-0 bottom-0 ${drift ? 'grid-drift' : ''}`}
         style={{
-          background: GRID_BASE,
+          // One cell taller than the screen when drifting, so the top never
+          // shows a gap while the layer slides down.
+          top: drift ? -38 : 0,
           backgroundImage: 'linear-gradient(#E6E0D2 1px, transparent 1px), linear-gradient(90deg, #E6E0D2 1px, transparent 1px)',
           backgroundSize: '38px 38px',
           backgroundPosition: 'center top',

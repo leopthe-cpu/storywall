@@ -33,7 +33,7 @@ export default function SkillsLoadingScreen({ onClose }) {
       exit={{ opacity: 0 }}
     >
       {/* Grid at full strength everywhere — the only fade is the disc. */}
-      <GridBackdrop fade={false} />
+      <GridBackdrop fade={false} drift />
       <BackButton onClick={onClose} className="absolute top-4 left-5" />
       {/* The progress sits on a disc of the page colour (82% opaque, so the
           grid still shows faintly through it) that fades out at its edge,

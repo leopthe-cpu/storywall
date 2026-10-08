@@ -442,3 +442,19 @@ input, textarea, select {
   font-variation-settings: 'SOFT' 100;
   font-optical-sizing: auto;
 }
+
+/* Skills loading screen: the paper grid drifts slowly downward forever.
+   The layer is one cell (38px) taller than the screen and moves exactly one
+   cell per loop, so the restart is invisible. transform (not
+   background-position) keeps it on the GPU and smooth. */
+@keyframes grid-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, 38px, 0); }
+}
+.grid-drift {
+  animation: grid-drift 3s linear infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .grid-drift { animation: none; }
+}
