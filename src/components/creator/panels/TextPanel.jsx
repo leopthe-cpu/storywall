@@ -600,36 +600,6 @@ export default function TextPanel({
                 <span className="text-white/30 text-[10px]">{w.hint}</span>
               </div>
             ))}
-
-            {/* Live preview — same helpers the canvas/thumbnails use, so this
-                always matches what actually renders (compounded effects,
-                warp and all). */}
-            <div className="mt-1 rounded-lg bg-black/30 flex items-center justify-center overflow-hidden" style={{ minHeight: 96, padding: '28px 12px' }}>
-              <div
-                style={{
-                  fontSize: 22,
-                  maxWidth: '100%',
-                  textAlign: 'center',
-                  whiteSpace: 'pre-wrap',
-                  overflowWrap: 'break-word',
-                  fontWeight: formatEl.font_weight || '400',
-                  fontFamily: formatEl.font_family || 'Inter',
-                  fontStyle: formatEl.font_italic ? 'italic' : 'normal',
-                  textTransform: formatEl.text_transform || 'none',
-                  color: resolveColor(formatEl.color_token, tokens, formatEl.color || '#000000'),
-                  ...getTextEffectStyle(formatEl, 1),
-                }}
-              >
-                {hasTextWarp(formatEl)
-                  ? <WarpedText
-                      text={(formatEl.content && formatEl.content.trim()) || 'Preview'}
-                      warp={formatEl.text_warp}
-                      amount={formatEl.text_warp_amount}
-                      decoration={[formatEl.font_underline ? 'underline' : '', formatEl.font_strikethrough ? 'line-through' : ''].filter(Boolean).join(' ') || 'none'}
-                    />
-                  : ((formatEl.content && formatEl.content.trim()) || 'Preview')}
-              </div>
-            </div>
           </div>
         </div>
       )}
