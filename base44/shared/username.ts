@@ -41,6 +41,20 @@ export async function getUsernameClaim(base44: Base44, username: string) {
   return claims[0] || null;
 }
 
+// Read-only owner lookup, for anonymous callers (getPublicProfile): the
+// claim's owner, or — for a legacy name with no claim yet — the oldest
+// account holding it, which is exactly who claimUsernameIfUnclaimed would
+// claim it for. Same answer, but no write: an unauthenticated request never
+// creates records. Claims for legacy names are still created on the
+// signed-in paths (setUsername, searchProfiles).
+export async function resolveUsernameOwnerId(base44: Base44, username: string): Promise<string | null> {
+  const claim = await getUsernameClaim(base44, username);
+  if (claim) return claim.user_id;
+  if (!isAllowedUsername(username)) return null;
+  const users = await base44.asServiceRole.entities.User.filter({ username }, 'created_date', 1);
+  return users[0]?.id || null;
+}
+
 // Legacy accounts (and sign-ups made before setUsername existed) have a
 // username on their User record but no claim. The first time such a name is
 // looked up, claim it for the oldest account holding it, so a later

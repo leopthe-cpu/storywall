@@ -1,4 +1,7 @@
-// Social icon links — only renders icons that have a URL
+// Social icon links — only renders icons that have a URL. Only http(s)
+// URLs become links (see safeUrl.js); anything else (e.g. "javascript:…"
+// written straight to the User record) shows as a plain, unclickable icon.
+import { isSafeHttpUrl } from '@/lib/safeUrl';
 
 const SOCIALS = [
   {
@@ -64,16 +67,22 @@ export default function SocialLinks({ user }) {
   return (
     <div className="flex items-center gap-3">
       {links.map(({ key, label, icon: Icon }) => (
-        <a
-          key={key}
-          href={user[key]}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={label}
-          className="text-gray-500 hover:text-gray-900 transition-colors"
-        >
-          <Icon />
-        </a>
+        isSafeHttpUrl(user[key]) ? (
+          <a
+            key={key}
+            href={user[key]}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={label}
+            className="text-gray-500 hover:text-gray-900 transition-colors"
+          >
+            <Icon />
+          </a>
+        ) : (
+          <span key={key} aria-label={label} className="text-gray-300">
+            <Icon />
+          </span>
+        )
       ))}
     </div>
   );
