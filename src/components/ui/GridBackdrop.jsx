@@ -2,9 +2,10 @@
 // same radial fade from the top. Absolutely positioned to fill its (relative
 // or fixed) parent; content above it needs `relative` (z-auto is enough
 // since this comes first in the DOM). Values match PublicProfile.jsx.
+// fade={false} keeps the grid at full strength over the whole screen.
 export const GRID_BASE = '#F4F2EC';
 
-export default function GridBackdrop() {
+export default function GridBackdrop({ fade = true }) {
   return (
     <div aria-hidden="true" className="absolute inset-0 pointer-events-none overflow-hidden">
       <div
@@ -16,10 +17,12 @@ export default function GridBackdrop() {
           backgroundPosition: 'center top',
         }}
       />
-      <div
-        className="absolute inset-0"
-        style={{ background: `radial-gradient(120% 100% at 50% 0%, transparent 0%, ${GRID_BASE} 72%)` }}
-      />
+      {fade && (
+        <div
+          className="absolute inset-0"
+          style={{ background: `radial-gradient(120% 100% at 50% 0%, transparent 0%, ${GRID_BASE} 72%)` }}
+        />
+      )}
     </div>
   );
 }

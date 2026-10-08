@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import PixelSpinner from '@/components/ui/PixelSpinner';
-import GridBackdrop from '@/components/ui/GridBackdrop';
+import GridBackdrop, { GRID_BASE } from '@/components/ui/GridBackdrop';
 import BackButton from '@/components/ui/BackButton';
 
 // Loading screen shown between the Story Builder and the Publish screen
@@ -32,14 +32,16 @@ export default function SkillsLoadingScreen({ onClose }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <GridBackdrop />
+      {/* Grid at full strength everywhere — the only fade is the disc. */}
+      <GridBackdrop fade={false} />
       <BackButton onClick={onClose} className="absolute top-4 left-5" />
-      {/* The progress sits on a soft white disc whose edge fades into the
-          grid, so the numbers stay legible over the lines. */}
+      {/* The progress sits on a disc of the page colour that hides the grid
+          behind the text and fades out at its edge, so the numbers stay
+          legible over the lines. */}
       <div
         aria-hidden="true"
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
-        style={{ width: 440, height: 440, background: 'radial-gradient(circle, #FFFFFF 0%, #FFFFFF 42%, rgba(255,255,255,0) 70%)' }}
+        style={{ width: 440, height: 440, background: `radial-gradient(circle, ${GRID_BASE} 0%, ${GRID_BASE} 42%, rgba(244,242,236,0) 70%)` }}
       />
       <div className="relative flex flex-col items-center gap-4">
         <PixelSpinner size={24} />
