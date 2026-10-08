@@ -53,8 +53,6 @@ window.matchMedia('(prefers-color-scheme: dark)').matches ? '#000000' : '#FFFFFF
 const TOP_BAR_HEIGHT = 56;
 // Desktop: width of the left tool panel (matches md:w-[360px] below).
 const DESKTOP_PANEL_WIDTH = 360;
-// Centre of the top bar's profile button: left-4 (16px) + half its 32px.
-const TOP_PROFILE_CENTER = 16 + 16;
 // How far the add-card button reaches past the card's right edge.
 const ADD_CARD_REACH = 46;
 // Desktop card size range (px): largest = Oz's reference layout; smallest ≈
@@ -1153,111 +1151,117 @@ export default function StoryCreator() {
     }
   };
 
+  // Top-bar pieces (arranged in the TOP BAR below).
+  const topProfileButton = (
+    <button
+      onClick={async () => { await flushActiveTextEdit(); firePersist(); navigateToProfile(); }}
+      title="Profile"
+      className={`flex-shrink-0 w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors ${generatePhase === 'notes' ? 'bg-black/5 hover:bg-black/10' : 'bg-white/10 hover:bg-white/20'}`}>
+      <PerspectiveView size={16} className={generatePhase === 'notes' ? 'text-black/60' : 'text-white/60'} />
+    </button>
+  );
+  const topUndoRedo = generatePhase !== 'notes' && (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={handleUndo}
+        disabled={!canUndo}
+        title="Undo"
+        className={`w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors ${canUndo ? 'bg-white/10 hover:bg-white/20' : 'opacity-20 cursor-default'}`}>
+        <Undo2 size={16} className="text-white/60" />
+      </button>
+      <button
+        onClick={handleRedo}
+        disabled={!canRedo}
+        title="Redo"
+        className={`w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors ${canRedo ? 'bg-white/10 hover:bg-white/20' : 'opacity-20 cursor-default'}`}>
+        <Redo2 size={16} className="text-white/60" />
+      </button>
+    </div>
+  );
+  const topCounter = generatePhase !== 'notes' ? (
+    <div className="flex items-center justify-center gap-3">
+      <button
+        onClick={() => navigateCard(-1)}
+        disabled={currentCardIndex === 0}
+        title="Previous card"
+        className="p-1 text-white/50 hover:text-white disabled:opacity-20 transition-colors">
+        <ChevronLeft size={18} />
+      </button>
+      <span className="text-white/70 text-sm font-medium tabular-nums">
+        {currentCardIndex + 1}/{cards.length}
+      </span>
+      <button
+        onClick={() => navigateCard(1)}
+        disabled={currentCardIndex === cards.length - 1}
+        title="Next card"
+        className="p-1 text-white/50 hover:text-white disabled:opacity-20 transition-colors">
+        <ChevronRight size={18} />
+      </button>
+    </div>
+  ) : <div />;
+  const topPostArea = generatePhase === 'notes' ? (
+    <button
+      onClick={handleGenerateTap}
+      disabled={!rawNotes.trim()}
+      className="bg-black text-white font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-black/90 active:scale-95 transition-all disabled:opacity-40">
+      Generate →
+    </button>
+  ) : generateMode && aiGenerated ? (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={handleBackToNotes}
+        className="bg-white/10 text-white/80 font-medium text-sm px-3 py-1.5 rounded-[6px] hover:bg-white/20 transition-all">
+        Notes
+      </button>
+      <button
+        onClick={handleOpenPostFlow}
+        className="bg-white text-black font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-white/90 active:scale-95 transition-all">
+        Post →
+      </button>
+    </div>
+  ) : (
+    <button
+      onClick={handleOpenPostFlow}
+      className="bg-white text-black font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-white/90 active:scale-95 transition-all">
+      Post →
+    </button>
+  );
+
   return (
   <DraftMediaProvider>
   <div className="flex flex-col overflow-hidden select-none" style={{ height: '100dvh', backgroundColor: '#111' }}>
 
       {/* TOP BAR: profile | undo/redo | counter | post.
-          Positions (Oz's layout):
-          - Mobile: counter centred on the screen; undo/redo centred halfway
-            between the profile button and the counter.
-          - Desktop: the row sits over the left panel (DESKTOP_PANEL_WIDTH):
-            undo/redo centred on the panel, counter at the panel's right edge.
-          Post stays at the far right. Buttons are rounded squares (6px), not
-          pills, to match the rest of the builder. */}
-      <div className="relative flex-shrink-0 z-10" style={{ height: TOP_BAR_HEIGHT, backgroundColor: generatePhase === 'notes' ? '#FFFFFF' : 'transparent' }}>
-        {/* Profile */}
-        <button
-          onClick={async () => { await flushActiveTextEdit(); firePersist(); navigateToProfile(); }}
-          title="Profile"
-          className={`absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors ${generatePhase === 'notes' ? 'bg-black/5 hover:bg-black/10' : 'bg-white/10 hover:bg-white/20'}`}>
-          <PerspectiveView size={16} className={generatePhase === 'notes' ? 'text-black/60' : 'text-white/60'} />
-        </button>
-
-        {/* Undo / redo */}
-        {generatePhase !== 'notes' && (
-          <div
-            className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1"
-            style={{ left: isDesktop ? DESKTOP_PANEL_WIDTH / 2 : `calc((${TOP_PROFILE_CENTER}px + 50%) / 2)` }}
-          >
-            <button
-              onClick={handleUndo}
-              disabled={!canUndo}
-              title="Undo"
-              className={`w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors ${canUndo ? 'bg-white/10 hover:bg-white/20' : 'opacity-20 cursor-default'}`}>
-              <Undo2 size={16} className="text-white/60" />
-            </button>
-            <button
-              onClick={handleRedo}
-              disabled={!canRedo}
-              title="Redo"
-              className={`w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors ${canRedo ? 'bg-white/10 hover:bg-white/20' : 'opacity-20 cursor-default'}`}>
-              <Redo2 size={16} className="text-white/60" />
-            </button>
-          </div>
-        )}
-
-        {/* Card counter + editing indicator */}
-        <div
-          className={`absolute top-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-0.5 ${isDesktop ? '-translate-x-full' : '-translate-x-1/2'}`}
-          style={{ left: isDesktop ? DESKTOP_PANEL_WIDTH - 12 : '50%' }}
-        >
-          {generatePhase !== 'notes' && (
-          <div className="flex items-center justify-center gap-3">
-            <button
-              onClick={() => navigateCard(-1)}
-              disabled={currentCardIndex === 0}
-              title="Previous card"
-              className="p-1 text-white/50 hover:text-white disabled:opacity-20 transition-colors">
-              <ChevronLeft size={18} />
-            </button>
-            <span className="text-white/70 text-sm font-medium tabular-nums">
-              {currentCardIndex + 1}/{cards.length}
-            </span>
-            <button
-              onClick={() => navigateCard(1)}
-              disabled={currentCardIndex === cards.length - 1}
-              title="Next card"
-              className="p-1 text-white/50 hover:text-white disabled:opacity-20 transition-colors">
-              <ChevronRight size={18} />
-            </button>
-          </div>
-          )}
-          {editingPostId && (
-            <span className={`text-[10px] font-medium ${generatePhase === 'notes' ? 'text-black/40' : 'text-white/40'}`}>Editing story</span>
-          )}
-        </div>
-
-        {/* Right: post / generate button */}
-        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-        {generatePhase === 'notes' ? (
-          <button
-            onClick={handleGenerateTap}
-            disabled={!rawNotes.trim()}
-            className="bg-black text-white font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-black/90 active:scale-95 transition-all disabled:opacity-40">
-            Generate →
-          </button>
-        ) : generateMode && aiGenerated ? (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleBackToNotes}
-              className="bg-white/10 text-white/80 font-medium text-sm px-3 py-1.5 rounded-[6px] hover:bg-white/20 transition-all">
-              Notes
-            </button>
-            <button
-              onClick={handleOpenPostFlow}
-              className="bg-white text-black font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-white/90 active:scale-95 transition-all">
-              {editingPostId ? 'Update →' : 'Post →'}
-            </button>
-          </div>
+          Laid out with flex/grid rather than fixed offsets so the spacing
+          balances itself:
+          - Mobile: three columns (1fr | auto | 1fr) — the counter is exactly
+            centred on the screen, and undo/redo are centred in the real gap
+            between the profile button and the counter's left arrow.
+          - Desktop: the same left group spans the panel's width (counter
+            ending at its right edge); Post sits at the far right.
+          No "Editing story" label, and the button always says Post. Buttons
+          are rounded squares (6px), matching the rest of the builder. */}
+      <div className="relative flex-shrink-0 z-10 flex items-center px-4" style={{ height: TOP_BAR_HEIGHT, backgroundColor: generatePhase === 'notes' ? '#FFFFFF' : 'transparent' }}>
+        {isDesktop ? (
+          <>
+            <div className="flex items-center" style={{ width: DESKTOP_PANEL_WIDTH - 16 - 12 }}>
+              {topProfileButton}
+              <div className="flex-1 flex justify-center">{topUndoRedo}</div>
+              {topCounter}
+            </div>
+            <div className="flex-1" />
+            {topPostArea}
+          </>
         ) : (
-          <button
-            onClick={handleOpenPostFlow}
-            className="bg-white text-black font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-white/90 active:scale-95 transition-all">
-            {editingPostId ? 'Update →' : 'Post →'}
-          </button>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center w-full">
+            <div className="flex items-center min-w-0">
+              {topProfileButton}
+              <div className="flex-1 flex justify-center">{topUndoRedo}</div>
+            </div>
+            {topCounter}
+            <div className="flex justify-end">{topPostArea}</div>
+          </div>
         )}
-        </div>
       </div>
 
       {/* Body: notes view (generate mode) or canvas + island (write mode) */}
