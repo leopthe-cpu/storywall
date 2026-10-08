@@ -71,8 +71,14 @@ const HIDDEN = { ...SLOTS[VISIBLE_SLOTS - 1], opacity: 0 };
 // Alt text is the card's own words so the stories stay readable to screen
 // readers. `tags` (max 2) are the front card's skill tags, shown with the
 // product's own Tag pill.
+//
+// To swap a card: export it from StoryWall (1080×1080), resize to 720×720
+// WebP at quality 82, overwrite public/landing-cards/NN.webp, and update that
+// entry's alt (the card's own words) and tags below; bump the ?v= on its
+// src so browsers don't keep showing the cached old image. Card 01 was replaced
+// this way in Oct 2026 (new photo, same "Unlocking customer insights" title).
 const CARDS = [
-  { src: '/landing-cards/01.webp', tags: ['Customer Research', 'Empathy'], alt: 'Unlocking customer insights' },
+  { src: '/landing-cards/01.webp?v=2', tags: ['Customer Research', 'Empathy'], alt: 'Unlocking customer insights' },
   { src: '/landing-cards/02.webp', tags: ['Product Optimization', 'Data Analysis'], alt:'We had years of viewing data and a ranking algorithm built on top of it. Then we added a simple thumbs up. It took one tap and gave us something the logs couldn\'t: a direct opinion. Whenever the data and the opinion disagreed, we let the opinion win.' },
   { src: '/landing-cards/03.webp', tags: ['Problem Solving'], alt: 'The 11s Bottleneck' },
   { src: '/landing-cards/04.webp', tags: ['Data Analysis', 'Product Optimization'], alt:'Everyone had a theory, but the data showed something simple: our checkout took eleven seconds to load. A single third-party script was hogging six of them. We cut it, and load times dropped to two seconds overnight.' },
