@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import GridBackdrop from '@/components/ui/GridBackdrop';
+import BackButton from '@/components/ui/BackButton';
 
 // Loading screen shown between the Story Builder and the Publish screen
 // while skills are being generated. Visually similar to GenerateProgress.
@@ -26,18 +27,21 @@ export default function SkillsLoadingScreen({ onClose }) {
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <button
-        onClick={onClose}
-        className="absolute top-4 left-5 text-gray-400 hover:text-gray-900 transition-colors"
-      >
-        <ChevronLeft size={22} />
-      </button>
-      <div className="flex flex-col items-center gap-4">
+      <GridBackdrop />
+      <BackButton onClick={onClose} className="absolute top-4 left-5" />
+      {/* The progress sits on a soft white disc whose edge fades into the
+          grid, so the numbers stay legible over the lines. */}
+      <div
+        aria-hidden="true"
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full pointer-events-none"
+        style={{ width: 440, height: 440, background: 'radial-gradient(circle, #FFFFFF 0%, #FFFFFF 42%, rgba(255,255,255,0) 70%)' }}
+      />
+      <div className="relative flex flex-col items-center gap-4">
         <PixelSpinner size={24} />
         <div className="text-3xl font-bold text-gray-900 tabular-nums">{pct}%</div>
         <div className="text-sm font-medium text-gray-600">
