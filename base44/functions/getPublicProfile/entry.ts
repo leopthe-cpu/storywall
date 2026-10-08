@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.41';
 import { isRateLimited, getClientIP } from '../../shared/rateLimit.ts';
-import { normalizeUsername, isAllowedUsername, claimUsernameIfUnclaimed } from '../../shared/username.ts';
+import { normalizeUsername, isAllowedUsername, resolveUsernameOwnerId } from '../../shared/username.ts';
 
 // ── INTENTIONAL: no authentication required ──────────────────────────────
 // This function is intentionally callable without a logged-in user. It serves
@@ -32,9 +32,11 @@ export default async function(req) {
 
     // Resolve the name through its server-written claim (shared/username.ts):
     // a username self-written to the User record can't hijack this page.
-    const claim = await claimUsernameIfUnclaimed(base44, username);
-    const user = claim
-      ? await base44.asServiceRole.entities.User.get(claim.user_id).catch(() => null)
+    // Read-only — this endpoint is anonymous, so it never writes (a legacy,
+    // unclaimed name resolves to its oldest holder without creating a claim).
+    const ownerId = await resolveUsernameOwnerId(base44, username);
+    const user = ownerId
+      ? await base44.asServiceRole.entities.User.get(ownerId).catch(() => null)
       : null;
     // The owner must still be using the name (a stale claim isn't served).
     if (!user || normalizeUsername(user.username) !== username) {
