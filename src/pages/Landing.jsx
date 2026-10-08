@@ -19,6 +19,15 @@ export default function Landing() {
   const navigate = useNavigate();
   const [typed, setTyped] = useState('');
   const [markLit, setMarkLit] = useState(false);
+  // Header: transparent at the top of the page, frosted glass once scrolled
+  // (same treatment as the profile's top bar).
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const pre = "You're more than\n";
   const mark = "a job title.";
@@ -151,15 +160,30 @@ export default function Landing() {
         }}
       />
 
-      <div className="relative z-10 max-w-[1180px] mx-auto px-7 sm:px-7">
-        {/* Header */}
-        <header className="flex items-center justify-between pt-[26px]">
+      {/* Header — fixed, so it stays while the page scrolls under it. At the
+          top it's transparent and sits where it always did (26px down); once
+          scrolled it tightens and turns to frosted glass (translucent page
+          colour + blur + saturation), like the profile's top bar. */}
+      <div
+        className={`fixed top-0 left-0 right-0 z-30 border-b transition-[background-color,border-color,box-shadow,padding,backdrop-filter] duration-300 ${
+          scrolled ? 'bg-[#F4F2EC]/55 border-[#E6E0D2]/70 shadow-[0_1px_12px_rgba(38,38,36,0.06)] py-3' : 'bg-transparent border-transparent pt-[26px] pb-3'
+        }`}
+        style={scrolled
+          ? { backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)' }
+          : { backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
+      >
+        <header className="max-w-[1180px] mx-auto px-7 flex items-center justify-between">
           <img src="/logo-slash-ink.png" alt="StoryWall" className="h-[18px] sm:h-[22px] w-auto flex-shrink-0" />
           <nav className="flex items-center gap-3 sm:gap-[22px] whitespace-nowrap">
             <Link to="/signin" className="font-inter text-[14px] font-semibold text-[#6B6964] no-underline hover:text-[#262624]">Sign in</Link>
             <Link to="/signup" className="font-inter text-[12px] sm:text-[13px] font-semibold text-[#F4F2EC] bg-[#262624] px-3 sm:px-4 py-2 rounded-lg no-underline hover:opacity-90 hover:-translate-y-px transition-all">Claim your wall</Link>
           </nav>
         </header>
+      </div>
+
+      <div className="relative z-10 max-w-[1180px] mx-auto px-7 sm:px-7">
+        {/* Space the fixed header used to take up in the flow. */}
+        <div aria-hidden="true" className="h-[60px]" />
 
         {/* Hero */}
         {/* Desktop: copy column left, card stack right (unchanged).
