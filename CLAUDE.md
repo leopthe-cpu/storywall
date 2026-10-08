@@ -54,7 +54,7 @@ Base44 silently drops any card/element field that is NOT declared in `base44/ent
 - The same card is rendered in several places. They MUST stay in sync — the #1 recurring bug class has been "editor looks different from published":
   - `src/components/creator/DraggableElement.jsx` — interactive editor canvas
   - `src/components/creator/CardThumb.jsx` — gallery thumbnails, publish preview AND the live published card (one outer `transform: scale()`)
-  - `src/components/creator/panels/TextPanel.jsx` — text thumbnails + live effects preview
+  - `src/components/creator/panels/TextPanel.jsx` — text thumbnails (the separate effects preview was removed Oct 2026; effects show live on the card)
 
   Shared helpers exist precisely for this (`src/lib/textEffects.js`, `src/components/creator/WarpedText.jsx`). Put logic in a shared helper, never copy it per file.
 - **Images:** `displayWidth/displayHeight` = full image box; `clipTop/Bottom/Left/Right` = crop insets (ref px) → visible box. `zoom` = extra scale. `focalX/focalY` = object-position (legacy pan; no UI gesture anymore).
@@ -74,7 +74,7 @@ Base44 silently drops any card/element field that is NOT declared in `base44/ent
 
 **Text:**
 
-- Text FX (doc 108) Phase 1: Shadow, Outline, Glow, Echo, Spacing — compound, each field is its own on/off + strength. Phase 2: warps Arc, Wave, Stairs, Bulge (`WarpedText.jsx`, per-letter transforms, display-only — plain text while typing). Effects tab UI: pills (white = in use, ring = open slider), one slider visible at a time, compact slider with a reset tick (`MinimalSlider` `compact`/`resetValue` props — intended to become the default for all sliders).
+- Text FX (doc 108) Phase 1: Shadow, Outline, Glow, Echo, Spacing — compound, each field is its own on/off + strength. Phase 2: warps Arc, Wave, Stairs, Bulge (`WarpedText.jsx`, per-letter transforms, display-only — plain text while typing). Effects tab UI: pills (green = in use, stronger ring = open slider; builder pills use 4px corners), one slider visible at a time, compact slider with a reset tick (`MinimalSlider` `compact`/`resetValue` props — intended to become the default for all sliders).
 - Typed text is committed on blur; it's now also committed on deselect, unmount, card switch and before any "leaving" save (`flushActiveTextEdit` in `StoryCreator.jsx`). `updateElement` matches by element id across ALL cards (it used to only touch the current card).
 
 **Drafts / saving** (`StoryCreator.jsx`):
