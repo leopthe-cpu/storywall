@@ -13,6 +13,18 @@ export default function UsernameClaimField({ onClaim, autoFocus = false, buttonL
   const [reason, setReason] = useState('');
   const [claiming, setClaiming] = useState(false);
   const timerRef = useRef(null);
+  // Long usernames: once the typed name no longer fits next to the
+  // "storywall.io/" prefix, the prefix is dropped so the whole name stays
+  // visible. It only comes back when the field is emptied (re-showing it
+  // as soon as the name fits again would flicker, since dropping the prefix
+  // is what made it fit).
+  const inputRef = useRef(null);
+  const [hidePrefix, setHidePrefix] = useState(false);
+  useEffect(() => {
+    if (!value) { setHidePrefix(false); return; }
+    const el = inputRef.current;
+    if (!hidePrefix && el && el.scrollWidth > el.clientWidth) setHidePrefix(true);
+  }, [value, hidePrefix]);
 
   // If the user hits Back from the sign-up page, the browser can restore this
   // page from its back/forward cache with the button still frozen on the
@@ -75,13 +87,16 @@ export default function UsernameClaimField({ onClaim, autoFocus = false, buttonL
     onClaim(value.trim().toLowerCase());
   };
 
-  const fieldClass = `flex items-center bg-[#FAF9F5] border-[1.5px] rounded-[10px] px-3 py-0 font-mono transition-all ${
+  // One rounded field with the button inside it (input left, button inset
+  // on the right). Colours unchanged; the border/glow still shows the
+  // availability state.
+  const fieldClass = `flex items-center gap-1 sm:gap-2 bg-[#FAF9F5] border-[1.5px] rounded-[12px] pl-2.5 sm:pl-3 pr-1.5 py-1.5 transition-all ${
     state === 'available' ? 'border-[#1f9d55] shadow-[0_0_0_3px_rgba(31,157,85,0.12)]' :
     state === 'taken' ? 'border-[#d64545] shadow-[0_0_0_3px_rgba(214,69,69,0.12)]' :
     'border-[#D6D2C7] focus-within:border-[#262624] focus-within:shadow-[0_0_0_3px_rgba(17,17,17,0.08)]'
   }`;
 
-  const statusClass = `font-mono text-xs min-h-[1.2em] ${
+  const statusClass = `font-mono text-xs min-h-[1.2em] mt-2 ${
     state === 'available' ? 'text-[#1f9d55]' :
     state === 'taken' ? 'text-[#d64545]' :
     'text-[#6B6964]'
@@ -89,10 +104,11 @@ export default function UsernameClaimField({ onClaim, autoFocus = false, buttonL
 
   return (
     <div>
-      <div className="flex items-stretch gap-2.5 max-w-[440px] flex-wrap">
-        <label className={fieldClass + ' flex-1 min-w-[240px]'}>
-          <span className="text-sm text-[#6B6964] whitespace-nowrap">storywall.io/</span>
+      <label className={fieldClass + ' max-w-[440px]'}>
+        <span className="flex-1 min-w-0 flex items-center font-mono">
+          {!hidePrefix && <span className="text-[13px] sm:text-sm text-[#6B6964] whitespace-nowrap">storywall.io/</span>}
           <input
+            ref={inputRef}
             type="text"
             value={value}
             onChange={e => setValue(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
@@ -101,17 +117,19 @@ export default function UsernameClaimField({ onClaim, autoFocus = false, buttonL
             autoComplete="off"
             spellCheck="false"
             autoFocus={autoFocus}
-            className="border-0 outline-none font-mono text-sm text-[#262624] py-3 px-1.5 w-full bg-transparent placeholder:text-[#8A877F]"
+            aria-label="Username"
+            className="border-0 outline-none font-mono text-[13px] sm:text-sm text-[#262624] py-2 px-0.5 sm:px-1 w-full min-w-0 bg-transparent placeholder:text-[#8A877F]"
           />
-        </label>
+        </span>
         <button
+          type="button"
           onClick={handleClaim}
           disabled={state !== 'available' || claiming}
-          className="font-mono font-bold text-sm bg-[#262624] text-[#F4F2EC] border-0 rounded-[10px] px-5 cursor-pointer whitespace-nowrap transition-all hover:opacity-90 hover:-translate-y-px disabled:opacity-40 disabled:cursor-not-allowed disabled:translate-y-0"
+          className="flex-shrink-0 font-inter font-semibold text-[13px] sm:text-sm bg-[#262624] text-[#F4F2EC] border-0 rounded-[8px] px-3 sm:px-4 py-2.5 cursor-pointer whitespace-nowrap transition-all hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {claiming ? claimingLabel : buttonLabel}
         </button>
-      </div>
+      </label>
       <p className={statusClass} aria-live="polite">
         {state === 'available' ? <span className="font-bold mr-1">✓</span> :
          state === 'taken' ? <span className="font-bold mr-1">✕</span> :
