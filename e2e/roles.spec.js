@@ -18,7 +18,7 @@ test.describe('visitor (signed out)', () => {
   });
 });
 
-test.describe('normal user', () => {
+test.describe('another signed-in user', () => {
   useAccount('user');
 
   test("sees no owner controls on someone else's wall", async ({ page }) => {
@@ -27,10 +27,16 @@ test.describe('normal user', () => {
     await expect(page.getByRole('button', { name: 'Edit profile' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Story options' })).toHaveCount(0);
   });
+});
+
+// Needs a non-admin, non-premium account (SW_NORMAL_*); skipped without one.
+test.describe('normal user', () => {
+  useAccount('normal');
 
   test('New story: Generate is locked (premium) and there is no Prompt Test', async ({ page }) => {
-    await page.goto(`/${ACCOUNTS.user.username}`);
-    await expect(page.getByRole('button', { name: 'Edit profile' })).toBeVisible();
+    // Signing in lands on your own wall.
+    await page.goto('/signin');
+    await expect(page.getByRole('button', { name: 'Edit profile' })).toBeVisible({ timeout: 30_000 });
     await newStoryButton(page).click();
     await expect(page.getByRole('heading', { name: 'New story' })).toBeVisible();
     await expect(page.getByRole('button', { name: /^Write/ })).toBeEnabled();

@@ -35,7 +35,7 @@ All existing logins of Oz unless noted; no new accounts without his OK.
 - **OpenRouter:** existing account (AI credits). **LibreChat:** existing instance (Phase 7).
 - **Base44:** app id `6a161402f22a3ebcce243595` (name "SW"). Frozen; stays untouched and working until the new app is proven.
 - **Domain:** storywall.io, registered and DNS-hosted at GoDaddy (see step 4h).
-- **Test accounts on live Base44:** `leopteh` = admin + premium (data migrated); `leo` = normal user (tests only). Credentials in env vars `SW_ADMIN_EMAIL/PASSWORD`, `SW_USER_EMAIL/PASSWORD` (cloud environment settings; a new session is needed after changing them).
+- **Test accounts on live Base44:** `leopteh` = admin + premium (data migrated, tests only read it); `leo` = admin since 2026-10-09, tests only, the account data-changing tests use (decision 16). Optional non-admin account for "locked" checks: `SW_NORMAL_EMAIL/PASSWORD` (not set yet). Credentials in env vars `SW_ADMIN_EMAIL/PASSWORD`, `SW_USER_EMAIL/PASSWORD` (cloud environment settings; a new session is needed after changing them).
 
 ## Lessons learned from Mend (apply from day one)
 
@@ -73,7 +73,7 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
   - **Publish:** preview, skill tags (AI + manual), story appears on the wall.
   - **Wall management:** reorder, archive/unarchive (archived = hidden from the wall, only the owner sees it and can unarchive), edit, delete.
   - **Admin-only:** Prompt Test page; "Download images" buttons.
-- Tests that create or delete data run **only as `leo`** and clean up after themselves; never write with `leopteh` (pending Oz's OK).
+- Tests that create or delete data run **only as `leo`** and clean up after themselves; never write with `leopteh` (decision 16). They are named `*.write.spec.js` and run one at a time after the read-only tests (phone, then desktop).
 - Screenshot baselines of key screens and rendered cards (editor, thumbnail, published) at phone and desktop sizes; animations off, timestamps masked.
 - All tests must pass on Base44 first. They define "works the same".
 - Progress (2026-10-09): sign-in check passes for both accounts. Read-only tests written and passing on Base44 (46 runs, phone + desktop): visitor pages, landing username claim (taken / reserved / free → sign-up), signed-in redirect and owner controls, settings panel, sign out, Generate/Prompt Test/"Download images" visibility per role, builder opens. The accounts sign in once (`e2e/auth.setup.js`, traces off) and the saved sessions (`e2e/.auth/`, gitignored) are reused. **Not yet covered:** wrong-password message, private profile page and its search, and every flow that writes data (onboarding, profile edits, builder actions, publish, wall management, Generate run): waiting for Oz's OK to write as `leo`. Screenshot baselines: not started.
