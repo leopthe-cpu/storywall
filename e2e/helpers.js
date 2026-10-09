@@ -130,3 +130,64 @@ export async function deleteDrafts(page, text = MARKER) {
     await expect(page.getByText(/^Saved /)).toHaveCount(before - 1, { timeout: 15_000 });
   }
 }
+
+// Wall: one story on the owner's wall (the smallest block holding both its
+// "Story options" menu button and the given text).
+export function storyOnWall(page, text) {
+  return page.locator('div')
+    .filter({ has: page.getByRole('button', { name: 'Story options' }) })
+    .filter({ hasNot: page.getByRole('button', { name: 'Edit profile' }) })
+    .filter({ hasText: text })
+    .last();
+}
+
+// The wall removes a deleted/archived story from the screen first and saves
+// in the background; reloading before that request finishes would cancel
+// it. Start this before the click, await it after.
+export function waitForWrite(page, methods = ['DELETE', 'PUT', 'PATCH']) {
+  return page.waitForResponse((res) => methods.includes(res.request().method()), { timeout: 30_000 });
+}
+
+// Wall: opens a story's ⋯ menu and picks an item (Edit, Archive, Delete…).
+export async function storyMenu(page, text, item) {
+  await storyOnWall(page, text).getByRole('button', { name: 'Story options' }).click();
+  await page.getByRole('button', { name: item, exact: true }).click();
+}
+
+// Builder → publish screen: write `text` on an empty card, open "Post →".
+export async function startStory(page, text) {
+  await page.goto('/create');
+  await typeIntoNewTextBox(page, text);
+  await page.getByRole('button', { name: 'Post →' }).first().click();
+  await expect(page.getByPlaceholder('Give your story a title...')).toBeVisible();
+}
+
+// Removes every story with the marker from the owner's wall and archive
+// (leftovers of a failed run). Deleting asks for confirmation.
+export async function deleteMarkedStories(page, username, text = MARKER) {
+  await page.goto(`/${username}`);
+  await expect(page.getByRole('button', { name: 'Edit profile' })).toBeVisible({ timeout: 30_000 });
+  for (let i = 0; i < 10 && (await storyOnWall(page, text).count()); i++) {
+    await storyMenu(page, text, 'Delete');
+    await expect(page.getByRole('heading', { name: 'Delete this story?' })).toBeVisible();
+    const deleted = waitForWrite(page, ['DELETE']);
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+    await deleted;
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Edit profile' })).toBeVisible({ timeout: 30_000 });
+  }
+  await expect(storyOnWall(page, text)).toHaveCount(0);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await page.getByRole('button', { name: /Archived stories/ }).click();
+  await expect(page.getByRole('heading', { name: 'Archived stories' })).toBeVisible();
+  for (let i = 0; i < 10; i++) {
+    const row = page.locator('div')
+      .filter({ has: page.getByRole('button', { name: 'Delete permanently' }) })
+      .filter({ hasText: text })
+      .last();
+    if (!(await row.count())) break;
+    await row.getByRole('button', { name: 'Delete permanently' }).click();
+    await row.getByRole('button', { name: 'Delete', exact: true }).click();
+    await expect(row).toHaveCount(0, { timeout: 15_000 });
+  }
+}
