@@ -1,0 +1,51 @@
+# Checks every pull request and every push to develop/main.
+# Two checks, both required by the branch rules (docs/migration-plan.md):
+#   - "lint and build": npm run lint + npm run build must pass.
+#   - "secret scan": gitleaks looks for passwords/keys in the code and its
+#     history (free for personal accounts, no licence key needed).
+# The Playwright tests (e2e/) are not run here: they run against a live site
+# with test-account passwords and change test data, so they are run on
+# purpose (see e2e/ and the plan). Database tests join in Phase 2.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+# A newer push to the same pull request replaces an older, still-running
+# check. Runs for pushes to develop/main are never cancelled: a cancelled run
+# leaves a red "cancelled" mark on a shared commit (lesson from Mend).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  pull-requests: read # the secret scan lists a pull request's commits
+
+jobs:
+  lint-build:
+    name: lint and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  secret-scan:
+    name: secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # whole history, so old commits are scanned too
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

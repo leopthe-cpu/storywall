@@ -1,6 +1,6 @@
 # Migration plan: Base44 → Railway + Supabase + Resend
 
-Status: **Phase 0 nearly done (step 6: Oz's review); Phase 0.5 started.** Decisions are logged in [`decisions.md`](decisions.md).
+Status: **Phase 0 done; Phase 0.5 done except a few items (see its progress line); Phase 1 started.** Decisions are logged in [`decisions.md`](decisions.md).
 
 Goal: the new app behaves exactly like the Base44 app (frozen at Base44 commit `e359934`, published 2026-10-08 19:49 UTC). No new features during the migration (see "After migration" at the end).
 
@@ -54,15 +54,15 @@ All existing logins of Oz unless noted; no new accounts without his OK.
 
 Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 
-### ✅/🔶 Phase 0: Inventory (no app changes)
+### ✅ Phase 0: Inventory (no app changes)
 1. ✅ Pull every Base44-side file into GitHub; list differences (step 1 below).
 2. ✅ GitHub is the only source of truth; Oz stopped editing in the Base44 builder; CLAUDE.md says so.
 3. ✅ Inventory: SDK calls, entities and fields, functions, secrets, emails, storage (step 3 below).
 4. ✅ Checks a–j (step 4 below).
 5. ✅ Decisions: Supabase option (2), Google/Apple (off in Base44, nothing to keep), MCP (12), analytics (9), link previews (10).
-6. 🔶 Oz reviews this plan.
+6. ✅ Oz reviewed this plan (2026-10-09).
 
-### 🔶 Phase 0.5: Record current behaviour (before any migration code)
+### ✅ Phase 0.5: Record current behaviour (before any migration code)
 - Playwright end-to-end tests against the **live Base44 app**, selecting elements by role and visible text only (the Base44 version can't be changed), so the same tests run on both sites. Phone and desktop sizes.
 - Flows to cover (adjusted to what the app really has; likes/follows/saves/comments don't exist):
   - **Visitor:** landing page; public wall (lazy-loading feed); unclaimed username ("This wall isn't claimed yet"); private profile page (incl. its profile search box); builder requires sign-in.
@@ -78,8 +78,8 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 - All tests must pass on Base44 first. They define "works the same".
 - Progress (2026-10-09): 86 test runs pass on Base44 (phone + desktop; plus the opt-in Generate test). Covered: visitor pages; landing username claim; sign-in redirect, settings, sign out; roles (Generate locked / Prompt Test refused for a normal user; Generate, Prompt Test, "Download images" for the admin); edit profile fields and links; private/public switch and the private page's search; builder text + autosave + reopen + delete draft; templates; Text FX + warp survive save/reopen; text drag and narrowing; photo corner resize (opposite corner stays), crop and zoom, all kept after reopen; publish with suggested and own skills; archive/restore; edit + re-post; delete. Opt-in (`SW_RUN_GENERATE=1`, uses paid AI): Generate. **Screenshots** (`e2e/*-snapshots/`, taken on Base44 in this cloud environment, "reduce motion" on): landing, sign-in, sign-up, unclaimed username, empty builder; the photo template's cards in the editor, publish preview and published wall. Compare only pictures taken on the same kind of machine. **Not yet covered:** `leo`'s wall picture (parked: this environment's network blocks `base44.app` profile photos and `www.google.com` link icons; allow both hosts, then take it); wrong-password message; onboarding (needs a new account); uploads and profile photo (checked by hand by Oz, decision 18); clicking "Download images".
 
-### ⬜ Phase 1: Environments and email
-- Branches `develop` and `main`; rulesets as in the lessons above; CI workflow (lint, build, tests, secret scan, database tests).
+### 🔶 Phase 1: Environments and email
+- Branches `develop` and `main` (created 2026-10-09 from the code that matches the live app; work arrives by pull request); rulesets as in the lessons above; CI workflow `.github/workflows/ci.yml` (lint + build, secret scan; Playwright tests run on purpose, not in CI, since they use live test accounts; database tests join in Phase 2). Default branch → `main` (Oz, in GitHub settings).
 - Supabase GitHub integration (production from `main`, staging from `develop`). Site URL + Redirect URLs per environment.
 - Railway project `storywall` with `staging` and `production`.
 - DNS: GoDaddy can't do CNAME flattening/ALIAS at the root (to confirm) → move DNS to Cloudflare (free) now, keeping every existing record (step 4h).
