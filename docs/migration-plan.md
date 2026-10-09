@@ -79,9 +79,9 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 - Progress (2026-10-09): 86 test runs pass on Base44 (phone + desktop; plus the opt-in Generate test). Covered: visitor pages; landing username claim; sign-in redirect, settings, sign out; roles (Generate locked / Prompt Test refused for a normal user; Generate, Prompt Test, "Download images" for the admin); edit profile fields and links; private/public switch and the private page's search; builder text + autosave + reopen + delete draft; templates; Text FX + warp survive save/reopen; text drag and narrowing; photo corner resize (opposite corner stays), crop and zoom, all kept after reopen; publish with suggested and own skills; archive/restore; edit + re-post; delete. Opt-in (`SW_RUN_GENERATE=1`, uses paid AI): Generate. **Screenshots** (`e2e/*-snapshots/`, taken on Base44 in this cloud environment, "reduce motion" on): landing, sign-in, sign-up, unclaimed username, empty builder; the photo template's cards in the editor, publish preview and published wall. Compare only pictures taken on the same kind of machine. **Not yet covered:** `leo`'s wall picture (parked: this environment's network blocks `base44.app` profile photos and `www.google.com` link icons; allow both hosts, then take it); wrong-password message; onboarding (needs a new account); uploads and profile photo (checked by hand by Oz, decision 18); clicking "Download images".
 
 ### 🔶 Phase 1: Environments and email
-- Branches `develop` and `main` (created 2026-10-09 from the code that matches the live app; work arrives by pull request); rulesets as in the lessons above; CI workflow `.github/workflows/ci.yml` (lint + build, secret scan; Playwright tests run on purpose, not in CI, since they use live test accounts; database tests join in Phase 2). Default branch → `main` (Oz, in GitHub settings).
+- Branches `develop` and `main` (created 2026-10-09 from the code that matches the live app; work arrives by pull request); rulesets as in the lessons above; CI workflow `.github/workflows/ci.yml` (lint + build, secret scan; Playwright tests run on purpose, not in CI, since they use live test accounts; database tests join in Phase 2). Default branch → `main` ✅. Rulesets: to do (Oz, on a computer).
 - Supabase GitHub integration (production from `main`, staging from `develop`). Site URL + Redirect URLs per environment.
-- Railway project `storywall` with `staging` and `production`.
+- ✅ Railway project `storywall` with `staging` and `production` (both empty; services come in Phase 4).
 - DNS: GoDaddy can't do CNAME flattening/ALIAS at the root (to confirm) → move DNS to Cloudflare (free) now, keeping every existing record (step 4h).
 - Resend: verify storywall.io (SPF/DKIM/DMARC), connect as custom SMTP on **both** Supabase projects, sign-up/sign-in templates send the 6-digit code (`{{ .Token }}`), raise the auth email rate limit sensibly.
 
@@ -128,7 +128,7 @@ Decided by Oz on 2026-10-09 (decision 14). The new app must not reproduce these 
 |---|---|---|
 | Git branch | `develop` | `main` (Oz approves) |
 | Supabase project | `storywall-staging` (`vlgwcpqndmfhsfcxijpr`, ca-central-1) | `storywall` (`igakvqlzvglvuqflngey`, ca-central-1) |
-| Railway | project `storywall`, env `staging` (not created yet) | env `production` (not created yet) |
+| Railway | project `storywall` (`cc1c435c-28cd-4e49-80c3-3996a16d4221`), env `staging` (empty, created 2026-10-09) | env `production` (`e40b17e0-7924-4eb1-a68f-4e7ae1b9ed8f`, empty) |
 
 ## Phase 0, step 1: sync (done 2026-10-08)
 
