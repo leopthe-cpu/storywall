@@ -99,7 +99,17 @@ Shared helpers: `base44/shared/premium.ts` (hasPremium), `rateLimit.ts`, `userna
 
 **g. Supabase connector in `base44/connectors/supabase.jsonc`.** Lists only OAuth scopes, no project. No StoryWall data in any Supabase project (Oz's StoryWall Supabase account was new and empty on 2026-10-08).
 
-**h. Domain.** Registered at GoDaddy; DNS hosted at GoDaddy (default nameservers `ns59/ns60.domaincontrol.com`). storywall.io currently resolves to `216.24.57.1` (Base44 hosting; rollback target). Railway needs CNAME flattening or a dynamic ALIAS record at the root (docs.railway.com/networking/domains/working-with-domains#adding-a-root-domain). *Unverified* whether GoDaddy offers either; if not, DNS moves to Cloudflare in Phase 1 keeping every record. Record list (incl. MX): pending screenshot.
+**h. Domain.** Registered at GoDaddy; DNS hosted at GoDaddy (default nameservers `ns59/ns60.domaincontrol.com`). Records on 2026-10-09 (all TTL 1 hour):
+
+| Type | Name | Value | Purpose |
+|---|---|---|---|
+| A | @ | 216.24.57.1 | Base44 hosting (rollback target) |
+| CNAME | www | base44.onrender.com | Base44 hosting |
+| CNAME | em, s1._domainkey, s2._domainkey | `*.wl200.sendgrid.net` | Base44 custom email domain (`hello@storywall.io`); Base44 reports it as **never finished** (`pending_user_dns_configuration`), so Base44's emails don't use it today |
+| CNAME | _domainconnect | _domainconnect.gd.domaincontrol.com | GoDaddy default |
+| NS, SOA | @ | GoDaddy | GoDaddy default |
+
+**No MX records**: nobody receives email at @storywall.io today. Railway needs CNAME flattening or a dynamic ALIAS record at the root (docs.railway.com/networking/domains/working-with-domains#adding-a-root-domain); GoDaddy's record list offers neither as far as we know (*not fully verified*), so the plan is to move DNS to Cloudflare (free) in Phase 1, keeping every record above.
 
 **i. AI models.** `structureStory` calls Base44 `InvokeLLM` with **no model specified** (Base44's default model; which one is *not verified*), JSON-schema output, optional image `file_urls`, two calls per run (structure + verify, up to 2 attempts). `generateImage` calls Base44 `GenerateImage`; code comments mention Qwen-Image-3.0 image-to-image (`existing_image_urls`). Base44 also stores an unused `DASHSCOPE_API_KEY` (DashScope = Alibaba's Qwen API), which fits that. `suggestSkills` calls z.ai directly (`glm-5.3-flash`).
 
@@ -112,5 +122,7 @@ Shared helpers: `base44/shared/premium.ts` (hasPremium), `rateLimit.ts`, `userna
 - Credentials: stored by Oz as environment variables in the cloud environment settings (never in chat or repo).
 
 ## After migration (not doing now)
+
+- Analytics (decision 9).
 
 - Likes / follows / saves / comments: tables exist but no screens. Decide whether to drop the tables or build the feature.
