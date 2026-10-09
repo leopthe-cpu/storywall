@@ -29,13 +29,11 @@ test.describe('another signed-in user', () => {
   });
 });
 
-// Needs a non-admin, non-premium account (SW_NORMAL_*); skipped without one.
 test.describe('normal user', () => {
-  useAccount('normal');
+  useAccount('user');
 
   test('New story: Generate is locked (premium) and there is no Prompt Test', async ({ page }) => {
-    // Signing in lands on your own wall.
-    await page.goto('/signin');
+    await page.goto(`/${ACCOUNTS.user.username}`);
     await expect(page.getByRole('button', { name: 'Edit profile' })).toBeVisible({ timeout: 30_000 });
     await newStoryButton(page).click();
     await expect(page.getByRole('heading', { name: 'New story' })).toBeVisible();

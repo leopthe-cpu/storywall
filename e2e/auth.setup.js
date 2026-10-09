@@ -14,7 +14,7 @@ for (const account of Object.keys(ACCOUNTS)) {
     fs.mkdirSync('e2e/.auth', { recursive: true });
     if (!email || !password) {
       // Credentials not set: save an empty session so the specs can load;
-      // they skip themselves (see requireAccount in helpers.js).
+      // they skip themselves (see useAccount in helpers.js).
       fs.writeFileSync(authFile(account), JSON.stringify({ cookies: [], origins: [] }));
       return;
     }

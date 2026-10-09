@@ -1,11 +1,13 @@
 import { test, expect } from '@playwright/test';
-import { useAccount, newStoryButton, ACCOUNTS, openDraftsList, waitForDraft, deleteDrafts } from './helpers.js';
+import { useAccount, newStoryButton, ACCOUNTS, openDraftsList, waitForDraft, deleteRecentDrafts } from './helpers.js';
 
-// AI Generate, as the test-only `leo` account (an admin, so premium).
+// AI Generate, as the admin account `leopteh` (admins are premium; the
+// normal test account can't run it). It makes one draft there and deletes
+// it again (only drafts saved in the last hours that contain KEPT).
 // OFF by default: every run uses paid AI (story structure + about 3 pictures)
 // and leaves the generated picture files in storage (deleting a draft doesn't
 // remove them). Turn on with SW_RUN_GENERATE=1.
-useAccount('user');
+useAccount('admin');
 test.describe.configure({ mode: 'serial' });
 test.skip(process.env.SW_RUN_GENERATE !== '1', 'Generate costs AI credits: set SW_RUN_GENERATE=1 to run it');
 
@@ -18,7 +20,7 @@ const notes = `Last year I led a small team that ${KEPT}. Sign-ups were dropping
 async function cleanUp(page) {
   await page.goto('/create');
   await openDraftsList(page);
-  await deleteDrafts(page, KEPT);
+  await deleteRecentDrafts(page, KEPT);
 }
 
 test.beforeAll(async ({ browser }) => {
@@ -35,7 +37,7 @@ test.afterAll(async ({ browser }) => {
 
 test('Generate turns notes into cards with the same words and saves a draft', async ({ page }) => {
   test.setTimeout(300_000);
-  await page.goto(`/${ACCOUNTS.user.username}`);
+  await page.goto(`/${ACCOUNTS.admin.username}`);
   await newStoryButton(page).click();
   await page.getByRole('button', { name: /^Generate/ }).click();
   await expect(page).toHaveURL(/\/create/);
@@ -59,5 +61,5 @@ test('Generate turns notes into cards with the same words and saves a draft', as
   }
 
   await openDraftsList(page);
-  await waitForDraft(page, KEPT);
+  await waitForDraft(page, KEPT, { recent: true });
 });

@@ -37,9 +37,9 @@ test.afterAll(async ({ browser }) => {
 
 test('publish: suggested skills, a title, then the story is on the wall for everyone', async ({ page, browser }) => {
   await startStory(page, body);
-  // The publish screen previews the card and (admins only) offers the image export.
+  // The publish screen previews the card; the image export is admin-only.
   await expect(page.getByText(body, { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole('button', { name: /Download card as image/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Download card as image/ })).toHaveCount(0);
 
   // Skills: suggestions appear; none is picked for you.
   await expect(page.getByRole('button', { name: 'Regenerate suggestions' })).toBeVisible({ timeout: 30_000 });

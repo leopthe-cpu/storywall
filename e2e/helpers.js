@@ -1,16 +1,14 @@
 import { test, expect } from '@playwright/test';
 
-// Test accounts on the site under test (see docs/migration-plan.md):
-// - admin  = `leopteh`, admin + premium, real data: tests only READ with it.
-// - user   = `leo`, test-only account (admin since 2026-10-09, so it can run
-//            Generate): tests that write data use this one and clean up.
-// - normal = an optional non-admin, non-premium account for the "locked for
-//            normal users" checks; those tests skip while it isn't set.
+// Test accounts on the site under test (decision 16 in docs/decisions.md):
+// - admin = `leopteh`, admin + premium, Oz's real data: used for the admin
+//           checks and Generate only (Generate deletes the draft it makes).
+// - user  = `leo`, a normal (non-admin, non-premium) test-only account: every
+//           other test that changes data uses it and cleans up.
 // Credentials come from environment variables only; never hard-code them.
 export const ACCOUNTS = {
   admin: { username: 'leopteh', name: 'Oz', email: process.env.SW_ADMIN_EMAIL, password: process.env.SW_ADMIN_PASSWORD },
   user: { username: 'leo', name: 'Leo', email: process.env.SW_USER_EMAIL, password: process.env.SW_USER_PASSWORD },
-  normal: { email: process.env.SW_NORMAL_EMAIL, password: process.env.SW_NORMAL_PASSWORD },
 };
 
 export const authFile = (account) => `e2e/.auth/${account}.json`;
