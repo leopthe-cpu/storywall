@@ -75,3 +75,58 @@ export async function visitorPage(browser) {
   const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
   return context.newPage();
 }
+
+// Every story a test creates contains this marker, so leftovers from a failed
+// run can be found and removed by the next run.
+export const MARKER = 'E2E';
+export const markerText = () => `${MARKER} ${Date.now().toString(36)}`;
+
+// Builder: start typing into the empty text box that clicking the Text tab
+// adds to an empty card. The "Text" placeholder doesn't take clicks itself
+// (pointer-events: none), so the double-click is forced through to the box.
+export async function typeIntoNewTextBox(page, text) {
+  await page.getByRole('button', { name: 'Text', exact: true }).click();
+  await page.getByText('Text', { exact: true }).first().dblclick({ force: true });
+  await page.keyboard.type(text);
+}
+
+// Builder: the Drafts list (Cards → Drafts), once it has loaded (the test
+// account always has at least one draft of its own, older than the tests).
+export async function openDraftsList(page) {
+  await page.getByRole('button', { name: 'Cards', exact: true }).click();
+  await page.getByRole('button', { name: 'Drafts', exact: true }).click();
+  await expect(page.getByText(/^Saved /).first()).toBeVisible({ timeout: 20_000 });
+}
+
+// The Drafts list loads only when its tab opens, so to see a draft that was
+// just autosaved, re-open the tab until it shows up.
+export async function waitForDraft(page, text) {
+  await expect(async () => {
+    await page.getByRole('button', { name: 'Gallery', exact: true }).click();
+    await page.getByRole('button', { name: 'Drafts', exact: true }).click();
+    await expect(draftRow(page, text)).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 40_000 });
+}
+
+// One draft row in the Drafts list: the smallest block holding both its
+// "Saved …" line and the given text. Blocks that also hold the panel's tabs
+// are excluded, or the whole screen (canvas + list) would match.
+export function draftRow(page, text) {
+  return page.locator('div')
+    .filter({ has: page.getByText(/^Saved /) })
+    .filter({ hasNot: page.getByRole('button', { name: 'Drafts', exact: true }) })
+    .filter({ hasText: text })
+    .last();
+}
+
+// Builder: delete every draft whose cards contain `text` (the bin button is
+// the row's last button; the first click asks, the second deletes).
+export async function deleteDrafts(page, text = MARKER) {
+  for (let i = 0; i < 10 && (await draftRow(page, text).count()); i++) {
+    const row = draftRow(page, text);
+    const before = await page.getByText(/^Saved /).count();
+    await row.getByRole('button').last().click();
+    await row.getByRole('button').last().click();
+    await expect(page.getByText(/^Saved /)).toHaveCount(before - 1, { timeout: 15_000 });
+  }
+}
