@@ -83,11 +83,33 @@ Shared helpers: `base44/shared/premium.ts` (hasPremium), `rateLimit.ts`, `userna
 - Link previews (Open Graph tags) on every page: title "StoryWall", description "A streamlined visual project management and collaboration workspace for creative teams.", Base44-hosted logo image. Same for every URL (to be confirmed for profile URLs in step 4f).
 - Security headers on storywall.io (HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy).
 
-## Phase 0, step 4h: domain (partial)
+## Phase 0, step 4: checks (2026-10-09)
 
-- storywall.io is registered at GoDaddy (Oz). DNS provider and records: pending (screenshot from GoDaddy).
-- Today storywall.io resolves to `216.24.57.1` (Base44's hosting; response headers show Cloudflare + Render). This is the rollback target.
-- Railway needs CNAME flattening or a dynamic ALIAS record for a root domain (docs.railway.com/networking/domains/working-with-domains#adding-a-root-domain). Unverified whether GoDaddy DNS offers either; if not, DNS moves to Cloudflare (free) in Phase 1, keeping every existing record.
+**a. Login methods.** Base44's live auth config (`/api/apps/public/login-info/by-id/<app id>`): email + password only. Google, Apple, Microsoft, Facebook and SSO are all **off**. StoryWall's own `/signin` page has no social buttons either; the "Provided by Google/Apple" text in `BurgerMenu.jsx` is unreachable. "Forgot password?" goes to Base44's hosted `/login` page.
+
+**b. MCP / OAuthConsent.** Base44 reports the app's MCP server as `active: false, published: false`, no tools, no config, and no route in `App.jsx` reaches `OAuthConsent.jsx`. The feature is **not live**.
+
+**c. Base44 built-ins the code relies on.** Fields: `id`, `created_date` (11 uses), `updated_date` (7), `created_by` (5, email), `full_name` (18), `provider` (7, BurgerMenu only), `User.role` (admin checks). Sorting: `'-updated_date'`, `'created_date'` (minus = newest first). Filters: equality objects, e.g. `{ author_id, status }`.
+
+**d. Upload sizes.** In our code: images are downscaled in the browser to 1600 px (`imageOptimize.js`); Prompt Test caps reference images at 10 MB; video and audio have **no size check in our code**. Base44's own server-side limit: *not verified yet* (to check before Phase 2 sets bucket limits; Supabase Free = 50 MB per file).
+
+**e. Analytics.** Two Base44 trackers, both platform-injected: page views (`POST /api/app-logs/<app>/log-user-in-app/<page>`) and events (`POST /api/apps/<app>/analytics/track/batch`). Nothing in our code reads them.
+
+**f. Link previews.** Server-side Open Graph tags from Base44, generic: home and `/login` → "StoryWall" + "A streamlined visual project management and collaboration workspace for creative teams." + Base44-hosted logo (1200×630). Profile URLs (e.g. `/leopteh`) → title "storywall", "Public Profile on StoryWall. A streamlined visual project management…", same logo. No per-user name/photo. Twitter card: `summary_large_image`.
+
+**g. Supabase connector in `base44/connectors/supabase.jsonc`.** Lists only OAuth scopes, no project. No StoryWall data in any Supabase project (Oz's StoryWall Supabase account was new and empty on 2026-10-08).
+
+**h. Domain.** Registered at GoDaddy; DNS hosted at GoDaddy (default nameservers `ns59/ns60.domaincontrol.com`). storywall.io currently resolves to `216.24.57.1` (Base44 hosting; rollback target). Railway needs CNAME flattening or a dynamic ALIAS record at the root (docs.railway.com/networking/domains/working-with-domains#adding-a-root-domain). *Unverified* whether GoDaddy offers either; if not, DNS moves to Cloudflare in Phase 1 keeping every record. Record list (incl. MX): pending screenshot.
+
+**i. AI models.** `structureStory` calls Base44 `InvokeLLM` with **no model specified** (Base44's default model; which one is *not verified*), JSON-schema output, optional image `file_urls`, two calls per run (structure + verify, up to 2 attempts). `generateImage` calls Base44 `GenerateImage`; code comments mention Qwen-Image-3.0 image-to-image (`existing_image_urls`). Base44 also stores an unused `DASHSCOPE_API_KEY` (DashScope = Alibaba's Qwen API), which fits that. `suggestSkills` calls z.ai directly (`glm-5.3-flash`).
+
+**j. z.ai key.** Oz can create z.ai keys (a new one will be made for Supabase; see decision 8).
+
+### Test accounts (live Base44)
+
+- Admin + premium: `leopteh`.
+- Normal user: `leo`.
+- Credentials: stored by Oz as environment variables in the cloud environment settings (never in chat or repo).
 
 ## After migration (not doing now)
 
