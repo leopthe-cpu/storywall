@@ -107,9 +107,8 @@ test('private wall: everyone sees "This profile is private"; signed-in users can
     await expect(other.getByRole('heading', { level: 1, name: 'Jody' })).toBeVisible();
     await otherContext.close();
 
-    // Base44 today: the owner gets the same page (no way back to Settings).
-    await page.goto(`/${username}`);
-    await expect(privateHeading(page)).toBeVisible();
+    // Not checked: what the owner sees. Base44 locks the owner out (same
+    // page, no Settings); the new app fixes that on purpose (decision 17).
   } finally {
     await setOwnPrivacyBase44(page, false);
   }

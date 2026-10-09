@@ -76,7 +76,7 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 - Tests that create or delete data run **only as `leo`** and clean up after themselves; never write with `leopteh` (decision 16). They are named `*.write.spec.js` and run one at a time after the read-only tests (phone, then desktop).
 - Screenshot baselines of key screens and rendered cards (editor, thumbnail, published) at phone and desktop sizes; animations off, timestamps masked.
 - All tests must pass on Base44 first. They define "works the same".
-- Progress (2026-10-09): 67 test runs pass on Base44 (phone + desktop). Covered: visitor pages; landing username claim; sign-in redirect, settings, sign out; roles (Generate/Prompt Test/"Download images" visibility); edit profile fields and links; private/public switch and the private page's search; builder text + autosave + reopen + delete draft; templates; Text FX + warp survive save/reopen; publish with suggested and own skills; archive/restore; edit + re-post; delete. Opt-in (`SW_RUN_GENERATE=1`, uses paid AI): Generate. Data-changing tests are `*.write.spec.js`, run as `leo` one at a time and clean up (checked in the database after each run). **Not yet covered:** "locked for normal users" checks (need a non-admin account, `SW_NORMAL_*`); wrong-password message; onboarding (needs a new account, i.e. the sign-up email code); image/video/audio uploads, drag/resize/crop/zoom and profile photo (uploads leave files in storage); clicking "Download images"; screenshot baselines.
+- Progress (2026-10-09): 67 test runs pass on Base44 (phone + desktop). Covered: visitor pages; landing username claim; sign-in redirect, settings, sign out; roles (Generate/Prompt Test/"Download images" visibility); edit profile fields and links; private/public switch and the private page's search; builder text + autosave + reopen + delete draft; templates; Text FX + warp survive save/reopen; publish with suggested and own skills; archive/restore; edit + re-post; delete. Opt-in (`SW_RUN_GENERATE=1`, uses paid AI): Generate. Data-changing tests are `*.write.spec.js`, run as `leo` one at a time and clean up (checked in the database after each run). **Not yet covered:** "locked for normal users" checks (need a non-admin account, `SW_NORMAL_*`); wrong-password message; onboarding (needs a new account, i.e. the sign-up email code); drag/resize/crop/zoom; image/video/audio uploads and profile photo (checked by hand by Oz, decision 18); clicking "Download images"; screenshot baselines.
 
 ### ⬜ Phase 1: Environments and email
 - Branches `develop` and `main`; rulesets as in the lessons above; CI workflow (lint, build, tests, secret scan, database tests).
@@ -119,6 +119,7 @@ Decided by Oz on 2026-10-09 (decision 14). The new app must not reproduce these 
 - Private notes behind a story (e.g. the notes given to Generate) are never sent to visitors.
 - A user's full profile record (role, private settings) is readable only by that user and admins; others see only public profile fields, and nothing beyond "this profile is private" for private profiles.
 - Ownership can't be changed by editing a record: write rules check the row both before and after the change.
+- The owner of a private wall still sees their own wall and Settings, so they can make it public again (decision 17).
 - Details of what was found on the live Base44 app are kept out of this public repo.
 
 ## Environments
@@ -247,7 +248,7 @@ Shared helpers: `base44/shared/premium.ts` (hasPremium), `rateLimit.ts`, `userna
 ## Base44 behaviour found while writing tests (2026-10-09)
 
 Recorded as-is ("works the same"); Oz decides whether any is fixed instead.
-- **Private wall locks out its owner:** once private, the owner's own wall also shows "This profile is private", so Settings (and the switch back) can't be reached.
+- **Private wall locks out its owner:** once private, the owner's own wall also shows "This profile is private", so Settings (and the switch back) can't be reached. **Fixed in the new app** (decision 17).
 - **Profile search on the private page** returns "No profiles found" to signed-out visitors (the search needs a sign-in); signed-in users get results.
 - **Reordering stories can't be reached:** `ReorderStories` exists but nothing opens it.
 - **No "Replace this story?" question for templates:** `TemplateConfirmModal` isn't used; a template saves the current story as a draft, then starts a new one.
