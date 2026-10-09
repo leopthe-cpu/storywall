@@ -14,3 +14,7 @@ Newest last. "Oz" = owner; "agent" = decision made by the AI assistant on Oz's b
 | 7 | 2026-10-09 | Migrate `leopteh`'s data to the new app: profile, stories (published, drafts, archived), onboarding draft and media files (copied into Supabase Storage, so nothing keeps pointing at Base44 file hosting after Base44 is cancelled). Other accounts' data is not migrated. | Oz | Done as a one-off import script in Phase 2/6, verified against the Base44 data. |
 | 8 | 2026-10-09 | A z.ai key shared in chat was treated as exposed: Oz revokes it and creates a new one later, which he stores directly in Supabase's secrets. | agent | Secrets never go through the chat or the repo. |
 | 9 | 2026-10-09 | No analytics during the migration; Base44's built-in tracking is not replaced. Analytics comes later (after-migration list). | Oz | |
+| 10 | 2026-10-09 | Link previews: keep today's generic card during the migration; per-person previews (name, photo) after go-live. | Oz | No new features during the migration. |
+| 11 | 2026-10-09 | Profile / keyword search for recruiters and readers: after go-live. The existing small profile search on the private-profile page is migrated as-is. | Oz | |
+| 12 | 2026-10-09 | MCP / AI-assistant integration: not migrated; after go-live if wanted. | Oz | Switched off in Base44, no route, no users. |
+| 13 | 2026-10-09 | Like / Follow / Save / Comment tables are not migrated (empty, unused). | agent | No code uses them; listed in the after-migration backlog. |

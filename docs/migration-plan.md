@@ -121,8 +121,18 @@ Shared helpers: `base44/shared/premium.ts` (hasPremium), `rateLimit.ts`, `userna
 - Normal user: `leo`.
 - Credentials: stored by Oz as environment variables in the cloud environment settings (never in chat or repo).
 
+## Product behaviour notes (confirmed by Oz, 2026-10-09)
+
+- **Archive:** an archived story is hidden from the public wall; only its owner still sees it and can unarchive it, which makes it visible on the wall again.
+- **Profile search today:** the only search in the app is the small "Search profiles by name or username…" box on the "This profile is private" page (`PrivateProfileState.jsx` → `searchProfiles`, signed-in users only). It is existing behaviour and is migrated as-is.
+- **Link previews during the migration:** the new app shows the same generic card Base44 shows today (static tags in `index.html`). Per-person previews come after the migration.
+
 ## After migration (not doing now)
 
-- Analytics (decision 9).
+Oz's backlog for after go-live. Nothing here is built during the migration.
 
-- Likes / follows / saves / comments: tables exist but no screens. Decide whether to drop the tables or build the feature.
+1. **Per-person link previews** (decision 10): when a wall link is shared (WhatsApp, LinkedIn, iMessage, Slack), show that person's name, headline and photo instead of the generic StoryWall card. Also replace Base44's stored description ("A streamlined visual project management and collaboration workspace for creative teams."), which doesn't describe StoryWall.
+2. **Search / discovery** (decision 11): keyword search across profiles, skill tags and stories, e.g. recruiters finding candidates, people finding stories to read.
+3. **AI-assistant integration (MCP)** (decision 12): let AI assistants act on a StoryWall account. Base44 had an unfinished, switched-off version (`src/pages/OAuthConsent.jsx`, no route); it is not migrated.
+4. **Analytics** (decision 9).
+5. **Likes / follows / saves / comments:** tables exist in Base44 but no screens and no data. Decide whether to build the feature; the empty tables are not migrated.
