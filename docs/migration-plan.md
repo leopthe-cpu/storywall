@@ -83,6 +83,12 @@ Shared helpers: `base44/shared/premium.ts` (hasPremium), `rateLimit.ts`, `userna
 - Link previews (Open Graph tags) on every page: title "StoryWall", description "A streamlined visual project management and collaboration workspace for creative teams.", Base44-hosted logo image. Same for every URL (to be confirmed for profile URLs in step 4f).
 - Security headers on storywall.io (HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy).
 
+## Phase 0, step 4h: domain (partial)
+
+- storywall.io is registered at GoDaddy (Oz). DNS provider and records: pending (screenshot from GoDaddy).
+- Today storywall.io resolves to `216.24.57.1` (Base44's hosting; response headers show Cloudflare + Render). This is the rollback target.
+- Railway needs CNAME flattening or a dynamic ALIAS record for a root domain (docs.railway.com/networking/domains/working-with-domains#adding-a-root-domain). Unverified whether GoDaddy DNS offers either; if not, DNS moves to Cloudflare (free) in Phase 1, keeping every existing record.
+
 ## After migration (not doing now)
 
 - Likes / follows / saves / comments: tables exist but no screens. Decide whether to drop the tables or build the feature.
