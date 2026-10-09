@@ -85,7 +85,8 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 - DNS: GoDaddy can't do CNAME flattening/ALIAS at the root (to confirm) → move DNS to Cloudflare (free) now, keeping every existing record (step 4h).
 - Resend: verify storywall.io (SPF/DKIM/DMARC), connect as custom SMTP on **both** Supabase projects, sign-up/sign-in templates send the 6-digit code (`{{ .Token }}`), raise the auth email rate limit sensibly.
 
-### ⬜ Phase 2: Database and storage
+### 🔶 Phase 2: Database and storage
+- Draft (2026-10-09, not applied anywhere yet): `supabase/migrations/20261009190000_initial_schema.sql` (tables, RLS, grants; design in decision 19) and `supabase/tests/database/access_rules.test.sql` (41 pgTAP checks, pass locally; run in CI by `supabase test db`). Storage buckets and the data import still to do.
 - Migrations for all used entities (`Post.cards[].elements[]` keeps every field), reproducing Base44's built-ins (`created_by`, dates, sorting, `role`); Oz's account stays admin.
 - RLS matching current visibility rules, **except the privacy fixes below**; storage buckets (public + private with signed URLs) with size limits (Free plan: 50 MB/file; Base44's limit still to verify); premium check (PremiumGrant + admins). Database tests (pgTAP).
 - One-off import of `leopteh`'s data incl. media files (decision 7).
