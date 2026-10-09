@@ -11,6 +11,10 @@ export default defineConfig({
   timeout: 60_000,
   retries: 0,
   reporter: [['list']],
+  // Screenshot comparisons: the reference pictures were taken on the live
+  // Base44 app (e2e/*-snapshots/). Small differences (font smoothing) are
+  // allowed; CSS animations are stopped before each picture.
+  expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.02, animations: 'disabled' } },
   use: {
     baseURL: process.env.BASE_URL || 'https://storywall.io',
     trace: 'retain-on-failure',
