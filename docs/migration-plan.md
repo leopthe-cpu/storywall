@@ -1,8 +1,124 @@
 # Migration plan: Base44 → Railway + Supabase + Resend
 
-Status: **Phase 0 (inventory) in progress.** Decisions are logged in [`decisions.md`](decisions.md).
+Status: **Phase 0 nearly done (step 6: Oz's review); Phase 0.5 started.** Decisions are logged in [`decisions.md`](decisions.md).
 
 Goal: the new app behaves exactly like the Base44 app (frozen at Base44 commit `e359934`, published 2026-10-08 19:49 UTC). No new features during the migration (see "After migration" at the end).
+
+## How we work (Oz's rules)
+
+**Working with Oz** (owner, product manager, not a developer):
+- Plain language, one step at a time. For dashboard steps: exact clicks and direct links, then wait for "done".
+- After Oz does something, **verify it yourself** with your tools before moving on.
+- Ask before deviating from this plan. Record every decision made on Oz's behalf in `docs/decisions.md`.
+- Be explicit about what is untested or unverified.
+- **Never ask Oz to paste passwords, tokens or keys into the chat.** He sets secrets himself in the dashboards or the cloud environment settings.
+
+**Engineering rules (strict):**
+- Never invent APIs, SDK methods, CLI flags or config keys. Check the current official docs (Base44, Supabase, Railway, Resend, GitHub) first.
+- Database changes only as migration files in `supabase/migrations/`, never in the dashboard. RLS on every table. Every table's grants are explicit (new projects don't auto-grant; see decision 5).
+- The browser only ever holds the publishable key. Premium is enforced server-side only.
+- No secrets in the repo; `.env.example` with placeholder names only.
+- Small commits on feature branches (cloud sessions: their `claude/…` branch, decision 4); pull requests into `develop`; never push to `main` or `develop` directly. Agents never open or merge PRs into `main`.
+- Verify behaviour in a real browser (Playwright), not by assumption.
+- Before every PR: `npm run lint` and `npm run build` pass.
+- No new features or redesigns during the migration. Ideas go to "After migration" at the end of this file.
+- This repo is **public**: keep sensitive docs (security review, operating guide, internal notes) out of it. A closed PR stays readable, so never push private text even briefly.
+- Playwright error logs and traces of sign-in tests contain the typed password: never print, open or share them.
+
+## Accounts and services
+
+All existing logins of Oz unless noted; no new accounts without his OK.
+- **GitHub:** `leopthe-cpu` (Oz, admin). Bot `w0rkstufff` (Write role, works only through PRs; used by Oz's LibreChat agent, Phase 7).
+- **Railway:** Oz's account. New project `storywall` with environments `production` (deploys `main`) and `staging` (deploys `develop`). The `mend` project (with LibreChat) stays as is. Project `dependable-reprieve`: unknown, **don't touch** (ask Oz).
+- **Supabase:** separate StoryWall login, org `storywall` (Free plan). Projects in the table below. The claude.ai Supabase connector is authorized for this org only (decision 3).
+- **Resend:** Oz creates a free account (Phase 1); agent guides the domain setup.
+- **OpenRouter:** existing account (AI credits). **LibreChat:** existing instance (Phase 7).
+- **Base44:** app id `6a161402f22a3ebcce243595` (name "SW"). Frozen; stays untouched and working until the new app is proven.
+- **Domain:** storywall.io, registered and DNS-hosted at GoDaddy (see step 4h).
+- **Test accounts on live Base44:** `leopteh` = admin + premium (data migrated); `leo` = normal user (tests only). Credentials in env vars `SW_ADMIN_EMAIL/PASSWORD`, `SW_USER_EMAIL/PASSWORD` (cloud environment settings; a new session is needed after changing them).
+
+## Lessons learned from Mend (apply from day one)
+
+- Check plan limits before relying on a feature. GitHub rulesets only work on public repos or GitHub Pro (this repo is public).
+- Supabase Auth: set **Site URL** and **Redirect URLs** (`https://<host>/**`) for each environment BEFORE testing sign-up emails, or links land on the home page.
+- Supabase's built-in email only reaches members of the Supabase team, a few per hour. **Custom SMTP (Resend) is needed before testing sign-up.**
+- The Supabase GitHub integration only deploys when files under `supabase/` change.
+- `VITE_*` variables are baked in at build time; changing them needs a rebuild.
+- CI concurrency: never cancel push runs (see Mend's `.github/workflows/ci.yml`), or shared commits get red "cancelled" marks.
+- Branch rules: `main` = PR + 1 approval + both CI checks + dismiss stale approvals + require approval of the most recent push; bypass "Repository admin" for pull requests only. `develop` = PR + CI checks, no approval. Oz merges his own PRs into `main` with "merge without waiting for requirements" (bypass).
+- The cloud session's network blocks hosts until Oz allows them in the environment settings (done for: storywall.io, *.base44.app, *.base44.com, *.supabase.co, api.supabase.com, *.up.railway.app, backboard.railway.app, api.resend.com, api.z.ai, openrouter.ai).
+- LibreChat agent: pick models under the **OpenRouter** provider (the DeepSeek provider gives "402 Insufficient Balance").
+- Mend (`leopthe-cpu/mend`) has reusable patterns: `docs/environments.md`, `.github/workflows/ci.yml`, `CLAUDE.md`, `docs/librechat-agent.md`.
+
+## The plan (phases)
+
+Status legend: ✅ done · 🔶 in progress · ⬜ not started.
+
+### ✅/🔶 Phase 0: Inventory (no app changes)
+1. ✅ Pull every Base44-side file into GitHub; list differences (step 1 below).
+2. ✅ GitHub is the only source of truth; Oz stopped editing in the Base44 builder; CLAUDE.md says so.
+3. ✅ Inventory: SDK calls, entities and fields, functions, secrets, emails, storage (step 3 below).
+4. ✅ Checks a–j (step 4 below).
+5. ✅ Decisions: Supabase option (2), Google/Apple (off in Base44, nothing to keep), MCP (12), analytics (9), link previews (10).
+6. 🔶 Oz reviews this plan.
+
+### 🔶 Phase 0.5: Record current behaviour (before any migration code)
+- Playwright end-to-end tests against the **live Base44 app**, selecting elements by role and visible text only (the Base44 version can't be changed), so the same tests run on both sites. Phone and desktop sizes.
+- Flows to cover (adjusted to what the app really has; likes/follows/saves/comments don't exist):
+  - **Visitor:** landing page; public wall (lazy-loading feed); unclaimed username ("This wall isn't claimed yet"); private profile page (incl. its profile search box); builder requires sign-in.
+  - **Account:** sign in; wrong-password message; sign out; onboarding (5 steps: name+username, headline+bio, location, links, photo); username claim from the landing page. Sign-up email codes and forgot-password are checked **by hand by Oz** on both sites.
+  - **Profile owner:** edit profile, private/public switch, profile photo, links.
+  - **Builder:** text, image, video and audio elements; drag, resize, crop, zoom; Text FX and warps; autosave and reopen a draft; templates; delete a draft.
+  - **AI Generate (premium):** visible and working for the admin, hidden for the normal user.
+  - **Publish:** preview, skill tags (AI + manual), story appears on the wall.
+  - **Wall management:** reorder, archive/unarchive (archived = hidden from the wall, only the owner sees it and can unarchive), edit, delete.
+  - **Admin-only:** Prompt Test page; "Download images" buttons.
+- Tests that create or delete data run **only as `leo`** and clean up after themselves; never write with `leopteh` (pending Oz's OK).
+- Screenshot baselines of key screens and rendered cards (editor, thumbnail, published) at phone and desktop sizes; animations off, timestamps masked.
+- All tests must pass on Base44 first. They define "works the same".
+
+### ⬜ Phase 1: Environments and email
+- Branches `develop` and `main`; rulesets as in the lessons above; CI workflow (lint, build, tests, secret scan, database tests).
+- Supabase GitHub integration (production from `main`, staging from `develop`). Site URL + Redirect URLs per environment.
+- Railway project `storywall` with `staging` and `production`.
+- DNS: GoDaddy can't do CNAME flattening/ALIAS at the root (to confirm) → move DNS to Cloudflare (free) now, keeping every existing record (step 4h).
+- Resend: verify storywall.io (SPF/DKIM/DMARC), connect as custom SMTP on **both** Supabase projects, sign-up/sign-in templates send the 6-digit code (`{{ .Token }}`), raise the auth email rate limit sensibly.
+
+### ⬜ Phase 2: Database and storage
+- Migrations for all used entities (`Post.cards[].elements[]` keeps every field), reproducing Base44's built-ins (`created_by`, dates, sorting, `role`); Oz's account stays admin.
+- RLS matching current visibility rules, **except the privacy fixes below**; storage buckets (public + private with signed URLs) with size limits (Free plan: 50 MB/file; Base44's limit still to verify); premium check (PremiumGrant + admins). Database tests (pgTAP).
+- One-off import of `leopteh`'s data incl. media files (decision 7).
+
+### ⬜ Phase 3: Server functions
+- Port the 10 functions to Supabase Edge Functions; keep rate limits and the premium check.
+- Replace Base44's built-in AI (InvokeLLM, GenerateImage) with Oz's own provider, matching current models where possible: **propose options and costs, then ask Oz.** Secrets per environment are set by Oz (new z.ai key: decision 8).
+
+### ⬜ Phase 4: Frontend
+- Replace the Base44 SDK with a small data layer over supabase-js; all auth flows including a **new reset-password flow** (Base44's hosted page goes away); remove `@base44/vite-plugin` and app-params.
+- Serve the app on Railway so `storywall.io/<username>` routes work. Security headers (match today's: HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy). Generic link-preview tags (decision 10). No analytics (decision 9).
+- Rendering parity: editor, thumbnails and published cards must still match (CLAUDE.md "Rendering model").
+
+### ⬜ Phase 5: Parity
+- Run the Phase 0.5 tests and screenshots against staging. Every difference is a bug to fix before moving on.
+- List intentional differences (AI wording, reset-password screens, privacy fixes) and get Oz's OK. Oz checks the sign-up email flow by hand.
+
+### ⬜ Phase 6: Go live
+- Production passes the same tests. Recreate test accounts.
+- A day before: lower storywall.io's DNS TTL. Then point storywall.io to Railway (guide Oz through the DNS provider). **Rollback = point DNS back to Base44** (`A @ 216.24.57.1`, `CNAME www base44.onrender.com`).
+- Keep the Base44 app untouched for an agreed period as a fallback; archive its full source; then cancel Base44.
+
+### ⬜ Phase 7: Agent
+- Invite `w0rkstufff` to this repo (Write); scoped Supabase token for `storywall-staging` only; add it to LibreChat's config; create a "StoryWall dev" agent; write `docs/librechat-agent.md`.
+- Give Oz an operating guide **in the chat, not in the repo**, so he can run StoryWall alone.
+
+## Privacy requirements for the new app (intentional differences)
+
+Decided by Oz on 2026-10-09 (decision 14). The new app must not reproduce these Base44 behaviours, even though "works the same" is otherwise the rule:
+- **Never expose a user's email address** to anyone but that user (and server code). Public walls and every API a visitor or other user can call return only the fields the page displays.
+- Private notes behind a story (e.g. the notes given to Generate) are never sent to visitors.
+- A user's full profile record (role, private settings) is readable only by that user and admins; others see only public profile fields, and nothing beyond "this profile is private" for private profiles.
+- Ownership can't be changed by editing a record: write rules check the row both before and after the change.
+- Details of what was found on the live Base44 app are kept out of this public repo.
 
 ## Environments
 

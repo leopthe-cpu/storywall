@@ -18,3 +18,4 @@ Newest last. "Oz" = owner; "agent" = decision made by the AI assistant on Oz's b
 | 11 | 2026-10-09 | Profile / keyword search for recruiters and readers: after go-live. The existing small profile search on the private-profile page is migrated as-is. | Oz | |
 | 12 | 2026-10-09 | MCP / AI-assistant integration: not migrated; after go-live if wanted. | Oz | Switched off in Base44, no route, no users. |
 | 13 | 2026-10-09 | Like / Follow / Save / Comment tables are not migrated (empty, unused). | agent | No code uses them; listed in the after-migration backlog. |
+| 14 | 2026-10-09 | Privacy fixes are intentional differences from Base44: the new app never exposes users' email addresses or private data to other users or visitors; public endpoints return only displayed fields; ownership can't be changed by editing a record. See "Privacy requirements" in `migration-plan.md`. | Oz | Found while reviewing Base44's access rules (details kept out of the public repo). |
