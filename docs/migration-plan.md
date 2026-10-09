@@ -69,13 +69,14 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
   - **Account:** sign in; wrong-password message; sign out; onboarding (5 steps: name+username, headline+bio, location, links, photo); username claim from the landing page. Sign-up email codes and forgot-password are checked **by hand by Oz** on both sites.
   - **Profile owner:** edit profile, private/public switch, profile photo, links.
   - **Builder:** text, image, video and audio elements; drag, resize, crop, zoom; Text FX and warps; autosave and reopen a draft; templates; delete a draft.
-  - **AI Generate (premium):** visible and working for the admin, hidden for the normal user.
+  - **AI Generate (premium):** visible and working for the admin; for the normal user it is shown but locked ("Premium feature — upgrade to unlock"), not hidden.
   - **Publish:** preview, skill tags (AI + manual), story appears on the wall.
   - **Wall management:** reorder, archive/unarchive (archived = hidden from the wall, only the owner sees it and can unarchive), edit, delete.
   - **Admin-only:** Prompt Test page; "Download images" buttons.
 - Tests that create or delete data run **only as `leo`** and clean up after themselves; never write with `leopteh` (pending Oz's OK).
 - Screenshot baselines of key screens and rendered cards (editor, thumbnail, published) at phone and desktop sizes; animations off, timestamps masked.
 - All tests must pass on Base44 first. They define "works the same".
+- Progress (2026-10-09): sign-in check passes for both accounts. Read-only tests written and passing on Base44 (46 runs, phone + desktop): visitor pages, landing username claim (taken / reserved / free → sign-up), signed-in redirect and owner controls, settings panel, sign out, Generate/Prompt Test/"Download images" visibility per role, builder opens. The accounts sign in once (`e2e/auth.setup.js`, traces off) and the saved sessions (`e2e/.auth/`, gitignored) are reused. **Not yet covered:** wrong-password message, private profile page and its search, and every flow that writes data (onboarding, profile edits, builder actions, publish, wall management, Generate run): waiting for Oz's OK to write as `leo`. Screenshot baselines: not started.
 
 ### ⬜ Phase 1: Environments and email
 - Branches `develop` and `main`; rulesets as in the lessons above; CI workflow (lint, build, tests, secret scan, database tests).

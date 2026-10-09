@@ -4,8 +4,10 @@ import { test, expect } from '@playwright/test';
 // (SW_ADMIN_* = admin + premium account, SW_USER_* = normal account).
 // Values never appear in the repo. WARNING: on failure Playwright's
 // error-context.md and trace record what was typed into the form, password
-// included. They stay local (test-results/ is gitignored); never print or
-// share them, and delete test-results/ after a failed auth run.
+// included. Traces and screenshots are therefore off here; test-results/ is
+// gitignored. Never print or share it, and delete it after a failed auth run.
+test.use({ trace: 'off', screenshot: 'off', video: 'off' });
+
 const accounts = [
   ['admin', process.env.SW_ADMIN_EMAIL, process.env.SW_ADMIN_PASSWORD],
   ['user', process.env.SW_USER_EMAIL, process.env.SW_USER_PASSWORD],

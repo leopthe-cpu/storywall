@@ -14,7 +14,10 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'phone', use: { ...devices['iPhone 13'], browserName: 'chromium' } },
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
+    // Signs the test accounts in once; the other projects reuse the saved
+    // sessions (e2e/auth.setup.js).
+    { name: 'setup', testMatch: /auth\.setup\.js/, use: { ...devices['Desktop Chrome'] } },
+    { name: 'phone', use: { ...devices['iPhone 13'], browserName: 'chromium' }, dependencies: ['setup'] },
+    { name: 'desktop', use: { ...devices['Desktop Chrome'] }, dependencies: ['setup'] },
   ],
 });
