@@ -251,4 +251,5 @@ Oz's backlog for after go-live. Nothing here is built during the migration.
 2. **Search / discovery** (decision 11): keyword search across profiles, skill tags and stories, e.g. recruiters finding candidates, people finding stories to read.
 3. **AI-assistant integration (MCP)** (decision 12): let AI assistants act on a StoryWall account. Base44 had an unfinished, switched-off version (`src/pages/OAuthConsent.jsx`, no route); it is not migrated.
 4. **Analytics** (decision 9).
-5. **Likes / follows / saves / comments:** tables exist in Base44 but no screens and no data. Decide whether to build the feature; the empty tables are not migrated.
+5. **Change-password screen** for signed-in users (today there's only "Forgot password?"). Then Oz changes the `leopteh` test password (decision 15).
+6. **Likes / follows / saves / comments:** tables exist in Base44 but no screens and no data. Decide whether to build the feature; the empty tables are not migrated.
