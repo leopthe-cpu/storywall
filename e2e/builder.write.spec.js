@@ -99,3 +99,31 @@ test('a template over your story saves your story first and starts a new one', a
   await expect(draftRow(page, text)).not.toContainText(TEMPLATE_TEXT);
   await finishTemplateTest(page);
 });
+
+test('Text FX and warps stay set after the draft is saved and reopened', async ({ page }) => {
+  const text = markerText();
+  await typeIntoNewTextBox(page, text);
+  await page.getByRole('button', { name: 'effects', exact: true }).click();
+
+  // Each effect is a pill showing its strength; tapping one turns it on at
+  // 30% and shows its slider.
+  await page.getByRole('button', { name: 'Shadow: 0%' }).click();
+  await expect(page.getByRole('button', { name: 'Shadow: 30%' })).toBeVisible();
+  await expect(page.getByRole('slider')).toHaveValue('30');
+  await page.getByRole('button', { name: 'Arc: 0%' }).click();
+  await expect(page.getByRole('button', { name: /^Arc: [1-9]\d*%$/ })).toBeVisible();
+
+  // Saved, then reopened in a fresh builder: both effects are still on.
+  await page.getByRole('button', { name: 'Cards', exact: true }).click();
+  await page.getByRole('button', { name: 'Drafts', exact: true }).click();
+  await waitForDraft(page, text);
+  await page.goto('/create');
+  await openDraftsList(page);
+  await draftRow(page, text).getByText(/^Saved /).click();
+  // On the card the text is drawn letter by letter (the warp), each letter
+  // turned along the arc and carrying the shadow. Its "2" (from "E2E") is
+  // checked; the card comes before the side panel on the page.
+  const letter = page.getByText('2', { exact: true }).first();
+  await expect(letter).toHaveCSS('text-shadow', /rgba\(0, 0, 0/, { timeout: 20_000 });
+  await expect(letter).not.toHaveCSS('transform', 'none');
+});

@@ -76,7 +76,7 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 - Tests that create or delete data run **only as `leo`** and clean up after themselves; never write with `leopteh` (decision 16). They are named `*.write.spec.js` and run one at a time after the read-only tests (phone, then desktop).
 - Screenshot baselines of key screens and rendered cards (editor, thumbnail, published) at phone and desktop sizes; animations off, timestamps masked.
 - All tests must pass on Base44 first. They define "works the same".
-- Progress (2026-10-09): sign-in check passes for both accounts. Read-only tests written and passing on Base44 (46 runs, phone + desktop): visitor pages, landing username claim (taken / reserved / free → sign-up), signed-in redirect and owner controls, settings panel, sign out, Generate/Prompt Test/"Download images" visibility per role, builder opens. The accounts sign in once (`e2e/auth.setup.js`, traces off) and the saved sessions (`e2e/.auth/`, gitignored) are reused. **Not yet covered:** wrong-password message, private profile page and its search, and every flow that writes data (onboarding, profile edits, builder actions, publish, wall management, Generate run): waiting for Oz's OK to write as `leo`. Screenshot baselines: not started.
+- Progress (2026-10-09): 67 test runs pass on Base44 (phone + desktop). Covered: visitor pages; landing username claim; sign-in redirect, settings, sign out; roles (Generate/Prompt Test/"Download images" visibility); edit profile fields and links; private/public switch and the private page's search; builder text + autosave + reopen + delete draft; templates; Text FX + warp survive save/reopen; publish with suggested and own skills; archive/restore; edit + re-post; delete. Opt-in (`SW_RUN_GENERATE=1`, uses paid AI): Generate. Data-changing tests are `*.write.spec.js`, run as `leo` one at a time and clean up (checked in the database after each run). **Not yet covered:** "locked for normal users" checks (need a non-admin account, `SW_NORMAL_*`); wrong-password message; onboarding (needs a new account, i.e. the sign-up email code); image/video/audio uploads, drag/resize/crop/zoom and profile photo (uploads leave files in storage); clicking "Download images"; screenshot baselines.
 
 ### ⬜ Phase 1: Environments and email
 - Branches `develop` and `main`; rulesets as in the lessons above; CI workflow (lint, build, tests, secret scan, database tests).
@@ -243,6 +243,17 @@ Shared helpers: `base44/shared/premium.ts` (hasPremium), `rateLimit.ts`, `userna
 - **Archive:** an archived story is hidden from the public wall; only its owner still sees it and can unarchive it, which makes it visible on the wall again.
 - **Profile search today:** the only search in the app is the small "Search profiles by name or username…" box on the "This profile is private" page (`PrivateProfileState.jsx` → `searchProfiles`, signed-in users only). It is existing behaviour and is migrated as-is.
 - **Link previews during the migration:** the new app shows the same generic card Base44 shows today (static tags in `index.html`). Per-person previews come after the migration.
+
+## Base44 behaviour found while writing tests (2026-10-09)
+
+Recorded as-is ("works the same"); Oz decides whether any is fixed instead.
+- **Private wall locks out its owner:** once private, the owner's own wall also shows "This profile is private", so Settings (and the switch back) can't be reached.
+- **Profile search on the private page** returns "No profiles found" to signed-out visitors (the search needs a sign-in); signed-in users get results.
+- **Reordering stories can't be reached:** `ReorderStories` exists but nothing opens it.
+- **No "Replace this story?" question for templates:** `TemplateConfirmModal` isn't used; a template saves the current story as a draft, then starts a new one.
+- **Delete and archive are saved after the story leaves the screen;** reloading within a split second can cancel the save.
+- **Generate keeps the user's sentences but may drop ones that aren't story** (e.g. a leading label), and makes about 3 pictures per run; deleting the draft doesn't delete those picture files (nor do any other deletes).
+- **When skills are suggested, the "tag your own" box is hidden;** it appears only when matching finds nothing.
 
 ## After migration (not doing now)
 
