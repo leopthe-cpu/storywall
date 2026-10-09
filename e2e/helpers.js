@@ -100,23 +100,42 @@ export async function openDraftsList(page) {
 
 // The Drafts list loads only when its tab opens, so to see a draft that was
 // just autosaved, re-open the tab until it shows up.
-export async function waitForDraft(page, text) {
+export async function waitForDraft(page, text, { recent = false } = {}) {
   await expect(async () => {
     await page.getByRole('button', { name: 'Gallery', exact: true }).click();
     await page.getByRole('button', { name: 'Drafts', exact: true }).click();
-    await expect(draftRow(page, text)).toBeVisible({ timeout: 3_000 });
+    await expect(draftRow(page, text, { recent })).toBeVisible({ timeout: 3_000 });
   }).toPass({ timeout: 40_000 });
 }
 
-// One draft row in the Drafts list: the smallest block holding both its
-// "Saved …" line and the given text. Blocks that also hold the panel's tabs
-// are excluded, or the whole screen (canvas + list) would match.
-export function draftRow(page, text) {
-  return page.locator('div')
+// "Saved …" times of drafts made during a test run (the test account's own
+// older drafts say "Saved 10 days ago" and must be kept).
+const RECENT = /^Saved (less than a minute|\d+ minutes?|about \d+ hours?) ago$/;
+
+// One draft row in the Drafts list: the last, smallest block holding both a
+// "Saved …" line and the given text (with `recent`, a recent "Saved" line).
+// Blocks that also hold the panel's tabs are excluded, or the whole screen
+// (canvas + list) would match. The filters must come before .last().
+export function draftRow(page, text, { recent = false } = {}) {
+  let rows = page.locator('div')
     .filter({ has: page.getByText(/^Saved /) })
     .filter({ hasNot: page.getByRole('button', { name: 'Drafts', exact: true }) })
-    .filter({ hasText: text })
-    .last();
+    .filter({ hasText: text });
+  if (recent) rows = rows.filter({ has: page.getByText(RECENT) });
+  return rows.last();
+}
+
+// Builder: delete drafts containing `text` that were saved in the last few
+// hours, e.g. drafts made from a template (the test account has an older
+// draft made from the same template, which this leaves alone).
+export async function deleteRecentDrafts(page, text) {
+  const recentRow = () => draftRow(page, text, { recent: true });
+  for (let i = 0; i < 10 && (await recentRow().count()); i++) {
+    const before = await page.getByText(/^Saved /).count();
+    await recentRow().getByRole('button').last().click();
+    await recentRow().getByRole('button').last().click();
+    await expect(page.getByText(/^Saved /)).toHaveCount(before - 1, { timeout: 15_000 });
+  }
 }
 
 // Builder: delete every draft whose cards contain `text` (the bin button is
