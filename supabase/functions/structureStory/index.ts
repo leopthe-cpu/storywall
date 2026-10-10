@@ -1,13 +1,13 @@
 import { withSupabase } from 'npm:@supabase/server@1.9.1';
 import { DRAFTS_BUCKET, draftPath, isOwnDraft, isPublicUrl } from '../_shared/media.ts';
 import { chatJson, MODELS } from '../_shared/openrouter.ts';
-import { hasPremium } from '../_shared/premium.ts';
+import { hasPremium, pickModel } from '../_shared/premium.ts';
 import { type Attachment, runStructurePipeline } from './pipeline.ts';
 
 // AI Carousel Builder, step 1: turns the user's notes into structured cards.
 // Port of base44/functions/structureStory (same instructions, same checks),
 // now on OpenRouter. Premium only, checked here on the server.
-// Body: { text, attachments?: [{ url, type }] }  →  { structured }
+// Body: { text, attachments?: [{ url, type }], model? (admins only) }  →  { structured }
 
 const MAX_TEXT = 20_000;
 const MAX_ATTACHMENTS = 10;
@@ -48,7 +48,7 @@ export default {
         attachments.push({ type, imageUrl });
       }
 
-      const model = MODELS.structure();
+      const model = await pickModel(ctx.supabaseAdmin, userId, body?.model, MODELS.structure());
       const { structured, attempts, cost } = await runStructurePipeline({
         text, attachments, model, chat: chatJson,
       });
