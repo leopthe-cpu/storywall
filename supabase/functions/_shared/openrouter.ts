@@ -10,10 +10,12 @@
 const BASE_URL = 'https://openrouter.ai/api/v1';
 
 // Which model does what. Each can be switched with an Edge Function secret
-// of the same name, without a code change; these defaults are only the
-// starting point until Oz picks models from the side-by-side test.
+// of the same name, without a code change. Defaults chosen by Oz from the
+// side-by-side test on staging (decision 22).
 export const MODELS = {
-  structure: () => Deno.env.get('STRUCTURE_MODEL') || 'anthropic/claude-haiku-5.5',
+  // Decision 22: Sonnet kept every sentence in the user's words; cheaper
+  // models dropped lines in the side-by-side test.
+  structure: () => Deno.env.get('STRUCTURE_MODEL') || 'anthropic/claude-sonnet-5.5',
   skills: () => Deno.env.get('SKILLS_MODEL') || 'anthropic/claude-haiku-5.5',
   // Base44 generated pictures with Qwen-Image-3.0; same family by default.
   image: () => Deno.env.get('IMAGE_MODEL') || 'qwen/qwen-image-3',
