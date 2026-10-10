@@ -1,13 +1,13 @@
 import { withSupabase } from 'npm:@supabase/server@1.9.1';
 import { DRAFTS_BUCKET, draftPath, isOwnDraft, isPublicUrl, PUBLIC_BUCKET } from '../_shared/media.ts';
 import { generateImageBytes, MODELS, OpenRouterError } from '../_shared/openrouter.ts';
-import { hasPremium } from '../_shared/premium.ts';
+import { hasPremium, pickModel } from '../_shared/premium.ts';
 
 // Generates a picture from a text prompt (AI Carousel Builder, admin Prompt
 // Test page). Port of base44/functions/generateImage, now on OpenRouter.
 // Premium only, checked here on the server. The picture is saved in the
 // caller's public-media folder and its public URL returned, as before.
-// Body: { prompt, referenceImage?, aspectRatio? }  →  { url }
+// Body: { prompt, referenceImage?, aspectRatio?, model? (admins only) }  →  { url }
 
 const ASPECT_RATIOS = ['1:1', '4:5', '3:4', '9:16', '16:9', '4:3', '5:4'];
 const EXTENSIONS: Record<string, string> = {
@@ -46,7 +46,7 @@ export default {
         if (!referenceUrl) return Response.json({ error: 'Invalid referenceImage' }, { status: 400 });
       }
 
-      const model = MODELS.image();
+      const model = await pickModel(ctx.supabaseAdmin, userId, body?.model, MODELS.image());
       const image = await generateImageBytes({
         model, prompt, aspectRatio, referenceUrls: referenceUrl ? [referenceUrl] : [],
       });
