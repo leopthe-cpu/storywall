@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm ci)",
+      "Bash(npm run lint)",
+      "Bash(npm run build)",
+      "Bash(npx -y deno@2 check *)",
+      "Bash(npx -y deno@2 test *)",
+      "Bash(npx -y deno@2 lint *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)"
+    ]
+  }
+}

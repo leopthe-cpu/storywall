@@ -438,3 +438,12 @@ verify_jwt = true
 
 [functions.publishStoryMedia]
 verify_jwt = true
+
+[functions.structureStory]
+verify_jwt = true
+
+[functions.generateImage]
+verify_jwt = true
+
+[functions.suggestSkills]
+verify_jwt = true
