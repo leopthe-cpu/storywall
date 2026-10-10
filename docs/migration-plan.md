@@ -91,7 +91,9 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 - RLS matching current visibility rules, **except the privacy fixes below**; storage buckets (public + private with signed URLs) with size limits (Free plan: 50 MB/file; Base44's limit still to verify); premium check (PremiumGrant + admins). Database tests (pgTAP).
 - One-off import of `leopteh`'s data incl. media files (decision 7).
 
-### ⬜ Phase 3: Server functions
+### 🔶 Phase 3: Server functions
+> **Progress (10 Oct 2026):** all 10 functions ported to `supabase/functions/` and running on staging (deployed by hand: the GitHub integration's function deploy fails with no log; database and storage deploy normally). AI on OpenRouter with the models in decision 22, tested for real with a staging test user. Not yet called by the app (Phase 4).
+
 - Port the 10 functions to Supabase Edge Functions; keep rate limits and the premium check.
 - Replace Base44's built-in AI (InvokeLLM, GenerateImage) with Oz's own provider, matching current models where possible: **propose options and costs, then ask Oz.** Secrets per environment are set by Oz (new z.ai key: decision 8).
 
