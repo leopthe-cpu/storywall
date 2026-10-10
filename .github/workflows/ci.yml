@@ -64,3 +64,42 @@ jobs:
       # the file-storage rules apply to); everything else is left out.
       - run: supabase start -x gotrue,realtime,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
       - run: supabase test db
+
+  # Not (yet) a required check. Starts every Edge Function in Supabase's own
+  # runtime and calls it once, so a function that fails to load shows up
+  # here, with the error, instead of only as "failed to bundle function" on
+  # the staging deploy after merging. Calls carry no key, so a function that
+  # loads answers 401 (the @supabase/server sign-in check); a 5xx means it
+  # didn't load.
+  functions-boot:
+    name: edge functions load
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.120.0
+      - run: supabase start -x gotrue,realtime,imgproxy,mailpit,postgres-meta,studio,logflare,vector,supavisor,storage-api
+      - name: Serve functions
+        run: |
+          # --no-verify-jwt: let every call reach the function so it has to load.
+          supabase functions serve --no-verify-jwt > "$RUNNER_TEMP/serve.log" 2>&1 &
+          for i in $(seq 1 30); do
+            grep -q "Serving functions" "$RUNNER_TEMP/serve.log" && break
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/serve.log"
+      - name: Call each function
+        run: |
+          status=0
+          for dir in supabase/functions/*/; do
+            name=$(basename "$dir")
+            case "$name" in _*) continue ;; esac
+            code=$(curl -s -o "$RUNNER_TEMP/body.txt" -w '%{http_code}' -X POST \
+              -H 'content-type: application/json' -d '{}' \
+              "http://127.0.0.1:54321/functions/v1/$name")
+            echo "$name -> $code: $(head -c 300 "$RUNNER_TEMP/body.txt")"
+            if [ "$code" -ge 500 ]; then status=1; fi
+          done
+          if [ "$status" -ne 0 ]; then cat "$RUNNER_TEMP/serve.log"; fi
+          exit $status
