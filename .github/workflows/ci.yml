@@ -1,11 +1,13 @@
 # Checks every pull request and every push to develop/main.
-# Two checks, both required by the branch rules (docs/migration-plan.md):
+# Three checks, all required by the branch rules (docs/migration-plan.md):
 #   - "lint and build": npm run lint + npm run build must pass.
 #   - "secret scan": gitleaks looks for passwords/keys in the code and its
 #     history (free for personal accounts, no licence key needed).
+#   - "database tests": applies supabase/migrations to a throwaway local
+#     Supabase database and runs supabase/tests (pgTAP access-rule tests).
 # The Playwright tests (e2e/) are not run here: they run against a live site
 # with test-account passwords and change test data, so they are run on
-# purpose (see e2e/ and the plan). Database tests join in Phase 2.
+# purpose (see e2e/ and the plan).
 name: CI
 
 on:
@@ -49,3 +51,15 @@ jobs:
       - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  db-tests:
+    name: database tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.120.0
+      # Only the database is needed for the tests (no auth/storage servers).
+      - run: supabase db start
+      - run: supabase test db
