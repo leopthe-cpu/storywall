@@ -80,7 +80,7 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 
 ### 🔶 Phase 1: Environments and email
 - Branches `develop` and `main` (created 2026-10-09 from the code that matches the live app; work arrives by pull request); rulesets as in the lessons above; CI workflow `.github/workflows/ci.yml` (lint + build, secret scan; Playwright tests run on purpose, not in CI, since they use live test accounts; database tests join in Phase 2). Default branch → `main` ✅. Rulesets: to do (Oz, on a computer).
-- Supabase GitHub integration (production from `main`, staging from `develop`). Site URL + Redirect URLs per environment.
+- Supabase GitHub integration: ✅ staging from `develop` (decision 21); production from `main` later. Site URL + Redirect URLs per environment.
 - ✅ Railway project `storywall` with `staging` and `production` (both empty; services come in Phase 4).
 - DNS: GoDaddy can't do CNAME flattening/ALIAS at the root (to confirm) → move DNS to Cloudflare (free) now, keeping every existing record (step 4h).
 - Resend: verify storywall.io (SPF/DKIM/DMARC), connect as custom SMTP on **both** Supabase projects, sign-up/sign-in templates send the 6-digit code (`{{ .Token }}`), raise the auth email rate limit sensibly.
