@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { getMe, signOut } from '@/api/storywallApi';
 
 const AuthContext = createContext();
 
@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
     let done = false;
     const t = setTimeout(() => { if (!done) { setTimedOut(true); setIsLoadingAuth(false); } }, 10000);
     try {
-      const currentUser = await base44.auth.me();
+      const currentUser = await getMe();
       done = true; clearTimeout(t);
       setUser(currentUser);
       setIsAuthenticated(true);
@@ -37,18 +37,18 @@ export const AuthProvider = ({ children }) => {
     checkAppState();
   }, []);
 
-  const logout = (shouldRedirect = true) => {
+  // Like Base44's logout, always ends with a full page load of the current
+  // URL, so every screen re-reads the (now signed-out) session.
+  const logout = async () => {
     setUser(null);
     setIsAuthenticated(false);
-    if (shouldRedirect) {
-      base44.auth.logout(window.location.href);
-    } else {
-      base44.auth.logout();
-    }
+    await signOut().catch((e) => console.error('Sign-out failed', e));
+    window.location.assign(window.location.href);
   };
 
+  // Base44 sent people to its hosted login page; ours is /signin.
   const navigateToLogin = () => {
-    base44.auth.redirectToLogin(window.location.href);
+    window.location.assign('/signin');
   };
 
   return (

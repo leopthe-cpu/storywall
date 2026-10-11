@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, RotateCcw, Trash2 } from '@/components/icons';
 import { base44 } from '@/api/base44Client';
+import { getMe } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 
@@ -19,7 +20,7 @@ export default function ArchivesModal({ onClose, onRestored }) {
   const loadArchives = async () => {
     setLoading(true);
     try {
-      const user = await base44.auth.me();
+      const user = await getMe();
       const results = await base44.entities.Post.filter(
         { author_id: user.id, status: 'archived' },
         '-updated_date',

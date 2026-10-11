@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, ChevronLeft, ChevronRight } from '@/components/icons';
 import { motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
+import { getMe } from '@/api/storywallApi';
 import CardThumb from '@/components/creator/CardThumb';
 import ThumbMenu, { ReorderBar } from '@/components/creator/ThumbMenu';
 import DraftEntry from '@/components/creator/DraftEntry';
@@ -63,7 +64,7 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
   const loadDrafts = async () => {
     setLoadingDrafts(true);
     try {
-      const user = await base44.auth.me();
+      const user = await getMe();
       const results = await base44.entities.Post.filter({ author_id: user.id, status: 'draft' }, '-updated_date', RECENT_DRAFTS_LIMIT);
       setDrafts(results);
     } catch (e) {

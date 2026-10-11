@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { getMe } from '@/api/storywallApi';
 import { Plus, Share2, Pencil, SelectFace3d, X } from '@/components/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import StoryCard from '@/components/profile/StoryCard';
@@ -137,11 +138,11 @@ export default function PublicProfile() {
   // One-shot auth fetch — stores only the user id (primitive) so the owner
   // check never re-renders via a context subscription.
   useEffect(() => {
-    base44.auth.me()
+    getMe()
       .then(user => {
         setAuthUserId(user?.id ?? null);
         // Admin gate: uses the built-in role field on the User entity.
-        const admin = user?.role === 'admin';
+        const admin = !!user?.is_admin;
         setIsAdmin(admin);
         // Premium only shows/hides the Generate UI here — the backend
         // functions enforce it (base44/shared/premium.ts). Grants live in the

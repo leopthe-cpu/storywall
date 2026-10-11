@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { getMe } from '@/api/storywallApi';
 import { saveUsername } from '@/lib/usernameApi';
 import { useAuth } from '@/lib/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -163,7 +164,7 @@ export default function Onboarding() {
   });
 
   useEffect(() => {
-    base44.auth.me().then(async u => {
+    getMe().then(async u => {
       if (!u) { navigate('/signin', { replace: true }); return; }
       // If user already has a username, they've already onboarded — send to their profile
       if (u.username) { navigate(`/${u.username}`, { replace: true }); return; }
@@ -337,7 +338,7 @@ export default function Onboarding() {
     // Force re-fetch of current user so RequireAuth sees the new username
     // before any route re-evaluation — prevents redirect-back-to-onboarding.
     try {
-      const updatedUser = await base44.auth.me();
+      const updatedUser = await getMe();
       if (updatedUser?.username) {
         // Brief delay to let the database propagate the username write before
         // the profile page queries it (avoids a "not_found" race on first load).

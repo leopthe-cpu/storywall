@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { X, RotateCw, Plus } from '@/components/icons';
 import { base44 } from '@/api/base44Client';
+import { getMe } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
 import CardCarousel from '@/components/creator/CardCarousel';
 import SkillsLoadingScreen from '@/components/creator/SkillsLoadingScreen';
@@ -62,7 +63,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
   const [title, setTitle] = useState(initialTitle || '');
   // Card image export is admin-only for now (planned premium feature).
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = !!user?.is_admin;
   const [allSuggestedTags, setAllSuggestedTags] = useState([]);
   const [suggestedSelected, setSuggestedSelected] = useState(() => new Set());
   const [customTags, setCustomTags] = useState(() => initialTags && initialTags.length ? initialTags.slice() : []);
@@ -256,7 +257,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
     await onPublishStart?.();
     setPublishing(true);
     try {
-      const user = await base44.auth.me();
+      const user = await getMe();
       const cardsPayload = cards.map((c, i) => ({
         id: c.id,
         order: i,

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { signIn } from '@/api/storywallApi';
 import { useAuth } from '@/lib/AuthContext';
 import { ImagePanel } from '@/components/signup/SidePanel';
 import { AuthColumn, AuthInput, AuthButton, VerifyCodeForm, authErrorMessage, finishAuth } from '@/components/auth/AuthShared';
@@ -34,7 +35,7 @@ export default function SignIn() {
     setBusy(true);
     setError('');
     try {
-      await base44.auth.loginViaEmailPassword(email.trim(), password);
+      await signIn(email.trim(), password);
       finishAuth(from);
       return;
     } catch (err) {

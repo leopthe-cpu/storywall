@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, LogOut, Archive } from '@/components/icons';
 import { base44 } from '@/api/base44Client';
+import { getMe, signOut } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
 import EditableUsername from '@/components/profile/EditableUsername';
@@ -15,7 +16,7 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
   // Fetch the full current user (including email) from auth — the `user` prop
   // comes from getPublicProfile which intentionally omits email and role.
   useEffect(() => {
-    base44.auth.me().then(u => {
+    getMe().then(u => {
       setCurrentUser(u);
       setIsPrivate(!!u?.is_private);
       if (u?.id) {
@@ -36,7 +37,11 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
     }
   };
 
-  const handleLogout = () => base44.auth.logout('/');
+  // Like Base44's logout('/'): end the session, then a full load of the home page.
+  const handleLogout = async () => {
+    await signOut().catch((e) => console.error('Sign-out failed', e));
+    window.location.assign('/');
+  };
 
   // Email: show the real email if available. If genuinely absent (e.g. Apple
   // hides it), show a provider-based fallback instead of a dash.
