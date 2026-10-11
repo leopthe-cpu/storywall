@@ -67,7 +67,7 @@ async function requireUser() {
   return user;
 }
 
-// ---------- Auth (password reset comes with Phase 4 step 2c)
+// ---------- Auth
 
 // Base44's wording where we know it ("Invalid email or password"), and
 // plain words instead of Supabase's technical ones elsewhere.
@@ -75,6 +75,7 @@ const AUTH_MESSAGES = {
   invalid_credentials: 'Invalid email or password',
   otp_expired: "That code didn't work. Check it and try again.",
   over_email_send_rate_limit: 'Please wait a minute before asking for another code.',
+  same_password: 'Choose a password different from your current one.',
 };
 
 function authFail(error, status) {
@@ -114,6 +115,24 @@ export async function verifySignupCode(email, code) {
 
 export async function resendSignupCode(email) {
   return auth(getSupabase().auth.resend({ type: 'signup', email }));
+}
+
+// Password reset by code (replaces Base44's hosted page): Supabase emails a
+// 6-digit code (the "Reset password" template uses {{ .Token }}). For an
+// address with no account it sends nothing and still succeeds, so the
+// screen never reveals whether an account exists.
+export async function requestPasswordReset(email) {
+  return auth(getSupabase().auth.resetPasswordForEmail(email));
+}
+
+// A correct code signs the user in (a recovery session), which is what
+// allows setting the new password next.
+export async function verifyPasswordResetCode(email, code) {
+  return auth(getSupabase().auth.verifyOtp({ email, token: code, type: 'recovery' }));
+}
+
+export async function setNewPassword(password) {
+  return auth(getSupabase().auth.updateUser({ password }));
 }
 
 export async function signOut() {

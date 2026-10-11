@@ -102,7 +102,9 @@ export function AuthButton({ children, disabled, busy, busyLabel }) {
 // Apple-style boxed OTP entry: one big, clearly-tappable slot per digit,
 // instead of a plain text input. Supports typing, backspace-to-previous,
 // and pasting the whole code into any slot.
-export function OtpInput({ value, onChange, length = 6, autoFocus }) {
+// `light`: for the cream split-screen layout (reset password); the default
+// look is made for the dark photo background of the code screen.
+export function OtpInput({ value, onChange, length = 6, autoFocus, light = false }) {
   const refs = useRef([]);
   const digits = (value || '').split('').concat(Array(length).fill('')).slice(0, length);
 
@@ -148,7 +150,9 @@ export function OtpInput({ value, onChange, length = 6, autoFocus }) {
           onChange={e => handleChange(i, e)}
           onKeyDown={e => handleKeyDown(i, e)}
           aria-label={`Digit ${i + 1}`}
-          className="w-11 h-14 sm:w-13 sm:h-16 text-center text-3xl font-semibold rounded-xl border border-[#F4F2EC]/25 bg-[#FAF9F5]/95 text-[#262624] outline-none shadow-sm focus:ring-2 focus:ring-[#F4F2EC] focus:border-[#F4F2EC]/80 transition-all"
+          className={light
+            ? 'w-11 h-14 sm:w-13 sm:h-16 text-center text-3xl font-semibold rounded-xl border border-[#D6D2C7] bg-[#FAF9F5] text-[#262624] outline-none focus:ring-2 focus:ring-[#262624]/20 transition-all'
+            : 'w-11 h-14 sm:w-13 sm:h-16 text-center text-3xl font-semibold rounded-xl border border-[#F4F2EC]/25 bg-[#FAF9F5]/95 text-[#262624] outline-none shadow-sm focus:ring-2 focus:ring-[#F4F2EC] focus:border-[#F4F2EC]/80 transition-all'}
         />
       ))}
     </div>

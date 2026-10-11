@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
 import { signIn, resendSignupCode } from '@/api/storywallApi';
 import { useAuth } from '@/lib/AuthContext';
 import { ImagePanel } from '@/components/signup/SidePanel';
@@ -51,8 +50,8 @@ export default function SignIn() {
     setBusy(false);
   };
 
-  // Password reset still uses Base44's hosted flow.
-  const handleForgot = () => base44.auth.redirectToLogin(window.location.origin + from);
+  // Our own code-based reset screen (Base44's hosted page goes away).
+  const handleForgot = () => navigate('/signin/reset', { state: { from, email: email.trim() } });
 
   if (isLoadingAuth || isAuthenticated) {
     return <div className="fixed inset-0 bg-[#F4F2EC]" />;
