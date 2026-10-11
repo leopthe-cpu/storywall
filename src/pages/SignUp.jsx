@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { signUp } from '@/api/storywallApi';
 import { useAuth } from '@/lib/AuthContext';
 import { ImagePanel } from '@/components/signup/SidePanel';
 import { AuthColumn, AuthInput, AuthButton, VerifyCodeForm, FullBleedAuthScreen, authErrorMessage, finishAuth } from '@/components/auth/AuthShared';
@@ -45,9 +45,8 @@ export default function SignUp() {
     setBusy(true);
     setError('');
     try {
-      const res = await base44.auth.register({ email: email.trim(), password });
-      const token = res?.access_token || res?.data?.access_token;
-      if (token) { base44.auth.setToken(token); finishAuth(target); return; }
+      const { needsCode } = await signUp(email.trim(), password);
+      if (!needsCode) { finishAuth(target); return; }
       setStage('verify');
     } catch (err) {
       setError(authErrorMessage(err, "Couldn't create your account. Try again."));
@@ -72,7 +71,7 @@ export default function SignUp() {
     // The email-code step renders itself as a standalone full-bleed screen,
     // so it's returned outside the split-screen form layout below.
     if (stage === 'verify') {
-      return <VerifyCodeForm email={email.trim()} password={password} target={target} onBack={() => setStage('form')} />;
+      return <VerifyCodeForm email={email.trim()} target={target} onBack={() => setStage('form')} />;
     }
     return (
       <div className="min-h-screen bg-[#F4F2EC]">

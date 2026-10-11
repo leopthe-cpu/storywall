@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { signIn } from '@/api/storywallApi';
+import { signIn, resendSignupCode } from '@/api/storywallApi';
 import { useAuth } from '@/lib/AuthContext';
 import { ImagePanel } from '@/components/signup/SidePanel';
 import { AuthColumn, AuthInput, AuthButton, VerifyCodeForm, authErrorMessage, finishAuth } from '@/components/auth/AuthShared';
@@ -42,7 +42,7 @@ export default function SignIn() {
       const msg = authErrorMessage(err, "Couldn't sign you in. Try again.");
       // Account exists but its email was never confirmed — send a fresh code.
       if (/verif|confirm/i.test(msg)) {
-        try { await base44.auth.resendOtp(email.trim()); } catch { /* shown on the code screen via resend */ }
+        try { await resendSignupCode(email.trim()); } catch { /* shown on the code screen via resend */ }
         setStage('verify');
       } else {
         setError(msg);
@@ -61,7 +61,7 @@ export default function SignIn() {
   // The email-code step renders itself as a standalone full-bleed screen,
   // so it's returned outside the split-screen form layout below.
   if (stage === 'verify') {
-    return <VerifyCodeForm email={email.trim()} password={password} target={from} onBack={() => setStage('form')} />;
+    return <VerifyCodeForm email={email.trim()} target={from} onBack={() => setStage('form')} />;
   }
 
   return (
