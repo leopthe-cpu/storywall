@@ -18,7 +18,11 @@ dropped silently. Re-running is safe: copies are keyed by the source URL and
 stories already imported (by Base44 id, kept in the report) are skipped.
 
 Usage:
-  python3 scripts/import_base44.py --export-dir DIR --report report.json
+  python3 scripts/import_base44.py --export-dir DIR --report report.json \
+      [--only-post BASE44_ID ...]
+Decision 23: only Oz's profile and one story (the published "The 11s
+Bottleneck", Base44 id 6ac5ac04b291bfd0d6fcada9) are migrated; pass that id
+with --only-post. Without it, every story in the export is imported.
 Inputs in DIR: posts.json ({"entities": [...]} as Base44 returns it),
 profile.json (one User record), optional media.json ({"entities": [...]}).
 Environment: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, IMPORT_EMAIL,
@@ -103,12 +107,21 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--export-dir', required=True)
     ap.add_argument('--report', required=True)
+    ap.add_argument('--only-post', action='append', default=[],
+                    help='Base44 story id to import (repeatable); default: all')
     args = ap.parse_args()
     d = args.export_dir
     posts = json.load(open(os.path.join(d, 'posts.json')))['entities']
     profile = json.load(open(os.path.join(d, 'profile.json')))
     media_path = os.path.join(d, 'media.json')
     media_rows = json.load(open(media_path))['entities'] if os.path.exists(media_path) else []
+    if args.only_post:
+        posts = [p for p in posts if p['id'] in args.only_post]
+        missing = set(args.only_post) - {p['id'] for p in posts}
+        if missing:
+            sys.exit(f'not in the export: {sorted(missing)}')
+        # Only the media these stories and the profile use, not the whole library.
+        media_rows = []
 
     api = Api(os.environ['SUPABASE_URL'], os.environ['SUPABASE_PUBLISHABLE_KEY'])
     api.sign_in(os.environ['IMPORT_EMAIL'], os.environ['IMPORT_PASSWORD'])
