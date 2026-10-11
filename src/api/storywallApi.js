@@ -67,20 +67,53 @@ async function requireUser() {
   return user;
 }
 
-// ---------- Auth (sign-up, codes and password reset come with Phase 4 step 2)
+// ---------- Auth (password reset comes with Phase 4 step 2c)
 
-// Base44's wording, so the sign-in screen reads the same as today.
+// Base44's wording where we know it ("Invalid email or password"), and
+// plain words instead of Supabase's technical ones elsewhere.
 const AUTH_MESSAGES = {
   invalid_credentials: 'Invalid email or password',
+  otp_expired: "That code didn't work. Check it and try again.",
+  over_email_send_rate_limit: 'Please wait a minute before asking for another code.',
 };
 
-export async function signIn(email, password) {
-  const { data, error, status } = await getSupabase().auth.signInWithPassword({ email, password });
-  if (error) {
-    const message = AUTH_MESSAGES[error.code] || error.message;
-    throw apiError(message, error.status || status, { message, code: error.code });
-  }
+function authFail(error, status) {
+  const message = AUTH_MESSAGES[error.code] || error.message;
+  return apiError(message, error.status || status, { message, code: error.code });
+}
+
+async function auth(call) {
+  const { data, error, status } = await call;
+  if (error) throw authFail(error, status);
   return data;
+}
+
+export async function signIn(email, password) {
+  return auth(getSupabase().auth.signInWithPassword({ email, password }));
+}
+
+// Creates the account and emails a 6-digit code (the "Confirm sign up"
+// template uses {{ .Token }}). Returns { needsCode } — false only if the
+// project ever stops requiring email confirmation, in which case the user
+// is already signed in.
+export async function signUp(email, password) {
+  const data = await auth(getSupabase().auth.signUp({ email, password }));
+  // For an address that already has a confirmed account, Supabase sends no
+  // email and returns a user with no identities instead of an error.
+  if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+    const message = 'An account with this email already exists. Sign in instead.';
+    throw apiError(message, 409, { message, code: 'user_already_exists' });
+  }
+  return { needsCode: !data.session };
+}
+
+// Checks the emailed code; on success the user is signed in.
+export async function verifySignupCode(email, code) {
+  return auth(getSupabase().auth.verifyOtp({ email, token: code, type: 'email' }));
+}
+
+export async function resendSignupCode(email) {
+  return auth(getSupabase().auth.resend({ type: 'signup', email }));
 }
 
 export async function signOut() {
