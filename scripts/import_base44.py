@@ -85,6 +85,23 @@ def fetch(url):
         return r.read(), r.headers.get('content-type', '').split(';')[0]
 
 
+# Base44 serves some uploads (e.g. "…_publish-img.") with no extension and a
+# generic content type; the buckets only accept real media types, so the type
+# is read from the file's first bytes instead.
+MAGIC = [
+    (b'\xff\xd8\xff', 'image/jpeg'), (b'\x89PNG\r\n\x1a\n', 'image/png'),
+    (b'GIF87a', 'image/gif'), (b'GIF89a', 'image/gif'),
+]
+
+
+def sniff_type(data, ctype):
+    if ctype.split('/')[0] in ('image', 'video', 'audio'):
+        return ctype
+    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        return 'image/webp'
+    return next((t for sig, t in MAGIC if data.startswith(sig)), ctype)
+
+
 def is_media_ref(v):
     """Base44 file references: hosted URLs or private 'mp/private/...' paths."""
     return isinstance(v, str) and (
@@ -147,11 +164,14 @@ def main():
             continue
         try:
             data, ctype = fetch(ref)
+            ctype = sniff_type(data, ctype)
         except Exception as e:  # noqa: BLE001 - every failure is reported, none hidden
             report['not_copied'][ref] = f'download failed: {type(e).__name__}: {e}'[:200]
             continue
         name = os.path.basename(urllib.parse.urlparse(ref).path) or 'file'
-        ext = os.path.splitext(name)[1] or mimetypes.guess_extension(ctype) or ''
+        ext = os.path.splitext(name)[1]
+        if ext in ('', '.'):  # "…_publish-img." ends in a bare dot
+            ext = mimetypes.guess_extension(ctype) or ''
         path = f'{api.user_id}/imported/{hashlib.sha1(ref.encode()).hexdigest()[:16]}{ext}'
         st, res = api.call('POST', f'/storage/v1/object/{BUCKET}/{path}', raw=data,
                            headers={'x-upsert': 'true'}, content_type=ctype or 'application/octet-stream')
@@ -173,11 +193,13 @@ def main():
 
     # 4. Stories and their notes.
     for p in posts:
-        if p['id'] in report['posts']:
+        if 'id' in report['posts'].get(p['id'], {}):  # retry earlier failures, skip successes
             continue
         row = {k: walk_strings(p.get(k), swap) for k in POST_FIELDS if p.get(k) is not None}
-        if isinstance(row.get('display_order'), float):
-            row['display_order'] = int(row['display_order'])
+        # Base44's REST API returns whole numbers as floats (1.0); these columns are integers.
+        for k in ('display_order', 'skill_refresh_count'):
+            if isinstance(row.get(k), float):
+                row[k] = int(row[k])
         row['created_at'], row['updated_at'] = p.get('created_date'), p.get('updated_date')
         st, res = api.call('POST', '/rest/v1/posts', row, {'prefer': 'return=representation'})
         if st != 201:
