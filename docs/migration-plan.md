@@ -84,6 +84,7 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 - ✅ Railway project `storywall` with `staging` and `production` (both empty; services come in Phase 4).
 - DNS: GoDaddy can't do CNAME flattening/ALIAS at the root (to confirm) → move DNS to Cloudflare (free) now, keeping every existing record (step 4h).
 - Resend: verify storywall.io (SPF/DKIM/DMARC), connect as custom SMTP on **both** Supabase projects, sign-up/sign-in templates send the 6-digit code (`{{ .Token }}`), raise the auth email rate limit sensibly.
+  - ✅ Staging (2026-10-11, decisions 24–26): sending domain `send.storywall.io` verified in Resend (DNS records added at GoDaddy by Resend's auto-configure); custom SMTP on `storywall-staging` with a sending-only key, sender `no-reply@send.storywall.io` / "Storywall"; "Confirm sign up" and "Reset password" templates send a 6-digit code; email code length 6; minimum interval per user 60 s; email rate limit 30/hour (Supabase's starting value). Test emails arrive in Gmail's inbox. Still to do: production (own key) and a higher rate limit before go-live.
 
 ### 🔶 Phase 2: Database and storage
 - Draft (2026-10-09, not applied anywhere yet): `supabase/migrations/20261009190000_initial_schema.sql` (tables, RLS, grants; design in decision 19) and `supabase/tests/database/access_rules.test.sql` (41 pgTAP checks, pass locally; run in CI by `supabase test db`). Storage: `supabase/migrations/20261010170000_storage.sql` (buckets `drafts` private and `public-media` public, 50 MB, owner-folder rules) with `supabase/tests/database/storage_rules.test.sql`. Data import: `scripts/import_base44.py`, trial on staging 2026-10-10 into the staging test account: profile, username, all 102 stories (74 drafts, 27 published, 1 archived) and both story notes match Base44 field by field; 19 AI pictures copied. Still pointing at Base44: 24 uploads on `base44.app` (host blocked by this environment's network settings) and 13 private uploads (need a signed link from Base44). Scope then narrowed to the profile + one story (decision 23); staging test account trimmed to match (that story's 10 pictures are all on `base44.app` or private, so not copied yet). Final run at go-live, into Oz's real account.
@@ -95,9 +96,11 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 > **Progress (10 Oct 2026):** all 10 functions ported to `supabase/functions/` and running on staging (deployed by hand: the GitHub integration's function deploy fails with no log; database and storage deploy normally). AI on OpenRouter with the models in decision 22, tested for real with a staging test user. Not yet called by the app (Phase 4).
 
 - Port the 10 functions to Supabase Edge Functions; keep rate limits and the premium check.
-- Replace Base44's built-in AI (InvokeLLM, GenerateImage) with Oz's own provider, matching current models where possible: **propose options and costs, then ask Oz.** Secrets per environment are set by Oz (new z.ai key: decision 8).
+- Replace Base44's built-in AI (InvokeLLM, GenerateImage) with Oz's own provider, matching current models where possible: **propose options and costs, then ask Oz.** Secrets per environment are set by Oz. (Provider: OpenRouter, decision 20, which replaced the earlier z.ai plan of decision 8.)
 
-### ⬜ Phase 4: Frontend
+### 🔶 Phase 4: Frontend
+> **Progress (11 Oct 2026):** step 1 (Supabase client + data layer `src/api/storywallApi.js`) and step 2 (auth: sign-in, sign-out, session, sign-up with email code, code-based password reset at `/signin/reset`) merged into `develop`, tested in headless Chromium against staging. Not yet tested: entering a real emailed code (Oz checks by hand on the staging site). Next: step 3, profile and public wall. Until steps 3–5 are done, screens that load data still call Base44.
+
 - Replace the Base44 SDK with a small data layer over supabase-js; all auth flows including a **new reset-password flow** (Base44's hosted page goes away); remove `@base44/vite-plugin` and app-params.
 - Serve the app on Railway so `storywall.io/<username>` routes work. Security headers (match today's: HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy). Generic link-preview tags (decision 10). No analytics (decision 9).
 - Rendering parity: editor, thumbnails and published cards must still match (CLAUDE.md "Rendering model").
@@ -269,3 +272,5 @@ Oz's backlog for after go-live. Nothing here is built during the migration.
 4. **Analytics** (decision 9).
 5. **Change-password screen** for signed-in users (today there's only "Forgot password?"). Then Oz changes the `leopteh` test password (decision 15).
 6. **Likes / follows / saves / comments:** tables exist in Base44 but no screens and no data. Decide whether to build the feature; the empty tables are not migrated.
+7. **Name: "Storywall"** (decision 27): change the app's on-screen "StoryWall" to "Storywall" (one visible sentence on the sign-up page, plus image descriptions and the share-sheet title). Emails already say Storywall.
+8. **Reserved usernames:** the app's own pages `create`, `verify`, `onboarding` and `prompt-test` aren't on the reserved-username list, so a user could take one of those names and their wall would be unreachable (same on Base44). Decide whether to add them.
