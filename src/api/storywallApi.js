@@ -5,7 +5,7 @@ import { getSupabase } from '@/api/supabaseClient';
 // own (migration plan, Phase 4). Nothing imports this yet.
 //
 // Base44 → here:
-//   auth.me / updateMe                → me() / updateMe()
+//   auth.me / updateMe                → getMe() / updateMe()
 //   PremiumGrant.filter, role==='admin' → myAccess()  (the UI hint only;
 //                                       the server functions are the real gate)
 //   Post.filter/get/create/update/delete/bulkUpdate → filterPosts() … reorderPosts()
@@ -69,8 +69,18 @@ async function requireUser() {
 
 // ---------- Auth (sign-up, codes and password reset come with Phase 4 step 2)
 
+// Base44's wording, so the sign-in screen reads the same as today.
+const AUTH_MESSAGES = {
+  invalid_credentials: 'Invalid email or password',
+};
+
 export async function signIn(email, password) {
-  return check(await getSupabase().auth.signInWithPassword({ email, password }));
+  const { data, error, status } = await getSupabase().auth.signInWithPassword({ email, password });
+  if (error) {
+    const message = AUTH_MESSAGES[error.code] || error.message;
+    throw apiError(message, error.status || status, { message, code: error.code });
+  }
+  return data;
 }
 
 export async function signOut() {
@@ -86,10 +96,10 @@ export async function myAccess() {
 }
 
 // The signed-in user's own profile plus their email (from Supabase Auth,
-// shown only to themselves) and access flags; null when signed out.
-export async function me() {
-  const user = await currentUser();
-  if (!user) return null;
+// shown only to themselves) and access flags. Throws (status 401) when
+// signed out, like Base44's auth.me(), which every caller relies on.
+export async function getMe() {
+  const user = await requireUser();
   const sb = getSupabase();
   const [profile, access] = await Promise.all([
     sb.from('profiles').select('*').eq('id', user.id).single().then(check),

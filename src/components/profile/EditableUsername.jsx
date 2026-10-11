@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
+import { getMe } from '@/api/storywallApi';
 import { saveUsername } from '@/lib/usernameApi';
 import { Pencil, Check, X, AlertCircle } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
@@ -53,7 +54,7 @@ export default function EditableUsername({ currentUsername, currentUserId, onSav
     setError('');
     try {
       await saveUsername(value);
-      const updated = await base44.auth.me();
+      const updated = await getMe();
       if (updated?.username) {
         onSaved?.();
         navigate(`/${updated.username}`, { replace: true });

@@ -1,4 +1,5 @@
 import { base44 } from '@/api/base44Client';
+import { getMe } from '@/api/storywallApi';
 import { registerMedia } from '@/lib/mediaLibrary';
 import { buildAICards } from '@/lib/aiStyleTemplates';
 
@@ -37,7 +38,7 @@ function validateSanitizedPrompt(sanitized) {
 export async function runGeneratePipeline({ text, attachments, onProgress, editMode = 'full', existingCards = [], existingStyleTemplate }) {
   let userId = null;
   try {
-    const user = await base44.auth.me();
+    const user = await getMe();
     userId = user?.id;
   } catch {}
 

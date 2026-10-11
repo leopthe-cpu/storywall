@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, Camera, FolderOpen, Image as ImageIcon, Mic, Play, Film, Music, RefreshCw, RotateCw, FlipHorizontal, FlipVertical, Eraser } from '@/components/icons';
 import { base44 } from '@/api/base44Client';
+import { getMe } from '@/api/storywallApi';
 import { registerMedia } from '@/lib/mediaLibrary';
 import { useDraftMedia } from '@/components/creator/DraftMediaContext';
 import ColorPicker from '@/components/creator/ColorPicker';
@@ -350,7 +351,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
     onRemoveMediaByUrl?.(item.image_url);
     if (selectedElement?.image_url === item.image_url) onSelectElement?.(null);
     try {
-      const user = await base44.auth.me();
+      const user = await getMe();
       if (user) await base44.entities.Media.deleteMany({ user_id: user.id, image_url: item.image_url });
     } catch (e) {
       console.error(e);

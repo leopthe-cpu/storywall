@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2, PerspectiveView } from '@/components/icons';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
 import { base44 } from '@/api/base44Client';
+import { getMe } from '@/api/storywallApi';
 import { registerMedia } from '@/lib/mediaLibrary';
 import CanvasArea, { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/components/creator/CanvasArea';
 import BottomIsland, { ISLAND_CHROME } from '@/components/creator/BottomIsland';
@@ -771,7 +772,7 @@ export default function StoryCreator() {
   const userPromiseRef = useRef(null);
   const getUser = useCallback(() => {
     if (!userPromiseRef.current) {
-      userPromiseRef.current = base44.auth.me().catch((e) => { userPromiseRef.current = null; throw e; });
+      userPromiseRef.current = getMe().catch((e) => { userPromiseRef.current = null; throw e; });
     }
     return userPromiseRef.current;
   }, []);
@@ -948,7 +949,7 @@ export default function StoryCreator() {
   const [currentUser, setCurrentUser] = useState(null);
   // Load current user for navigation back to profile
   useEffect(() => {
-    base44.auth.me().then((u) => setCurrentUser(u)).catch(() => {});
+    getMe().then((u) => setCurrentUser(u)).catch(() => {});
   }, []);
 
   // Navigate to the user's profile — falls back to a fresh me() call if
@@ -957,7 +958,7 @@ export default function StoryCreator() {
     let username = currentUser?.username;
     if (!username) {
       try {
-        const u = await base44.auth.me();
+        const u = await getMe();
         username = u?.username;
       } catch {}
     }
@@ -1010,7 +1011,7 @@ export default function StoryCreator() {
     resetBaseline(migratedCards, migratedTokens);
 
     try {
-      const user = await base44.auth.me();
+      const user = await getMe();
       if (user?.id) {
         const seen = new Set();
         for (const c of migratedCards) {
