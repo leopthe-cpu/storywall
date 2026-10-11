@@ -14,6 +14,7 @@ import SignIn from '@/pages/SignIn';
 import Verify from '@/pages/Verify';
 import Onboarding from '@/pages/Onboarding';
 import SignUp from '@/pages/SignUp';
+import ResetPassword from '@/pages/ResetPassword';
 import { useState, useEffect } from 'react';
 import { getMe } from '@/api/storywallApi';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -65,6 +66,7 @@ const AuthenticatedApp = () => {
       {/* Entry / auth */}
       <Route path="/" element={<Landing />} />
       <Route path="/signin" element={<SignIn />} />
+      <Route path="/signin/reset" element={<ResetPassword />} />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/verify" element={<Verify />} />
 
