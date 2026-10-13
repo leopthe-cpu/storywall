@@ -6,7 +6,8 @@ import InlinePhotoCrop from './InlinePhotoCrop';
 // Shared profile-picture editor used by both Onboarding and Edit Profile.
 // Shows a preview square; tapping it opens the inline zoom/pan/crop editor
 // (Save / Discard / Replace). `size` controls the preview + editor dimensions.
-export default function ProfilePhotoEditor({ value, onChange, size = 200, onEditingChange }) {
+// `commitRef`: see InlinePhotoCrop (the parent saves the crop with its own button).
+export default function ProfilePhotoEditor({ value, onChange, size = 200, onEditingChange, commitRef }) {
   const [editingPhoto, setEditingPhoto] = useState(null);
   const photoInputRef = useRef(null);
 
@@ -32,6 +33,7 @@ export default function ProfilePhotoEditor({ value, onChange, size = 200, onEdit
         onSaved={handleSaved}
         onDiscard={handleDiscard}
         size={size}
+        commitRef={commitRef}
       />
     );
   }
