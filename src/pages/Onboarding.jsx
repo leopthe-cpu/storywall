@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
-import { getMe } from '@/api/storywallApi';
+import { getMe, updateMe, invokeFunction, listOnboardingDrafts, createOnboardingDraft, updateOnboardingDraft, deleteOnboardingDraft } from '@/api/storywallApi';
 import { saveUsername } from '@/lib/usernameApi';
 import { useAuth } from '@/lib/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,28 +37,29 @@ const clearDraft = (userId) => { try { localStorage.removeItem(draftKey(userId))
 const withTimeout = (promise, ms) => Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
 async function loadServerDraft(userId) {
   try {
-    const rows = await withTimeout(base44.entities.OnboardingDraft.filter({ user_id: userId }), 3000);
+    // Owner-only table: only the signed-in user's own rows come back.
+    const rows = await withTimeout(listOnboardingDrafts(), 3000);
     if (!rows?.length) return null;
-    const row = [...rows].sort((a, b) => new Date(b.updated_date || 0) - new Date(a.updated_date || 0))[0];
+    const row = [...rows].sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0))[0];
     const d = JSON.parse(row.data || 'null');
     return d ? { ...d, _rowId: row.id } : null;
   } catch { return null; }
 }
 async function saveServerDraft(userId, rowIdRef, payload) {
   try {
-    const body = { user_id: userId, step: payload.step, data: JSON.stringify(payload) };
+    const body = { step: payload.step, data: JSON.stringify(payload) };
     if (!rowIdRef.current) {
-      const rows = await base44.entities.OnboardingDraft.filter({ user_id: userId });
+      const rows = await listOnboardingDrafts();
       if (rows?.length) rowIdRef.current = rows[0].id;
     }
-    if (rowIdRef.current) await base44.entities.OnboardingDraft.update(rowIdRef.current, body);
-    else { const created = await base44.entities.OnboardingDraft.create(body); rowIdRef.current = created?.id || null; }
+    if (rowIdRef.current) await updateOnboardingDraft(rowIdRef.current, body);
+    else { const created = await createOnboardingDraft(body); rowIdRef.current = created?.id || null; }
   } catch { /* non-blocking */ }
 }
 async function deleteServerDraft(userId) {
   try {
-    const rows = await base44.entities.OnboardingDraft.filter({ user_id: userId });
-    for (const r of rows || []) await base44.entities.OnboardingDraft.delete(r.id);
+    const rows = await listOnboardingDrafts();
+    for (const r of rows || []) await deleteOnboardingDraft(r.id);
   } catch { /* non-blocking */ }
 }
 
@@ -227,7 +227,7 @@ export default function Onboarding() {
       for (let attempt = 0; attempt < 2; attempt++) {
         if (cancelled) return;
         try {
-          const res = await base44.functions.invoke('checkUsername', { username: val, excludeUserId: currentUserId });
+          const res = await invokeFunction('checkUsername', { username: val, excludeUserId: currentUserId });
           if (cancelled) return;
           if (res.data?.available) {
             setCheckState('available');
@@ -329,7 +329,7 @@ export default function Onboarding() {
     const { username, ...profileData } = payload;
     try {
       if (username) await saveUsername(username);
-      if (Object.keys(profileData).length) await base44.auth.updateMe(profileData);
+      if (Object.keys(profileData).length) await updateMe(profileData);
     } catch (e) {
       setSaving(false);
       setError(e?.message || 'Something went wrong. Please try again.');
