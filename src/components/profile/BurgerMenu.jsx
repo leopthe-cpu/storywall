@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, LogOut, Archive } from '@/components/icons';
-import { base44 } from '@/api/base44Client';
-import { getMe, signOut } from '@/api/storywallApi';
+import { getMe, signOut, filterPosts, updateMe } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
 import EditableUsername from '@/components/profile/EditableUsername';
@@ -20,7 +19,7 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
       setCurrentUser(u);
       setIsPrivate(!!u?.is_private);
       if (u?.id) {
-        base44.entities.Post.filter({ author_id: u.id, status: 'archived' }, '-updated_date', 50)
+        filterPosts({ author_id: u.id, status: 'archived' }, '-updated_at', 50)
           .then(res => setArchivedCount(res.length))
           .catch(() => {});
       }
@@ -31,7 +30,7 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
     const newValue = !isPrivate;
     setIsPrivate(newValue);
     try {
-      await base44.auth.updateMe({ is_private: newValue });
+      await updateMe({ is_private: newValue });
     } catch {
       setIsPrivate(!newValue);
     }

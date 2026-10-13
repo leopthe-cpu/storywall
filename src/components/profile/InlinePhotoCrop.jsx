@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { uploadPublicFile } from '@/api/storywallApi';
 import MinimalSlider from '@/components/creator/MinimalSlider';
 import { Check, EmojiSad } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
@@ -100,7 +100,7 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
       const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
       if (blob) {
         const file = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        const { file_url } = await uploadPublicFile(file);
         onSaved(file_url);
       } else {
         onSaved(imageUrl);

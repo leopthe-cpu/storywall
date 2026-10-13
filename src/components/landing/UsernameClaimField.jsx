@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
+import { invokeFunction } from '@/api/storywallApi';
 import { validateUsernameFormat, isReservedUsername } from '@/lib/usernameValidation';
 
 // Username claim field with live green/red availability feedback.
@@ -69,7 +69,7 @@ export default function UsernameClaimField({ onClaim, autoFocus = false, buttonL
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
       try {
-        const res = await base44.functions.invoke('checkUsername', { username: v });
+        const res = await invokeFunction('checkUsername', { username: v });
         if (res.data?.available) {
           setState('available');
           setReason(`storywall.io/${v} is available`);

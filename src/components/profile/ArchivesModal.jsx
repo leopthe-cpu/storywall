@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, RotateCcw, Trash2 } from '@/components/icons';
-import { base44 } from '@/api/base44Client';
-import { getMe } from '@/api/storywallApi';
+import { getMe, filterPosts, updatePost, deletePost } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 
@@ -21,9 +20,9 @@ export default function ArchivesModal({ onClose, onRestored }) {
     setLoading(true);
     try {
       const user = await getMe();
-      const results = await base44.entities.Post.filter(
+      const results = await filterPosts(
         { author_id: user.id, status: 'archived' },
-        '-updated_date',
+        '-updated_at',
         50
       );
       setArchives(results);
@@ -37,7 +36,7 @@ export default function ArchivesModal({ onClose, onRestored }) {
   const handleRestore = async (post) => {
     setBusyId(post.id);
     try {
-      await base44.entities.Post.update(post.id, { status: 'published' });
+      await updatePost(post.id, { status: 'published' });
       setArchives(prev => prev.filter(p => p.id !== post.id));
       await onRestored?.();
     } catch (e) {
@@ -54,7 +53,7 @@ export default function ArchivesModal({ onClose, onRestored }) {
   const handleDelete = async (post) => {
     setBusyId(post.id);
     try {
-      await base44.entities.Post.delete(post.id);
+      await deletePost(post.id);
       setArchives(prev => prev.filter(p => p.id !== post.id));
       setConfirmDeleteId(null);
     } catch (e) {
