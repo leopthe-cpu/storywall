@@ -8,20 +8,18 @@ import useDocumentTitle from '@/lib/useDocumentTitle';
 // /signin/reset — "Forgot password?" by email code (replaces Base44's hosted
 // reset page; code instead of a link, approved by Oz). Two-part path so it
 // can never clash with a wall at /<username>.
-// Flow: email → 6-digit code + new password → signed in → back to `from`.
+// Flow: email → 6-digit code → new password → signed in → back to `from`.
+// Code and password are separate steps (Oz, 13 Oct 2026): the code is
+// confirmed first, then the new password is chosen.
 export default function ResetPassword() {
   useDocumentTitle('Reset Password | storywall');
   const location = useLocation();
   const from = location.state?.from || '/onboarding';
 
-  const [stage, setStage] = useState('email'); // 'email' | 'code'
+  const [stage, setStage] = useState('email'); // 'email' | 'code' | 'password'
   const [email, setEmail] = useState(location.state?.email || '');
   const [code, setCode] = useState('');
   const [password, setPassword] = useState('');
-  // Once the code is accepted the user holds a recovery session; if only
-  // the new password is refused (too short, same as before), retrying must
-  // not ask Supabase to check the already-used code again.
-  const [codeAccepted, setCodeAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [resent, setResent] = useState(false);
@@ -50,16 +48,28 @@ export default function ResetPassword() {
     }
   };
 
-  const saveNewPassword = async (e) => {
+  // A correct code signs the user in with a recovery session, which is what
+  // allows the password change on the next step.
+  const confirmCode = async (e) => {
     e.preventDefault();
-    if (code.length < 6 || !password) return;
+    if (code.length < 6) return;
     setBusy(true);
     setError('');
     try {
-      if (!codeAccepted) {
-        await verifyPasswordResetCode(email.trim(), code);
-        setCodeAccepted(true);
-      }
+      await verifyPasswordResetCode(email.trim(), code);
+      setStage('password');
+    } catch (err) {
+      setError(authErrorMessage(err, "That code didn't work. Check it and try again."));
+    }
+    setBusy(false);
+  };
+
+  const saveNewPassword = async (e) => {
+    e.preventDefault();
+    if (!password) return;
+    setBusy(true);
+    setError('');
+    try {
       await setNewPassword(password);
       finishAuth(from);
       return;
@@ -86,26 +96,33 @@ export default function ResetPassword() {
               <Link to="/signin" state={{ from }} className="text-[#6B6964] hover:text-[#262624]">Back to sign in</Link>
             </div>
           </form>
-        ) : (
-          <form onSubmit={saveNewPassword} className="flex flex-col gap-5">
+        ) : stage === 'code' ? (
+          <form onSubmit={confirmCode} className="flex flex-col gap-5">
             <div className="text-center">
               <h1 className="font-display text-[28px] leading-tight font-medium text-[#262624]">Check your email</h1>
               <p className="text-[#6B6964] text-sm mt-1">
                 If there's an account for <span className="text-[#262624] font-medium">{email.trim()}</span>, we sent it a code.
               </p>
             </div>
-            {!codeAccepted && <OtpInput value={code} onChange={setCode} length={6} autoFocus light />}
-            <AuthInput label="New password" type="password" value={password} onChange={setPassword} placeholder="Choose a new password" autoComplete="new-password" />
+            <OtpInput value={code} onChange={setCode} length={6} autoFocus light />
             {error && <p className="text-red-500 text-sm">{error}</p>}
-            <AuthButton disabled={code.length < 6 || !password} busy={busy} busyLabel="Saving…">Save new password</AuthButton>
+            <AuthButton disabled={code.length < 6} busy={busy} busyLabel="Checking…">Confirm code</AuthButton>
             <div className="flex justify-between text-sm">
-              <button type="button" onClick={() => { setStage('email'); setCode(''); setError(''); setResent(false); setCodeAccepted(false); }} className="text-[#6B6964] hover:text-[#262624]">Use a different email</button>
-              {!codeAccepted && (
-                <button type="button" onClick={resend} disabled={resent} className="text-[#262624] font-medium underline disabled:no-underline disabled:text-[#8A877F]">
-                  {resent ? 'Code sent' : 'Resend code'}
-                </button>
-              )}
+              <button type="button" onClick={() => { setStage('email'); setCode(''); setError(''); setResent(false); }} className="text-[#6B6964] hover:text-[#262624]">Use a different email</button>
+              <button type="button" onClick={resend} disabled={resent} className="text-[#262624] font-medium underline disabled:no-underline disabled:text-[#8A877F]">
+                {resent ? 'Code sent' : 'Resend code'}
+              </button>
             </div>
+          </form>
+        ) : (
+          <form onSubmit={saveNewPassword} className="flex flex-col gap-5">
+            <div className="text-center">
+              <h1 className="font-display text-[28px] leading-tight font-medium text-[#262624]">Choose a new password</h1>
+              <p className="text-[#6B6964] text-sm mt-1">For <span className="text-[#262624] font-medium">{email.trim()}</span>.</p>
+            </div>
+            <AuthInput label="New password" type="password" value={password} onChange={setPassword} placeholder="Choose a new password" autoComplete="new-password" autoFocus />
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <AuthButton disabled={!password} busy={busy} busyLabel="Saving…">Save new password</AuthButton>
           </form>
         )}
       </AuthColumn>
