@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
-import { getMe } from '@/api/storywallApi';
+import { getMe, getWall, updatePost, deletePost, reorderPosts } from '@/api/storywallApi';
 import { Plus, Share2, Pencil, SelectFace3d, X } from '@/components/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import StoryCard from '@/components/profile/StoryCard';
@@ -112,8 +111,7 @@ export default function PublicProfile() {
       let lastPosts = [];
       for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
-          const res = await base44.functions.invoke('getPublicProfile', { username });
-          const data = res?.data || {};
+          const data = (await getWall(username)) || {};
           lastStatus = data.status || 'not_found';
           lastUser = data.user || null;
           lastPosts = data.posts || [];
@@ -141,19 +139,10 @@ export default function PublicProfile() {
     getMe()
       .then(user => {
         setAuthUserId(user?.id ?? null);
-        // Admin gate: uses the built-in role field on the User entity.
-        const admin = !!user?.is_admin;
-        setIsAdmin(admin);
-        // Premium only shows/hides the Generate UI here — the backend
-        // functions enforce it (base44/shared/premium.ts). Grants live in the
-        // admin-managed PremiumGrant entity; admins are always premium.
-        if (admin) {
-          setIsPremium(true);
-        } else if (user?.id) {
-          base44.entities.PremiumGrant.filter({ user_id: user.id })
-            .then(grants => setIsPremium(Array.isArray(grants) && grants.length > 0))
-            .catch(() => setIsPremium(false));
-        }
+        // Admin and premium come from my_access() (via getMe). They only
+        // show/hide UI here; the server functions are the real gate.
+        setIsAdmin(!!user?.is_admin);
+        setIsPremium(!!user?.is_premium);
       })
       .catch(() => setAuthUserId(null));
   }, []);
@@ -178,10 +167,10 @@ export default function PublicProfile() {
   const [selectedTags, setSelectedTags] = useState([]);
   const toggleTag = (tag) => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
   // Display order: explicit display_order ascending, then stories without an
-  // explicit order fall back to created_date descending.
+  // explicit order fall back to created_at descending (newest first).
   const sortedPosts = useMemo(() => {
     const withOrder = posts.filter(p => p.display_order != null).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
-    const withoutOrder = posts.filter(p => p.display_order == null).sort((a, b) => new Date(b.created_date || 0) - new Date(a.created_date || 0));
+    const withoutOrder = posts.filter(p => p.display_order == null).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     return [...withOrder, ...withoutOrder];
   }, [posts]);
   const visiblePosts = selectedTags.length === 0
@@ -231,8 +220,7 @@ export default function PublicProfile() {
   const reloadPosts = useCallback(async () => {
     if (!username) return;
     try {
-      const res = await base44.functions.invoke('getPublicProfile', { username });
-      const data = res?.data || {};
+      const data = (await getWall(username)) || {};
       if (data.status === 'public') {
         setPosts(data.posts || []);
       }
@@ -245,7 +233,7 @@ export default function PublicProfile() {
     // Optimistically remove from the feed, then persist the status change.
     setPosts(prev => prev.filter(p => p.id !== post.id));
     try {
-      await base44.entities.Post.update(post.id, { status: 'archived' });
+      await updatePost(post.id, { status: 'archived' });
     } catch (e) {
       console.error('[PublicProfile] archive failed:', e);
       // Revert on failure
@@ -259,7 +247,7 @@ export default function PublicProfile() {
     if (!post) return;
     setPosts(prev => prev.filter(p => p.id !== post.id));
     try {
-      if (!String(post.id).startsWith('tpl')) await base44.entities.Post.delete(post.id);
+      if (!String(post.id).startsWith('tpl')) await deletePost(post.id);
     } catch (e) { console.error(e); }
   };
 
@@ -268,7 +256,7 @@ export default function PublicProfile() {
     const ordered = newOrder.map((p, i) => ({ ...p, display_order: i }));
     setPosts(ordered);
     try {
-      await base44.entities.Post.bulkUpdate(ordered.map((p, i) => ({ id: p.id, display_order: i })));
+      await reorderPosts(ordered.map((p, i) => ({ id: p.id, display_order: i })));
     } catch (e) { console.error(e); }
   };
 
@@ -507,8 +495,7 @@ export default function PublicProfile() {
               onSaved={async (updated) => {
                 setProfile(p => ({ ...p, ...updated }));
                 try {
-                  const res = await base44.functions.invoke('getPublicProfile', { username });
-                  const freshUser = res?.data?.user || null;
+                  const freshUser = (await getWall(username))?.user || null;
                   if (freshUser) setProfileUser({ ...freshUser, ...updated });
                 } catch (e) { /* keep optimistic update */ }
               }}

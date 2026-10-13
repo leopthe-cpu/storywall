@@ -267,6 +267,31 @@ export async function invokeFunction(name, body) {
   throw apiError(payload?.error || error.message, res?.status, payload);
 }
 
+// ---------- Walls
+
+// The same fields getPublicProfile returns for a public wall.
+const WALL_PROFILE_FIELDS = 'id, username, full_name, display_name, headline, bio, location, skills, links, profile_image';
+const WALL_POST_FIELDS = 'id, author_id, title, status, cards, color_tokens, cover_image, tags, display_order, ai_generated, generation_style, created_at, updated_at';
+
+// A wall as the page shows it: { status: 'public' | 'private' | 'not_found',
+// user, posts }. Visitors get exactly what getPublicProfile returns. The
+// owner of a PRIVATE wall gets their own wall back (decision 17: on Base44 a
+// private wall locked its owner out of it and of Settings, so it could never
+// be made public again); the database lets owners read their own rows.
+export async function getWall(username) {
+  const { data } = await invokeFunction('getPublicProfile', { username });
+  if (data?.status !== 'private') return data;
+  const user = await currentUser();
+  if (!user) return data;
+  const sb = getSupabase();
+  const own = check(await sb.from('profiles').select(WALL_PROFILE_FIELDS)
+    .eq('id', user.id).eq('username', data.user?.username || username).maybeSingle());
+  if (!own) return data;
+  const posts = check(await sb.from('posts').select(WALL_POST_FIELDS)
+    .eq('author_id', user.id).eq('status', 'published'));
+  return { status: 'public', user: own, posts };
+}
+
 // ---------- File uploads (each user writes only inside their own folder)
 
 function fileExtension(file) {
