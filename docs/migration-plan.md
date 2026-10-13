@@ -104,6 +104,16 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 - Replace the Base44 SDK with a small data layer over supabase-js; all auth flows including a **new reset-password flow** (Base44's hosted page goes away); remove `@base44/vite-plugin` and app-params.
 - Serve the app on Railway so `storywall.io/<username>` routes work. Security headers (match today's: HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy). Generic link-preview tags (decision 10). No analytics (decision 9).
 - Rendering parity: editor, thumbnails and published cards must still match (CLAUDE.md "Rendering model").
+- **Step 4 plan (builder), surveyed 13 Oct 2026.** About 24 Base44 calls remain in the whole app, mostly one-for-one swaps:
+  - autosave create/update (`StoryCreator.jsx`) → `createPost` / `updatePost` (notes go to `post_notes` automatically);
+  - drafts list and delete (`CardsPanel.jsx`, sorted `-updated_date`) → `filterPosts` (`-updated_at`), `deletePost`;
+  - reopening a story (from the wall, the archive or Drafts) must also load its private notes with `getPost`, or a Generate story reopens without them;
+  - uploads (`MediaPanel.jsx`, `AudioRecorder.jsx`) → `uploadPrivateFile` (`drafts/<uid>/…`); Generate attachments → `uploadPublicFile`;
+  - private media links (`DraftMediaContext.jsx`) → `resolveDraftMedia` on Supabase (same `{ resolved }` answer);
+  - media library (`mediaLibrary.js`, `MediaPanel.jsx`) → `registerMedia`, `removeFromMediaLibrary`;
+  - **template pictures** in `storyTemplates.js` are hosted on Base44's media server: copy them into `public/` before go-live.
+
+  Step 5: `PostFlowSheet.jsx` (publish, `publishStoryMedia`, `suggestSkills`), `generatePipeline.js` and `PromptTest.jsx` (`structureStory`, `generateImage`).
 
 ### ⬜ Phase 5: Parity
 - Run the Phase 0.5 tests and screenshots against staging. Every difference is a bug to fix before moving on.
