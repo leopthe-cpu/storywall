@@ -450,7 +450,7 @@ export default function Onboarding() {
                     <Field label="Name" value={form.full_name} onChange={handleNameChange} placeholder="Alex Rivera" />
                     <div>
                       <label className="text-xs font-semibold text-[#6B6964] uppercase tracking-wider mb-2 block">Username</label>
-                      <div className="flex items-center border border-[#D6D2C7] rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#262624]/20">
+                      <div className="flex items-center bg-white border border-[#D6D2C7] rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#262624]/20">
                         <span className="px-3 text-[#8A877F] text-sm bg-[#FAF9F5] border-r border-[#D6D2C7] py-3.5 flex-shrink-0">storywall.io/</span>
                         <input
                           value={form.username}
@@ -460,7 +460,7 @@ export default function Onboarding() {
                           }}
                           placeholder="yourname"
                           maxLength={30}
-                          className="flex-1 px-3 py-3.5 text-sm text-[#262624] placeholder:text-[#8A877F] focus:outline-none"
+                          className="flex-1 px-3 py-3.5 text-sm text-[#262624] placeholder:text-[#8A877F] bg-transparent focus:outline-none"
                         />
                         <div className="pr-3 flex-shrink-0 flex items-center">
                           {checkState === 'checking' && <PixelSpinner size={16} />}
