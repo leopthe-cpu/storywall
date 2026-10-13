@@ -12,6 +12,7 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [uploading, setUploading] = useState(false);
   const dragging = useRef(false);
+  const pointers = useRef(new Set());
   const lastPos = useRef({ x: 0, y: 0 });
   const lastPinchDist = useRef(null);
   const containerRef = useRef(null);
@@ -44,20 +45,35 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scale, size]);
 
-  // Pointer drag
+  // Pointer drag. On a phone each finger of a pinch is its own pointer: if
+  // both moved the photo, it jumped back and forth between the two fingers
+  // while pinching (Oz, 13 Oct 2026). So only a single pointer drags, and the
+  // drag restarts from wherever the remaining finger is after a pinch.
   const onPointerDown = (e) => {
-    dragging.current = true;
+    pointers.current.add(e.pointerId);
+    dragging.current = pointers.current.size === 1;
     lastPos.current = { x: e.clientX, y: e.clientY };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e) => {
-    if (!dragging.current) return;
+    if (pointers.current.size !== 1) return;
+    if (!dragging.current) {
+      dragging.current = true;
+      lastPos.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
     const dx = e.clientX - lastPos.current.x;
     const dy = e.clientY - lastPos.current.y;
     lastPos.current = { x: e.clientX, y: e.clientY };
     setOffset(o => clampOffset({ x: o.x + dx, y: o.y + dy }, scale));
   };
-  const onPointerUp = () => { dragging.current = false; lastPinchDist.current = null; };
+  const onPointerUp = (e) => {
+    pointers.current.delete(e.pointerId);
+    // Lifting one finger of a pinch must not make the other one jump the
+    // photo: its next move starts a fresh drag from where it is (see above).
+    dragging.current = false;
+    lastPinchDist.current = null;
+  };
 
   const isTouch = isTouchDevice();
 
@@ -75,6 +91,7 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
     }
     lastPinchDist.current = dist;
   };
+  const onTouchEnd = () => { lastPinchDist.current = null; };
 
   const handleSave = async () => {
     setUploading(true);
@@ -157,6 +174,8 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
         >
           <img
             src={imageUrl}
