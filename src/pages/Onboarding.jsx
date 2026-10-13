@@ -4,7 +4,7 @@ import { getMe, updateMe, invokeFunction, listOnboardingDrafts, createOnboarding
 import { saveUsername } from '@/lib/usernameApi';
 import { useAuth } from '@/lib/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Check, X, AlertCircle } from '@/components/icons';
+import { ArrowLeft, Check, X, AlertCircle } from '@/components/icons';
 import LinksEditor from '@/components/profile/LinksEditor';
 import ProfilePhotoEditor from '@/components/profile/ProfilePhotoEditor';
 import { ProfileHeroCard, ProfileInfo } from '@/components/profile/ProfileHeader';
@@ -76,7 +76,9 @@ function ProgressBar({ step }) {
   );
 }
 
-function StepWrapper({ children, onBack, canGoBack }) {
+// One step's content, headed by its title with "Step x of y" on the same line
+// (Oz, 13 Oct 2026). The back button lives above the progress bar instead.
+function StepWrapper({ children, title, subtitle, step }) {
   return (
     <motion.div
       initial={{ opacity: 0, x: 30 }}
@@ -85,12 +87,13 @@ function StepWrapper({ children, onBack, canGoBack }) {
       transition={{ duration: 0.22 }}
       className="flex flex-col gap-6"
     >
-      {canGoBack && (
-        <button onClick={onBack} className="flex items-center gap-1 text-[#6B6964] hover:text-[#262624] transition-colors w-fit -ml-1">
-          <ChevronLeft size={18} />
-          <span className="text-sm">Back</span>
-        </button>
-      )}
+      <div>
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 className="font-display text-[28px] leading-tight font-medium text-[#262624]">{title}</h2>
+          <span className="text-xs text-[#8A877F] font-medium shrink-0">Step {step} of {TOTAL_STEPS}</span>
+        </div>
+        <p className="text-[#6B6964] text-sm mt-1">{subtitle}</p>
+      </div>
       {children}
     </motion.div>
   );
@@ -428,9 +431,21 @@ export default function Onboarding() {
         </Link>
         <div className="px-6 pt-[4.5rem] pb-32 md:pt-20 md:pb-0 md:min-h-full md:flex md:flex-col">
           <div className="w-full max-w-sm mx-auto flex flex-col gap-8 md:flex-1">
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-4">
+              {/* Back sits above the progress bar; the space is kept on step 1 so nothing shifts */}
+              <div className="h-10">
+                {canGoBack && (
+                  <button
+                    onClick={() => setStep(s => s - 1)}
+                    aria-label="Back"
+                    title="Back"
+                    className="h-10 w-10 flex items-center justify-center bg-[#ECE9E1] text-[#3A3935] rounded-xl hover:bg-[#E6E0D2] hover:text-[#262624] active:scale-[0.96] transition-all"
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
+                )}
+              </div>
               <ProgressBar step={step} />
-              <div className="text-xs text-[#8A877F] font-medium">Step {step} of {TOTAL_STEPS}</div>
             </div>
 
             {/* Desktop: the form and Continue are centred in the remaining height (progress bar stays a little higher) */}
@@ -440,13 +455,7 @@ export default function Onboarding() {
 
                 {/* Step 1: Name + Username */}
                 {step === 1 && (
-                  <StepWrapper canGoBack={canGoBack} onBack={() => setStep(s => s - 1)}>
-                    <div>
-                      <h2 className="font-display text-[28px] leading-tight font-medium text-[#262624]">Who are you?</h2>
-                      <p className="text-[#6B6964] text-sm mt-1">
-                        This is how others will find you.
-                      </p>
-                    </div>
+                  <StepWrapper step={step} title="Who are you?" subtitle="This is how others will find you.">
                     <Field label="Name" value={form.full_name} onChange={handleNameChange} placeholder="Alex Rivera" />
                     <div>
                       <label className="text-xs font-semibold text-[#6B6964] uppercase tracking-wider mb-2 block">Username</label>
@@ -476,11 +485,7 @@ export default function Onboarding() {
 
                 {/* Step 2: Headline + Bio */}
                 {step === 2 && (
-                  <StepWrapper canGoBack={canGoBack} onBack={() => setStep(s => s - 1)}>
-                    <div>
-                      <h2 className="font-display text-[28px] leading-tight font-medium text-[#262624]">Your story</h2>
-                      <p className="text-[#6B6964] text-sm mt-1">Tell people what you do and who you are.</p>
-                    </div>
+                  <StepWrapper step={step} title="Your story" subtitle="Tell people what you do and who you are.">
                     <Field label="Job title / Headline" value={form.headline} onChange={set('headline')} placeholder="Product Designer at Acme" />
                     <Field label="Bio" value={form.bio} onChange={set('bio')} placeholder="A few words about your journey..." multiline />
                   </StepWrapper>
@@ -488,33 +493,21 @@ export default function Onboarding() {
 
                 {/* Step 3: Location */}
                 {step === 3 && (
-                  <StepWrapper canGoBack={canGoBack} onBack={() => setStep(s => s - 1)}>
-                    <div>
-                      <h2 className="font-display text-[28px] leading-tight font-medium text-[#262624]">Where are you?</h2>
-                      <p className="text-[#6B6964] text-sm mt-1">Your city or country.</p>
-                    </div>
+                  <StepWrapper step={step} title="Where are you?" subtitle="Your city or country.">
                     <Field label="Location" value={form.location} onChange={set('location')} placeholder="San Francisco, CA" />
                   </StepWrapper>
                 )}
 
                 {/* Step 4: Links */}
                 {step === 4 && (
-                  <StepWrapper canGoBack={canGoBack} onBack={() => setStep(s => s - 1)}>
-                    <div>
-                      <h2 className="font-display text-[28px] leading-tight font-medium text-[#262624]">Your links</h2>
-                      <p className="text-[#6B6964] text-sm mt-1">Add any links you want to share on your profile.</p>
-                    </div>
+                  <StepWrapper step={step} title="Your links" subtitle="Add any links you want to share on your profile.">
                     <LinksEditor links={form.links} onChange={set('links')} />
                   </StepWrapper>
                 )}
 
                 {/* Step 5: Profile photo */}
                 {step === 5 && (
-                  <StepWrapper canGoBack={canGoBack} onBack={() => setStep(s => s - 1)}>
-                    <div>
-                      <h2 className="font-display text-[28px] leading-tight font-medium text-[#262624]">Profile photo</h2>
-                      <p className="text-[#6B6964] text-sm mt-1">Add a face to your name.</p>
-                    </div>
+                  <StepWrapper step={step} title="Profile photo" subtitle="Add a face to your name.">
                     <ProfilePhotoEditor
                       value={form.profile_image}
                       onChange={(url) => set('profile_image')(url)}
