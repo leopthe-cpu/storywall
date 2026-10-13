@@ -150,6 +150,7 @@ export default function Onboarding() {
   const [saveError, setSaveError] = useState(false);
   // True while the profile-photo cropper is open (photo uploaded but not yet saved/discarded)
   const [photoEditing, setPhotoEditing] = useState(false);
+  const photoCommitRef = useRef(null); // saves the open crop (Finish Wall does it, no separate ✓)
   const finishedRef = useRef(false); // set once the profile is saved, so the draft isn't re-written
   const serverRowId = useRef(null);      // id of this user's server-side draft row, once known
   const serverTimer = useRef(null);      // debounce timer for the server save
@@ -311,17 +312,26 @@ export default function Onboarding() {
     if (step < TOTAL_STEPS) {
       setStep(s => s + 1);
     } else {
-      await handleFinish();
+      // A photo still in the crop editor is cropped and uploaded first; its
+      // URL is passed on directly because the form state updates only later.
+      let image;
+      if (photoEditing && photoCommitRef.current) {
+        setSaving(true);
+        image = await photoCommitRef.current();
+        if (!image) { setSaving(false); return; } // the editor shows the error
+      }
+      await handleFinish(image);
     }
   };
 
-  const handleFinish = async () => {
+  const handleFinish = async (imageOverride) => {
     setSaving(true);
     setError('');
     setSaveError(false);
     // full_name is a built-in that can't be overridden via updateMe;
     // write display_name instead — the profile reads display_name first.
     const payload = { ...form, display_name: form.full_name };
+    if (imageOverride) payload.profile_image = imageOverride;
     delete payload.full_name;
     Object.keys(payload).forEach(k => {
       const v = payload[k];
@@ -381,7 +391,7 @@ export default function Onboarding() {
             <>
               <p className="text-red-500 text-sm text-center">Something went wrong saving your profile. Please try again.</p>
               <button
-                onClick={handleFinish}
+                onClick={() => handleFinish()}
                 disabled={saving}
                 className="w-full bg-[#262624] text-[#F4F2EC] py-4 rounded-2xl font-semibold text-base disabled:opacity-50 hover:bg-[#30302E] active:scale-[0.98] transition-all"
               >
@@ -392,10 +402,10 @@ export default function Onboarding() {
             <>
               <button
                 onClick={handleNext}
-                disabled={saving || (step === 1 && !canContinueStep1) || (step === TOTAL_STEPS && photoEditing)}
+                disabled={saving || (step === 1 && !canContinueStep1)}
                 className="w-full bg-[#262624] text-[#F4F2EC] py-4 rounded-2xl font-semibold text-base disabled:opacity-50 hover:bg-[#30302E] active:scale-[0.98] transition-all"
               >
-                {saving ? 'Saving...' : step === TOTAL_STEPS ? 'Take me to my profile →' : 'Continue'}
+                {saving ? 'Saving...' : step === TOTAL_STEPS ? 'Finish Wall' : 'Continue'}
               </button>
               {isSkippable && step < TOTAL_STEPS && (
                 <button onClick={handleSkip} className="text-center text-sm text-[#8A877F] hover:text-[#3A3935] transition-colors py-1">
@@ -512,6 +522,7 @@ export default function Onboarding() {
                       value={form.profile_image}
                       onChange={(url) => set('profile_image')(url)}
                       onEditingChange={setPhotoEditing}
+                      commitRef={photoCommitRef}
                       size={300}
                     />
                   </StepWrapper>

@@ -1,16 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
 import { uploadPublicFile } from '@/api/storywallApi';
 import MinimalSlider from '@/components/creator/MinimalSlider';
-import { Check, EmojiSad } from '@/components/icons';
+import { Check, EmojiSad, ImageIcon } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 
 const isTouchDevice = () => typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
 
-// Inline square crop/zoom editor — no full-screen modal
-export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 200 }) {
+// Inline square crop/zoom editor — no full-screen modal.
+//
+// With `commitRef`, the parent saves the crop itself (onboarding saves it with
+// "Finish Wall", Oz 13 Oct 2026): the ✓ and ☹ buttons are hidden, Replace sits
+// on the photo, and commitRef.current() crops + uploads and resolves to the
+// new URL (null if the upload failed; the editor then shows the error).
+export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 200, commitRef }) {
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const dragging = useRef(false);
   const pointers = useRef(new Set());
   const lastPos = useRef({ x: 0, y: 0 });
@@ -95,6 +101,7 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
 
   const handleSave = async () => {
     setUploading(true);
+    setUploadError('');
     try {
       let urlToProcess = imageUrl;
 
@@ -107,7 +114,7 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
 
       // Crop using the (now local) blob URL
       const container = containerRef.current;
-      if (!container) { onSaved(imageUrl); return; }
+      if (!container) { onSaved(imageUrl); return imageUrl; }
       const rect = container.getBoundingClientRect();
       const size = 800;
       const canvas = document.createElement('canvas');
@@ -141,16 +148,26 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
         const file = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
         const { file_url } = await uploadPublicFile(file);
         onSaved(file_url);
-      } else {
-        onSaved(imageUrl);
+        return file_url;
       }
+      throw new Error('Could not make the cropped picture');
     } catch (err) {
+      // Stay in the editor: saving the local preview URL instead (as before)
+      // left a photo that only ever worked on this device, in this tab.
       console.error('Crop/upload failed:', err);
-      onSaved(imageUrl);
+      setUploadError("Couldn't save the photo. Please try again.");
+      return null;
     } finally {
       setUploading(false);
     }
   };
+
+  // Hand the parent the latest save function (it reads scale/offset).
+  useEffect(() => {
+    if (!commitRef) return;
+    commitRef.current = handleSave;
+    return () => { commitRef.current = null; };
+  });
 
   const handleChange = (e) => {
     const file = e.target.files?.[0];
@@ -195,6 +212,18 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
           />
           {/* Crop border hint */}
           <div className="absolute inset-0 rounded-2xl ring-2 ring-[#262624]/30 pointer-events-none" />
+          {/* Replace on the photo itself, so the page's own button below has room */}
+          {commitRef && (
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="absolute bottom-3 right-3 h-9 px-3 flex items-center gap-1.5 bg-[#F4F2EC]/90 text-[#262624] text-sm font-medium rounded-xl shadow-sm hover:bg-[#F4F2EC] active:scale-[0.97] transition-all disabled:opacity-50"
+            >
+              <ImageIcon size={16} />
+              Replace
+            </button>
+          )}
         </div>
       </div>
 
@@ -205,13 +234,19 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
         </div>
       )}
 
-      <p className="text-xs text-[#8A877F]">
-        {isTouch
-          ? 'Pinch to zoom, then drag to reposition'
-          : 'Use the slider to zoom, then drag to reposition'}
-      </p>
+{/* An upload error takes the hint's place, so it stays in view above a pinned page button */}
+      {uploadError ? (
+        <p className="text-xs text-red-500">{uploadError}</p>
+      ) : (
+        <p className="text-xs text-[#8A877F]">
+          {isTouch
+            ? 'Pinch to zoom, then drag to reposition'
+            : 'Use the slider to zoom, then drag to reposition'}
+        </p>
+      )}
 
       {/* Actions: Replace (text) · Discard (emoji) · Save (check, primary) */}
+      {!commitRef && (
       <div className="flex items-center gap-2 w-full" style={{ maxWidth: size }}>
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -239,6 +274,7 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
           {uploading ? <PixelSpinner size={16} tone="light" /> : <Check size={22} strokeWidth={2.2} />}
         </button>
       </div>
+      )}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
     </div>
   );
