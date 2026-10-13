@@ -99,7 +99,7 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 - Replace Base44's built-in AI (InvokeLLM, GenerateImage) with Oz's own provider, matching current models where possible: **propose options and costs, then ask Oz.** Secrets per environment are set by Oz. (Provider: OpenRouter, decision 20, which replaced the earlier z.ai plan of decision 8.)
 
 ### 🔶 Phase 4: Frontend
-> **Progress (11 Oct 2026):** step 1 (Supabase client + data layer `src/api/storywallApi.js`) and step 2 (auth: sign-in, sign-out, session, sign-up with email code, code-based password reset at `/signin/reset`) merged into `develop`, tested in headless Chromium against staging. Not yet tested: entering a real emailed code (Oz checks by hand on the staging site). Next: step 3, profile and public wall. Until steps 3–5 are done, screens that load data still call Base44.
+> **Progress (13 Oct 2026):** done and merged into `develop`: step 1 (data layer `src/api/storywallApi.js`), step 2 (sign-in, sign-out, sign-up with email code, code-based reset at `/signin/reset`, code and new password on separate screens), step 3 (profile and wall via `getWall()`, private-wall owner fix, edit profile, photo, archive/restore, username checks), onboarding, and step 7 early: **staging runs on Railway at https://web-staging-c748.up.railway.app** (service `web`, staging env only, builds `develop` with the Dockerfile + Caddyfile; same security headers as storywall.io; link-preview card and manifest served by the app). Oz checked by hand on staging (13 Oct): sign-up with a real emailed code, onboarding, password reset, his wall. Supabase Auth Site URL + redirect URLs set for staging. **Next: step 4, the builder** (StoryCreator: drafts/autosave, uploads to `drafts/<uid>/…` + `resolveDraftMedia`, media library, templates), then step 5 (publish + skill tags, Generate) and step 6 (remove Base44). Known leftover until step 6: the Base44 SDK's analytics posts to our own site and gets 405 (nothing reaches Base44). Railway notes: `accept-deploy` via the connector times out, so Oz applies staged changes in the dashboard; staging redeploys by itself on every merge into `develop`.
 
 - Replace the Base44 SDK with a small data layer over supabase-js; all auth flows including a **new reset-password flow** (Base44's hosted page goes away); remove `@base44/vite-plugin` and app-params.
 - Serve the app on Railway so `storywall.io/<username>` routes work. Security headers (match today's: HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy). Generic link-preview tags (decision 10). No analytics (decision 9).
@@ -134,7 +134,7 @@ Decided by Oz on 2026-10-09 (decision 14). The new app must not reproduce these 
 |---|---|---|
 | Git branch | `develop` | `main` (Oz approves) |
 | Supabase project | `storywall-staging` (`vlgwcpqndmfhsfcxijpr`, ca-central-1) | `storywall` (`igakvqlzvglvuqflngey`, ca-central-1) |
-| Railway | project `storywall` (`cc1c435c-28cd-4e49-80c3-3996a16d4221`), env `staging` (empty, created 2026-10-09) | env `production` (`e40b17e0-7924-4eb1-a68f-4e7ae1b9ed8f`, empty) |
+| Railway | project `storywall` (`cc1c435c-28cd-4e49-80c3-3996a16d4221`), env `staging`: service `web` (https://web-staging-c748.up.railway.app, from 2026-10-13) | env `production` (`e40b17e0-7924-4eb1-a68f-4e7ae1b9ed8f`, empty) |
 
 ## Phase 0, step 1: sync (done 2026-10-08)
 
