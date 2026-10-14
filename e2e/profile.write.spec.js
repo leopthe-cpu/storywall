@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ACCOUNTS, useAccount, setOwnPrivacyBase44, privacySwitch, visitorPage } from './helpers.js';
+import { ACCOUNTS, useAccount, setOwnPrivacy, privacySwitch, visitorPage } from './helpers.js';
 
 // Profile owner flows. These CHANGE data, so they run only as the test-only
 // `leo` account, one at a time (the *.write.spec.js projects in
@@ -110,7 +110,7 @@ test('private wall: everyone sees "This profile is private"; signed-in users can
     // Not checked: what the owner sees. Base44 locks the owner out (same
     // page, no Settings); the new app fixes that on purpose (decision 17).
   } finally {
-    await setOwnPrivacyBase44(page, false);
+    await setOwnPrivacy(page, username, false);
   }
   const visitor = await visitorPage(browser);
   await visitor.goto(`/${username}`);
