@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { invokeFunction } from '@/api/storywallApi';
 
 // Provides resolveMediaUrl(value) for the creator: private draft file_uris are
 // resolved to short-lived signed URLs (via the resolveDraftMedia backend
@@ -48,7 +48,7 @@ export function DraftMediaProvider({ children }) {
     );
     if (!toFetch.length) return;
     toFetch.forEach((u) => { pendingRef.current.delete(u); inFlightRef.current.add(u); });
-    base44.functions.invoke('resolveDraftMedia', { file_uris: toFetch })
+    invokeFunction('resolveDraftMedia', { file_uris: toFetch })
       .then((res) => {
         const resolved = res?.data?.resolved || {};
         const ts = Date.now();
