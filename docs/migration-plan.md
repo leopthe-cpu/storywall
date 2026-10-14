@@ -284,8 +284,8 @@ Oz's backlog for after go-live. Nothing here is built during the migration.
 
 1. **Per-person link previews** (decision 10): when a wall link is shared (WhatsApp, LinkedIn, iMessage, Slack), show that person's name, headline and photo instead of the generic StoryWall card. Also replace Base44's stored description ("A streamlined visual project management and collaboration workspace for creative teams."), which doesn't describe StoryWall.
 2. **Search / discovery** (decision 11): keyword search across profiles, skill tags and stories, e.g. recruiters finding candidates, people finding stories to read.
-3. **AI-assistant integration (MCP)** (decision 12): let AI assistants act on a StoryWall account. Base44 had an unfinished, switched-off version (`src/pages/OAuthConsent.jsx`, no route); it is not migrated.
-4. **Analytics** (decision 9).
+3. ~~AI-assistant integration (MCP)~~ (decision 12): not needed (decision 35). Base44's unfinished, switched-off version was removed with the Base44 client.
+4. **Visitor tracking: the first thing after the migration** (decision 34). Record wall views, story views (how far people swipe), clicks on a wall's links and an approximate location, in our own database, readable by the wall's owner and admins only. No full IP addresses; the owner's own views don't count. Later: analytics screens, and emails such as "X people viewed your wall this week, most from Toronto". To check first: whether the visitor's approximate location reaches our server code; privacy-notice wording (have it checked).
 5. **Change-password screen** for signed-in users (today there's only "Forgot password?"). Then Oz changes the `leopteh` test password (decision 15).
 6. **Likes / follows / saves / comments:** tables exist in Base44 but no screens and no data. Decide whether to build the feature; the empty tables are not migrated.
 7. **Name: "Storywall"** (decision 27): change the app's on-screen "StoryWall" to "Storywall" (one visible sentence on the sign-up page, plus image descriptions and the share-sheet title). Emails already say Storywall.
