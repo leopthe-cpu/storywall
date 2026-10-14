@@ -74,7 +74,8 @@ export async function setOwnPrivacy(page, username, isPrivate) {
   await page.getByRole('button', { name: 'Settings' }).click();
   const toggle = privacySwitch(page);
   await expect(toggle).toBeVisible();
-  // The switch shows "public" until the saved setting has loaded.
+  // The new app keeps the switch disabled until the saved setting has loaded.
+  await expect(toggle).toBeEnabled();
   await page.waitForLoadState('networkidle');
   const privateNow = !/bg-black/.test(await toggle.getAttribute('class'));
   if (privateNow === isPrivate) return;

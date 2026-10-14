@@ -8,7 +8,9 @@ import ArchivesModal from '@/components/profile/ArchivesModal';
 
 export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [isPrivate, setIsPrivate] = useState(false);
+  // null until the saved setting has loaded: the switch shows neither state
+  // and ignores taps, so it never flashes "public" or flips the wrong way.
+  const [isPrivate, setIsPrivate] = useState(null);
   const [showArchives, setShowArchives] = useState(false);
   const [archivedCount, setArchivedCount] = useState(0);
 
@@ -27,6 +29,7 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
   }, []);
 
   const handleTogglePrivacy = async () => {
+    if (isPrivate === null) return;
     const newValue = !isPrivate;
     setIsPrivate(newValue);
     try {
@@ -132,9 +135,13 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
               </div>
               <button
                 onClick={handleTogglePrivacy}
-                className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${isPrivate ? 'bg-gray-200' : 'bg-black'}`}
+                disabled={isPrivate === null}
+                aria-busy={isPrivate === null}
+                className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors disabled:cursor-default ${isPrivate === null ? 'bg-gray-100' : isPrivate ? 'bg-gray-200' : 'bg-black'}`}
               >
-                <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${isPrivate ? 'left-0.5' : 'right-0.5'}`} />
+                {isPrivate !== null && (
+                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${isPrivate ? 'left-0.5' : 'right-0.5'}`} />
+                )}
               </button>
             </div>
           </div>
