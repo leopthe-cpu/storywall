@@ -4,6 +4,12 @@
 // Suggested starting sizes: title ~20% of card width (64px in 320px ref), subtitle ~7% (22px).
 
 const REFERENCE_CARD_SIZE = 320;
+
+// Template pictures ship with the app (public/templates/; copied from Base44's
+// media server, Oct 2026). The link must be a full https address: the builder
+// treats any other link as a private draft file and asks the server to sign it.
+const templateImage = (name) =>
+  `${typeof window !== 'undefined' ? window.location.origin : ''}/templates/${name}`;
 const TITLE_SIZE = '40';   // Cover — exempt from reduction
 const SUBTITLE_SIZE = '16'; // ~5% of 320px (was 22, reduced ~27%)
 const TEXT_WIDTH = 256;     // 80% of 320px
@@ -250,7 +256,7 @@ export const STORY_TEMPLATES = [
         bodySize: '19',
         bodyX: 5.6, bodyY: 55, bodyWidth: 286,
         image: {
-          url: 'https://media.base44.com/images/public/6a161402f22a3ebcce243595/d24edfcb8_generated_image.png',
+          url: templateImage('bold-poster-photo-1.jpg'),
           treatment: 'full-bleed',
           overlayColor: '#1b288d',
           overlayIntensity: 85,
@@ -292,7 +298,7 @@ export const STORY_TEMPLATES = [
         bodySize: '16',
         bodyX: 7.3, bodyY: 36, bodyWidth: 272,
         image: {
-          url: 'https://media.base44.com/images/public/6a161402f22a3ebcce243595/bf7266a5f_generated_image.png',
+          url: templateImage('bold-poster-photo-2.jpg'),
           treatment: 'top-third',
         },
       },
