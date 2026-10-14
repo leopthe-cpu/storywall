@@ -2,8 +2,7 @@ import { useState, useRef, useCallback, useEffect, useReducer } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2, PerspectiveView } from '@/components/icons';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
-import { base44 } from '@/api/base44Client';
-import { getMe, createPost, updatePost } from '@/api/storywallApi';
+import { getMe, createPost, updatePost, invokeFunction, uploadPublicFile } from '@/api/storywallApi';
 import { registerMedia } from '@/lib/mediaLibrary';
 import CanvasArea, { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/components/creator/CanvasArea';
 import BottomIsland, { ISLAND_CHROME } from '@/components/creator/BottomIsland';
@@ -280,7 +279,7 @@ export default function StoryCreator() {
     setCards(prev => prev.map((c, i) => i === cardIndex ? { ...c, imageGenerationFailed: false, imageRetrying: true } : c));
 
     try {
-      const imgRes = await base44.functions.invoke('generateImage', { prompt: card.imagePrompt });
+      const imgRes = await invokeFunction('generateImage', { prompt: card.imagePrompt });
       const imageUrl = imgRes?.data?.url;
       if (imageUrl) {
         const isInset = card.photoTreatment === 'inset';
@@ -1076,7 +1075,7 @@ export default function StoryCreator() {
   const handleAddAttachment = async (file) => {
     try {
       const isVideo = file.type.startsWith('video/');
-      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+      const { file_url } = await uploadPublicFile(file);
       setAttachments(prev => [...prev, { url: file_url, type: isVideo ? 'video' : 'image' }]);
     } catch (e) {
       console.error('[StoryCreator] attachment upload failed:', e);

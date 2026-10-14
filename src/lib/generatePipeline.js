@@ -1,5 +1,4 @@
-import { base44 } from '@/api/base44Client';
-import { getMe } from '@/api/storywallApi';
+import { getMe, invokeFunction } from '@/api/storywallApi';
 import { registerMedia } from '@/lib/mediaLibrary';
 import { buildAICards } from '@/lib/aiStyleTemplates';
 
@@ -45,7 +44,7 @@ export async function runGeneratePipeline({ text, attachments, onProgress, editM
   // Step 1: Structure the story
   onProgress?.({ completedSteps: 0, totalSteps: 1, label: 'Structuring your story…' });
 
-  const structRes = await base44.functions.invoke('structureStory', {
+  const structRes = await invokeFunction('structureStory', {
     text,
     attachments: attachments.map(a => ({ url: a.url, type: a.type })),
   });
@@ -138,7 +137,7 @@ export async function runGeneratePipeline({ text, attachments, onProgress, editM
       // ── (c) Call generateImage ──
       try {
         console.log(`[generate-pipeline] card ${cardIndex}: CALLING generateImage (prompt: "${prompt.slice(0, 80)}…")`);
-        const imgRes = await base44.functions.invoke('generateImage', { prompt });
+        const imgRes = await invokeFunction('generateImage', { prompt });
         const imageUrl = imgRes?.data?.url;
         if (imageUrl) {
           card.imageUrl = imageUrl;
