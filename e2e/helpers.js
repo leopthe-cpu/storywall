@@ -63,6 +63,26 @@ export async function setOwnPrivacyBase44(page, isPrivate) {
 }
 
 // The privacy switch in the Settings panel (it has no label of its own).
+// Sets the signed-in owner's wall to private or public and waits until it's
+// saved. On Base44 a private wall locks its owner out of Settings, so there it
+// sends the Settings request directly; the new app keeps Settings reachable
+// for the owner (decision 17), so it uses the switch like a person would.
+export async function setOwnPrivacy(page, username, isPrivate) {
+  await page.goto(`/${username}`);
+  const onBase44 = await page.evaluate(() => !!localStorage.getItem('base44_access_token'));
+  if (onBase44) return setOwnPrivacyBase44(page, isPrivate);
+  await page.getByRole('button', { name: 'Settings' }).click();
+  const toggle = privacySwitch(page);
+  await expect(toggle).toBeVisible();
+  // The switch shows "public" until the saved setting has loaded.
+  await page.waitForLoadState('networkidle');
+  const privateNow = !/bg-black/.test(await toggle.getAttribute('class'));
+  if (privateNow === isPrivate) return;
+  const saved = page.waitForResponse((r) => /\/rest\/v1\/profiles/.test(r.url()) && r.request().method() === 'PATCH');
+  await toggle.click();
+  expect((await saved).status(), 'privacy update request').toBe(200);
+}
+
 export function privacySwitch(page) {
   return page.getByText('Anyone can view your profile').locator('xpath=../..').getByRole('button');
 }

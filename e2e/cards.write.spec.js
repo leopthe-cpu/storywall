@@ -60,7 +60,9 @@ test('template cards: editor, publish preview and wall look as recorded', async 
   // skills below it vary with the AI's suggestions).
   await page.getByRole('button', { name: 'Post →' }).first().click();
   await expect(page.getByPlaceholder('Give your story a title...')).toBeVisible();
-  const skills = page.getByText('Skills', { exact: true }).locator('xpath=..');
+  // The Skills section: its header row (label + Regenerate) and the
+  // suggestions below it, so button 0 is Regenerate and 1 the first skill.
+  const skills = page.getByText('Skills', { exact: true }).locator('xpath=../..');
   await expect(page.getByRole('button', { name: /Regenerate suggestions|Try matching again/ })).toBeVisible({ timeout: 30_000 });
   await picturesLoaded(page);
   await expect(page.locator('[data-card-item]').first()).toHaveScreenshot('preview-card1.png');
