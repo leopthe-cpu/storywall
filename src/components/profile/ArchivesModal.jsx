@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, RotateCcw, Trash2 } from '@/components/icons';
-import { getMe, filterPosts, updatePost, deletePost } from '@/api/storywallApi';
+import { getMe, filterPosts, updatePost, deletePost, getPostForEditing } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 
@@ -46,8 +46,8 @@ export default function ArchivesModal({ onClose, onRestored }) {
     }
   };
 
-  const handleOpenInEditor = (post) => {
-    navigate('/create', { state: { editStory: post } });
+  const handleOpenInEditor = async (post) => {
+    navigate('/create', { state: { editStory: await getPostForEditing(post) } });
   };
 
   const handleDelete = async (post) => {
