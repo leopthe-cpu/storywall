@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2, PerspectiveView } from '@/components/icons';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
 import { base44 } from '@/api/base44Client';
-import { getMe } from '@/api/storywallApi';
+import { getMe, createPost, updatePost } from '@/api/storywallApi';
 import { registerMedia } from '@/lib/mediaLibrary';
 import CanvasArea, { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/components/creator/CanvasArea';
 import BottomIsland, { ISLAND_CHROME } from '@/components/creator/BottomIsland';
@@ -768,14 +768,6 @@ export default function StoryCreator() {
   // checks this so it never adopts its newly-created row id, or resets the
   // dirty baseline, for the story that's now on screen.
   const storyEpochRef = useRef(0);
-  // auth.me() cached for the session — only needed to create a new draft row.
-  const userPromiseRef = useRef(null);
-  const getUser = useCallback(() => {
-    if (!userPromiseRef.current) {
-      userPromiseRef.current = getMe().catch((e) => { userPromiseRef.current = null; throw e; });
-    }
-    return userPromiseRef.current;
-  }, []);
   const persistDraft = useCallback(() => {
     if (isPersistingRef.current) { rerunPersistRef.current = true; return inFlightRef.current; }
     isPersistingRef.current = true;
@@ -803,7 +795,7 @@ export default function StoryCreator() {
         );
         if (hasPendingBlobMedia) return null;
         if (currentDraftId) {
-          await base44.entities.Post.update(currentDraftId, {
+          await updatePost(currentDraftId, {
             cards: currentCards,
             color_tokens: currentTokens,
             status: 'draft',
@@ -824,10 +816,8 @@ export default function StoryCreator() {
           return currentDraftId;
         } else {
           if (!hasRealContent(currentCards)) return null;
-          const user = await getUser();
-          const created = await base44.entities.Post.create({
-            author_id: user.id,
-            author_username: user.username || '',
+          // The database sets the author to the signed-in user itself.
+          const created = await createPost({
             title: '',
             tags: [],
             cards: currentCards,
@@ -860,7 +850,7 @@ export default function StoryCreator() {
     })();
     inFlightRef.current = p;
     return p;
-  }, [getUser]);
+  }, []);
   persistDraftRef.current = persistDraft;
 
   // Autosave timers: debounce 4s after last edit, 30s ceiling for continuous editing.
