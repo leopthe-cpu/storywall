@@ -198,6 +198,14 @@ export async function getPost(id) {
   return notes ? { ...post, raw_notes: notes.raw_notes } : post;
 }
 
+// A story to open in the builder. Wall and archive lists don't carry the
+// owner-only notes, and without them a Generate story reopens as a plain
+// one. If they can't be loaded, the story opens as listed: saving it then
+// leaves the stored notes as they are.
+export async function getPostForEditing(post) {
+  try { return await getPost(post.id); } catch { return post; }
+}
+
 export async function createPost(fields) {
   const { row, hasNotes, notes } = splitPost(fields);
   const post = check(await getSupabase().from('posts').insert(row).select('*').single());

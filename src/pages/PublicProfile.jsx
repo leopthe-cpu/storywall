@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getMe, getWall, updatePost, deletePost, reorderPosts } from '@/api/storywallApi';
+import { getMe, getWall, updatePost, deletePost, reorderPosts, getPostForEditing } from '@/api/storywallApi';
 import { Plus, Share2, Pencil, SelectFace3d, X } from '@/components/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import StoryCard from '@/components/profile/StoryCard';
@@ -214,7 +214,7 @@ export default function PublicProfile() {
       .catch(() => {});
   };
 
-  const handleEditStory = (post) => navigate('/create', { state: { editStory: post } });
+  const handleEditStory = async (post) => navigate('/create', { state: { editStory: await getPostForEditing(post) } });
 
   // Lightweight reload — re-fetches posts without the retry/loading dance.
   const reloadPosts = useCallback(async () => {
