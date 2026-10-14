@@ -176,7 +176,9 @@ export async function startStory(page, text) {
   await page.goto('/create');
   await typeIntoNewTextBox(page, text);
   await page.getByRole('button', { name: 'Post →' }).first().click();
-  await expect(page.getByPlaceholder('Give your story a title...')).toBeVisible();
+  // The publish screen waits for skill suggestions: when no keyword matches,
+  // the server asks the AI and retries once, which can take several seconds.
+  await expect(page.getByPlaceholder('Give your story a title...')).toBeVisible({ timeout: 30_000 });
 }
 
 // Removes every story with the marker from the owner's wall and archive
