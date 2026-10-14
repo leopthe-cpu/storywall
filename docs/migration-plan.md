@@ -115,9 +115,15 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 
   Step 5: `PostFlowSheet.jsx` (publish, `publishStoryMedia`, `suggestSkills`), `generatePipeline.js` and `PromptTest.jsx` (`structureStory`, `generateImage`).
 
-### ⬜ Phase 5: Parity
+### 🔶 Phase 5: Parity
 - Run the Phase 0.5 tests and screenshots against staging. Every difference is a bug to fix before moving on.
 - List intentional differences (AI wording, reset-password screens, privacy fixes) and get Oz's OK. Oz checks the sign-up email flow by hand.
+- **Run 1 (14 Oct 2026), against staging on Railway** (`BASE_URL=https://web-staging-c748.up.railway.app`, `SW_ADMIN_*`/`SW_USER_*` set from the `SW_STAGING_*` variables, one worker for the rate limits): read-only tests 26/27 on phone and on desktop; data-changing tests 13/13 on desktop, all but the AI-only "tag your own skill" test on phone. Every Base44 screenshot (editor, publish preview, wall cards) matches. Differences found and fixed:
+  - Sign-out ended the user's sessions on every device (Supabase's default); now this browser only, as on Base44.
+  - The Settings privacy switch showed "public" until the saved setting loaded, and a tap then went the wrong way; it now waits.
+  - Tests: the private-wall clean-up called Base44 directly (now `setOwnPrivacy`, using the owner's switch, decision 17); the template test looked for the first suggested skill in the wrong place.
+- **Staging test data** (so the recorded tests find the same content as on the live app): `leopteh` has the published "Storytelling" story from the live app (Base44 id 6ab6d84a5402905bc2be3161) next to the first one; a public test wall `jody` ("Jody") exists for the profile search; `leo`'s profile (headline, bio, location, links) matches the live one, because the wall's header height decides where the cards land and a different header moved the wall-card screenshots by a pixel. `leo` and `leopteh` each keep one draft ("Test account draft, keep").
+- Still to do: the "tag your own skill" test (2 AI calls), the opt-in Generate test on staging, Oz's hand check of the sign-up email, the list of intentional differences for Oz's OK.
 
 ### ⬜ Phase 6: Go live
 - Production passes the same tests. Recreate test accounts.
