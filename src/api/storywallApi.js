@@ -135,8 +135,10 @@ export async function setNewPassword(password) {
   return auth(getSupabase().auth.updateUser({ password }));
 }
 
+// Signs out this browser only. Supabase's default ('global') would also sign
+// the user out on every other device, which Base44 didn't do.
 export async function signOut() {
-  return check(await getSupabase().auth.signOut());
+  return check(await getSupabase().auth.signOut({ scope: 'local' }));
 }
 
 // What the UI may show about the signed-in user: { is_admin, is_premium }.
