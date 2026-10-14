@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { Mic, Square, Play, Pause, RotateCw, Check } from '@/components/icons';
-import { base44 } from '@/api/base44Client';
+import { uploadPrivateFile } from '@/api/storywallApi';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 
 function fmt(s) {
@@ -155,7 +155,7 @@ export default function AudioRecorder({ onUse, onCancel }) {
     try {
       const ext = mimeRef.current.includes('mp4') ? 'm4a' : 'webm';
       const file = new File([blob], `audio-${Date.now()}.${ext}`, { type: blob.type });
-      const { file_uri } = await base44.integrations.Core.UploadPrivateFile({ file });
+      const { file_uri } = await uploadPrivateFile(file);
       onUse(file_uri, duration);
     } catch (e) {
       console.error(e);
