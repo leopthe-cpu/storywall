@@ -5,9 +5,9 @@ import { buildAICards } from '@/lib/aiStyleTemplates';
 // Backstop: scan non-cover card prompts for face/person-descriptive language.
 const FACE_KEYWORDS = /\b(face|faces|eye|eyes|smiling|smile|looking|looked|portrait|person|people|man|woman|boy|girl|character|expression|gaze|stare)\b/i;
 
-// Fixed fallback prompt for non-cover cards when face-validation fails.
-// Known-safe: hands/detail/object-only, no face language whatsoever.
-const HANDS_DETAIL_FALLBACK_PROMPT = 'Top-down flat-lay of a laptop, mechanical keyboard, notepad with handwritten notes, pen resting across it, and a coffee mug. Even office light, muted color grade, visible film grain. No visible face, no person visible — objects and desk details only.';
+// Most AI pictures in one story (Oz, 2026-10-15): pictures complement the
+// story; they don't need to be on every card.
+const MAX_GENERATED_IMAGES = 3;
 
 function sanitizePrompt(prompt) {
   if (!prompt || !FACE_KEYWORDS.test(prompt)) return prompt;
@@ -87,52 +87,49 @@ export async function runGeneratePipeline({ text, attachments, onProgress, editM
     // Identify cards needing AI-generated images by index into the cards array.
     // We operate on cards[cardIndex] directly (not copies) so generated URLs
     // and failure flags propagate to buildAICards.
-    const needingIndexes = [];
+    let needingIndexes = [];
     cards.forEach((c, i) => {
       if (c.needsImage && !c.imageUrl) needingIndexes.push(i);
     });
+    // At most MAX_GENERATED_IMAGES per story (the structuring prompt asks for
+    // the same; this enforces it). The first ones win, so the cover keeps its
+    // picture; the others become text cards.
+    needingIndexes.slice(MAX_GENERATED_IMAGES).forEach((i) => { cards[i].needsImage = false; });
+    needingIndexes = needingIndexes.slice(0, MAX_GENERATED_IMAGES);
     const totalSteps = 1 + needingIndexes.length;
+    let done = 0;
 
     onProgress?.({
       completedSteps: 1,
       totalSteps,
-      label: needingIndexes.length > 0 ? 'Generating images…' : 'Assembling carousel…',
+      label: needingIndexes.length > 0 ? `Generating ${needingIndexes.length === 1 ? 'image' : `${needingIndexes.length} images`}…` : 'Assembling carousel…',
     });
 
-    for (let s = 0; s < needingIndexes.length; s++) {
-      const cardIndex = needingIndexes[s];
+    // Pictures are generated at the same time: each takes up to a minute, so
+    // one after another made a story with 5 pictures take over 5 minutes.
+    await Promise.all(needingIndexes.map(async (cardIndex) => {
       const card = cards[cardIndex];
       const isCover = cardIndex === 0;
-
-      onProgress?.({
-        completedSteps: s + 1,
-        totalSteps,
-        label: `Generating image ${s + 1} of ${needingIndexes.length}…`,
-      });
 
       // ── (a) Was image generation attempted? ──
       if (!card.imagePrompt) {
         console.log(`[generate-pipeline] card ${cardIndex} (isCover=${isCover}): NOT ATTEMPTED — needsImage=true but no imagePrompt from structuring`);
         card.imageGenerationFailed = true;
-        continue;
+        return;
       }
-
-      console.log(`[generate-pipeline] card ${cardIndex} (isCover=${isCover}): ATTEMPTED — imagePrompt drafted (${card.imagePrompt.length} chars)`);
 
       // ── (b) Face-validation: ALL cards (including cover) are sanitized + validated ──
-      // No card is exempt — no prompt may describe a face or person. If the
-      // backstop triggers, that signals a regression in prompt construction.
-      let prompt = card.imagePrompt;
+      // No card is exempt — no prompt may describe a face or person. A prompt
+      // that can't be cleaned gets no picture: the old fixed fallback (a desk
+      // flat-lay) put the same unrelated scene on every story.
       const sanitized = sanitizePrompt(card.imagePrompt);
       const validation = validateSanitizedPrompt(sanitized);
-
-      if (validation.valid) {
-        prompt = sanitized;
-        console.log(`[generate-pipeline] card ${cardIndex} (isCover=${isCover}): face-validation PASSED — sanitized prompt ready`);
-      } else {
-        prompt = HANDS_DETAIL_FALLBACK_PROMPT;
-        console.log(`[generate-pipeline] card ${cardIndex} (isCover=${isCover}): face-validation REJECTED — ${validation.reason}. Falling back to fixed object/detail template. THIS MAY INDICATE A REGRESSION IN PROMPT CONSTRUCTION.`);
+      if (!validation.valid) {
+        console.log(`[generate-pipeline] card ${cardIndex} (isCover=${isCover}): face-validation REJECTED — ${validation.reason}. No picture for this card. THIS MAY INDICATE A REGRESSION IN PROMPT CONSTRUCTION.`);
+        card.needsImage = false;
+        return;
       }
+      const prompt = sanitized;
 
       // ── (c) Call generateImage ──
       try {
@@ -159,7 +156,13 @@ export async function runGeneratePipeline({ text, attachments, onProgress, editM
         console.error(`[generate-pipeline] card ${cardIndex}: FAILED — generateImage threw: ${e?.message || e}`);
         card.imageGenerationFailed = true;
       }
-    }
+      done += 1;
+      onProgress?.({
+        completedSteps: 1 + done,
+        totalSteps,
+        label: done < needingIndexes.length ? `Generating images… ${done} of ${needingIndexes.length} done` : 'Assembling carousel…',
+      });
+    }));
 
     onProgress?.({ completedSteps: totalSteps, totalSteps, label: 'Assembling carousel…' });
   } else {
