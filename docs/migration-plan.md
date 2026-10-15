@@ -125,10 +125,16 @@ Status legend: ✅ done · 🔶 in progress · ⬜ not started.
 - **Staging test data** (so the recorded tests find the same content as on the live app): `leopteh` has the published "Storytelling" story from the live app (Base44 id 6ab6d84a5402905bc2be3161) next to the first one; a public test wall `jody` ("Jody") exists for the profile search; `leo`'s profile (headline, bio, location, links) matches the live one, because the wall's header height decides where the cards land and a different header moved the wall-card screenshots by a pixel. `leo` and `leopteh` each keep one draft ("Test account draft, keep").
 - Finished: Generate passes on staging (opt-in test); the "tag your own skill" test now skips itself when the AI suggests skills (decision 33); Oz's hand check of the sign-up email code on staging passed; the intentional differences are approved (decision 36).
 
-### ⬜ Phase 6: Go live
-- Production passes the same tests. Recreate test accounts.
-- A day before: lower storywall.io's DNS TTL. Then point storywall.io to Railway (guide Oz through the DNS provider). **Rollback = point DNS back to Base44** (`A @ 216.24.57.1`, `CNAME www base44.onrender.com`).
+### 🟡 Phase 6: Go live
+- ✅ `develop` merged into `main` (PR #45, "Live v0"). Production Supabase `storywall`: 3 migrations, the 10 functions, `OPENROUTER_API_KEY`, auth emails through Resend (own sending key, 6-digit codes), URL configuration with the Railway address and `https://storywall.io/**`.
+- ✅ Railway production: service `web-OR9B` (the name `web` is taken by staging's service) in env `production`, built from `main`, at https://web-or9b-production.up.railway.app.
+- ✅ Oz signed up on production as `leo` (admin); "The 11s Bottleneck" imported into it with its 10 pictures copied to his folder (decision 37).
+- ✅ Full test run against production with two temporary test accounts, deleted afterwards (decision 39): 85 passed, 4 skipped on purpose (Generate; tag-your-own when the AI suggests skills), 1 known 1-pixel wall screenshot difference (shorter test profile above the card).
+- 🟡 DNS moved from GoDaddy to Cloudflare (decision 38): records copied one to one, all "DNS only"; GoDaddy now uses `cecelia.ns.cloudflare.com` / `ganz.ns.cloudflare.com`; waiting for Cloudflare to show the domain active. Railway custom domains `storywall.io` and `www.storywall.io` added; their `_railway-verify` TXT records are in Cloudflare.
+- ⬜ Switch (in Cloudflare, all "DNS only"): replace `A storywall.io 216.24.57.1` with `CNAME @ ulkpw2fe.up.railway.app`; change `CNAME www` from `base44.onrender.com` to `4jb382r8.up.railway.app`. Then set the Supabase Site URL to `https://storywall.io`.
+- **Rollback = in Cloudflare, put back `A @ 216.24.57.1` and `CNAME www base44.onrender.com`** (and the Site URL).
 - Keep the Base44 app untouched for an agreed period as a fallback; archive its full source; then cancel Base44.
+- Note: stories built from a photo template store the picture address of the site they were made on, so keep the Railway address after the switch.
 
 ### ⬜ Phase 7: Agent
 - Invite `w0rkstufff` to this repo (Write); scoped Supabase token for `storywall-staging` only; add it to LibreChat's config; create a "StoryWall dev" agent; write `docs/librechat-agent.md`.
@@ -150,7 +156,7 @@ Decided by Oz on 2026-10-09 (decision 14). The new app must not reproduce these 
 |---|---|---|
 | Git branch | `develop` | `main` (Oz approves) |
 | Supabase project | `storywall-staging` (`vlgwcpqndmfhsfcxijpr`, ca-central-1) | `storywall` (`igakvqlzvglvuqflngey`, ca-central-1) |
-| Railway | project `storywall` (`cc1c435c-28cd-4e49-80c3-3996a16d4221`), env `staging`: service `web` (https://web-staging-c748.up.railway.app, from 2026-10-13) | env `production` (`e40b17e0-7924-4eb1-a68f-4e7ae1b9ed8f`, empty) |
+| Railway | project `storywall` (`cc1c435c-28cd-4e49-80c3-3996a16d4221`), env `staging`: service `web` (https://web-staging-c748.up.railway.app, from 2026-10-13) | env `production` (`e40b17e0-7924-4eb1-a68f-4e7ae1b9ed8f`): service `web-OR9B` (https://web-or9b-production.up.railway.app, from 2026-10-15) |
 
 ## Phase 0, step 1: sync (done 2026-10-08)
 
