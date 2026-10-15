@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Image as ImageIcon, Download, X, Paperclip } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
-import { base44 } from '@/api/base44Client';
+import { getMe, invokeFunction, uploadPublicFile } from '@/api/storywallApi';
 
 const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4'];
 
@@ -22,9 +22,9 @@ export default function PromptTest() {
   // Admin gate — redirect non-admins back to their profile.
   // Uses the built-in role field on the User entity.
   useEffect(() => {
-    base44.auth.me()
+    getMe()
       .then(user => {
-        if (user?.role !== 'admin') { setAuthed(false); return; }
+        if (!user?.is_admin) { setAuthed(false); return; }
         setAuthed(true);
       })
       .catch(() => setAuthed(false));
@@ -43,7 +43,7 @@ export default function PromptTest() {
       return;
     }
     try {
-      const u = await base44.auth.me();
+      const u = await getMe();
       navigate(u?.username ? `/${u.username}` : '/');
     } catch {
       navigate('/');
@@ -84,7 +84,7 @@ export default function PromptTest() {
     setUploadingRef(true);
     setError('');
     try {
-      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+      const { file_url } = await uploadPublicFile(file);
       setReferenceImage({ url: file_url, name: file.name });
     } catch (err) {
       setError('Failed to upload reference image');
@@ -120,7 +120,7 @@ export default function PromptTest() {
       const fullPrompt = aspectRatio === '1:1'
         ? trimmed
         : `${trimmed}\n\nAspect ratio: ${aspectRatio}`;
-      const res = await base44.functions.invoke('generateImage', { prompt: fullPrompt, ...(referenceImage ? { referenceImage: referenceImage.url } : {}) });
+      const res = await invokeFunction('generateImage', { prompt: fullPrompt, ...(referenceImage ? { referenceImage: referenceImage.url } : {}) });
       const imageUrl = res?.data?.url || res?.url;
       if (!imageUrl) throw new Error('No image returned');
       setResults(prev => [{ prompt: trimmed, imageUrl, aspectRatio, timestamp: Date.now() }, ...prev]);

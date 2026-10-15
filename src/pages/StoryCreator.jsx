@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, useReducer } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2, PerspectiveView } from '@/components/icons';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
-import { base44 } from '@/api/base44Client';
+import { getMe, createPost, updatePost, invokeFunction, uploadPublicFile } from '@/api/storywallApi';
 import { registerMedia } from '@/lib/mediaLibrary';
 import CanvasArea, { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/components/creator/CanvasArea';
 import BottomIsland, { ISLAND_CHROME } from '@/components/creator/BottomIsland';
@@ -279,7 +279,7 @@ export default function StoryCreator() {
     setCards(prev => prev.map((c, i) => i === cardIndex ? { ...c, imageGenerationFailed: false, imageRetrying: true } : c));
 
     try {
-      const imgRes = await base44.functions.invoke('generateImage', { prompt: card.imagePrompt });
+      const imgRes = await invokeFunction('generateImage', { prompt: card.imagePrompt });
       const imageUrl = imgRes?.data?.url;
       if (imageUrl) {
         const isInset = card.photoTreatment === 'inset';
@@ -767,14 +767,6 @@ export default function StoryCreator() {
   // checks this so it never adopts its newly-created row id, or resets the
   // dirty baseline, for the story that's now on screen.
   const storyEpochRef = useRef(0);
-  // auth.me() cached for the session — only needed to create a new draft row.
-  const userPromiseRef = useRef(null);
-  const getUser = useCallback(() => {
-    if (!userPromiseRef.current) {
-      userPromiseRef.current = base44.auth.me().catch((e) => { userPromiseRef.current = null; throw e; });
-    }
-    return userPromiseRef.current;
-  }, []);
   const persistDraft = useCallback(() => {
     if (isPersistingRef.current) { rerunPersistRef.current = true; return inFlightRef.current; }
     isPersistingRef.current = true;
@@ -802,7 +794,7 @@ export default function StoryCreator() {
         );
         if (hasPendingBlobMedia) return null;
         if (currentDraftId) {
-          await base44.entities.Post.update(currentDraftId, {
+          await updatePost(currentDraftId, {
             cards: currentCards,
             color_tokens: currentTokens,
             status: 'draft',
@@ -823,10 +815,8 @@ export default function StoryCreator() {
           return currentDraftId;
         } else {
           if (!hasRealContent(currentCards)) return null;
-          const user = await getUser();
-          const created = await base44.entities.Post.create({
-            author_id: user.id,
-            author_username: user.username || '',
+          // The database sets the author to the signed-in user itself.
+          const created = await createPost({
             title: '',
             tags: [],
             cards: currentCards,
@@ -859,7 +849,7 @@ export default function StoryCreator() {
     })();
     inFlightRef.current = p;
     return p;
-  }, [getUser]);
+  }, []);
   persistDraftRef.current = persistDraft;
 
   // Autosave timers: debounce 4s after last edit, 30s ceiling for continuous editing.
@@ -948,7 +938,7 @@ export default function StoryCreator() {
   const [currentUser, setCurrentUser] = useState(null);
   // Load current user for navigation back to profile
   useEffect(() => {
-    base44.auth.me().then((u) => setCurrentUser(u)).catch(() => {});
+    getMe().then((u) => setCurrentUser(u)).catch(() => {});
   }, []);
 
   // Navigate to the user's profile — falls back to a fresh me() call if
@@ -957,7 +947,7 @@ export default function StoryCreator() {
     let username = currentUser?.username;
     if (!username) {
       try {
-        const u = await base44.auth.me();
+        const u = await getMe();
         username = u?.username;
       } catch {}
     }
@@ -1010,7 +1000,7 @@ export default function StoryCreator() {
     resetBaseline(migratedCards, migratedTokens);
 
     try {
-      const user = await base44.auth.me();
+      const user = await getMe();
       if (user?.id) {
         const seen = new Set();
         for (const c of migratedCards) {
@@ -1085,7 +1075,7 @@ export default function StoryCreator() {
   const handleAddAttachment = async (file) => {
     try {
       const isVideo = file.type.startsWith('video/');
-      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+      const { file_url } = await uploadPublicFile(file);
       setAttachments(prev => [...prev, { url: file_url, type: isVideo ? 'video' : 'image' }]);
     } catch (e) {
       console.error('[StoryCreator] attachment upload failed:', e);

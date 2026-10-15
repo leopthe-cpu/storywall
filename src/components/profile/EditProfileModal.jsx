@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { X } from '@/components/icons';
-import { base44 } from '@/api/base44Client';
+import { updateMe } from '@/api/storywallApi';
 import ProfilePhotoEditor from './ProfilePhotoEditor';
 import LinksEditor from './LinksEditor';
 
@@ -43,7 +43,7 @@ export default function EditProfileModal({ profile, allTags, onClose, onSaved })
     try {
       const latest = formRef.current;
       console.log('[EditProfileModal] Saving profile:', latest);
-      const result = await base44.auth.updateMe(latest);
+      const result = await updateMe(latest);
       console.log('[EditProfileModal] Save result:', result);
       onSaved(latest);
       onClose();

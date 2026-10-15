@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Plus, Camera, FolderOpen, Image as ImageIcon, Mic, Play, Film, Music, RefreshCw, RotateCw, FlipHorizontal, FlipVertical, Eraser } from '@/components/icons';
-import { base44 } from '@/api/base44Client';
+import { uploadPrivateFile, removeFromMediaLibrary } from '@/api/storywallApi';
 import { registerMedia } from '@/lib/mediaLibrary';
 import { useDraftMedia } from '@/components/creator/DraftMediaContext';
 import ColorPicker from '@/components/creator/ColorPicker';
@@ -191,7 +191,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
       // for GIFs, and for non-images (video/audio pass through untouched).
       const uploadFile = mtype === 'image' ? await optimizeImageFile(file) : file;
       const { file_uri } = await withTimeout(
-        base44.integrations.Core.UploadPrivateFile({ file: uploadFile }),
+        uploadPrivateFile(uploadFile),
         UPLOAD_TIMEOUT_MS,
         'Upload timed out'
       );
@@ -264,7 +264,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
     try {
       const uploadFile = await optimizeImageFile(file);
       const { file_uri } = await withTimeout(
-        base44.integrations.Core.UploadPrivateFile({ file: uploadFile }),
+        uploadPrivateFile(uploadFile),
         UPLOAD_TIMEOUT_MS,
         'Upload timed out'
       );
@@ -350,8 +350,7 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
     onRemoveMediaByUrl?.(item.image_url);
     if (selectedElement?.image_url === item.image_url) onSelectElement?.(null);
     try {
-      const user = await base44.auth.me();
-      if (user) await base44.entities.Media.deleteMany({ user_id: user.id, image_url: item.image_url });
+      await removeFromMediaLibrary(item.image_url);
     } catch (e) {
       console.error(e);
     }

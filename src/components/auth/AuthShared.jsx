@@ -1,11 +1,11 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { verifySignupCode, resendSignupCode } from '@/api/storywallApi';
 
 // Shared pieces for StoryWall's own sign-in / sign-up screens (split-screen
 // layout; replaces Base44's hosted login page, which can't be styled).
-// Auth itself still goes through Base44 via the SDK: register → email code
-// (verifyOtp) → loginViaEmailPassword.
+// Auth goes through Supabase (src/api/storywallApi.js): sign up → 6-digit
+// email code → signed in.
 
 export function authErrorMessage(err, fallback = 'Something went wrong. Try again.') {
   return (
@@ -102,7 +102,9 @@ export function AuthButton({ children, disabled, busy, busyLabel }) {
 // Apple-style boxed OTP entry: one big, clearly-tappable slot per digit,
 // instead of a plain text input. Supports typing, backspace-to-previous,
 // and pasting the whole code into any slot.
-export function OtpInput({ value, onChange, length = 6, autoFocus }) {
+// `light`: for the cream split-screen layout (reset password); the default
+// look is made for the dark photo background of the code screen.
+export function OtpInput({ value, onChange, length = 6, autoFocus, light = false }) {
   const refs = useRef([]);
   const digits = (value || '').split('').concat(Array(length).fill('')).slice(0, length);
 
@@ -148,7 +150,9 @@ export function OtpInput({ value, onChange, length = 6, autoFocus }) {
           onChange={e => handleChange(i, e)}
           onKeyDown={e => handleKeyDown(i, e)}
           aria-label={`Digit ${i + 1}`}
-          className="w-11 h-14 sm:w-13 sm:h-16 text-center text-3xl font-semibold rounded-xl border border-[#F4F2EC]/25 bg-[#FAF9F5]/95 text-[#262624] outline-none shadow-sm focus:ring-2 focus:ring-[#F4F2EC] focus:border-[#F4F2EC]/80 transition-all"
+          className={light
+            ? 'w-11 h-14 sm:w-13 sm:h-16 text-center text-3xl font-semibold rounded-xl border border-[#D6D2C7] bg-[#FAF9F5] text-[#262624] outline-none focus:ring-2 focus:ring-[#262624]/20 transition-all'
+            : 'w-11 h-14 sm:w-13 sm:h-16 text-center text-3xl font-semibold rounded-xl border border-[#F4F2EC]/25 bg-[#FAF9F5]/95 text-[#262624] outline-none shadow-sm focus:ring-2 focus:ring-[#F4F2EC] focus:border-[#F4F2EC]/80 transition-all'}
         />
       ))}
     </div>
@@ -156,10 +160,10 @@ export function OtpInput({ value, onChange, length = 6, autoFocus }) {
 }
 
 // Email-code step, used after sign-up (and on sign-in if the account was
-// never verified). On success, signs in with the same credentials and
-// continues to `target`. Renders as its own full-bleed screen (not nested
+// never verified). A correct code signs the user in; then continues to
+// `target`. Renders as its own full-bleed screen (not nested
 // inside AuthColumn) so it matches the already-signed-in screen.
-export function VerifyCodeForm({ email, password, target, onBack }) {
+export function VerifyCodeForm({ email, target, onBack }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -171,10 +175,7 @@ export function VerifyCodeForm({ email, password, target, onBack }) {
     setBusy(true);
     setError('');
     try {
-      const res = await base44.auth.verifyOtp({ email, otpCode: code.trim() });
-      const token = res?.access_token || res?.data?.access_token;
-      if (token) base44.auth.setToken(token);
-      else await base44.auth.loginViaEmailPassword(email, password);
+      await verifySignupCode(email, code.trim());
       finishAuth(target);
     } catch (err) {
       setError(authErrorMessage(err, "That code didn't work. Check it and try again."));
@@ -185,7 +186,7 @@ export function VerifyCodeForm({ email, password, target, onBack }) {
   const resend = async () => {
     setError('');
     try {
-      await base44.auth.resendOtp(email);
+      await resendSignupCode(email);
       setResent(true);
     } catch (err) {
       setError(authErrorMessage(err, "Couldn't resend the code. Try again in a minute."));

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { invokeFunction } from '@/api/storywallApi';
 import { Search, Lock } from '@/components/icons';
 
 // Private profile state — shown when a user has set is_private: true.
@@ -22,7 +22,7 @@ export default function PrivateProfileState({ username }) {
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
       try {
-        const res = await base44.functions.invoke('searchProfiles', { query });
+        const res = await invokeFunction('searchProfiles', { query });
         setResults(res.data?.results || []);
       } catch {
         setResults([]);

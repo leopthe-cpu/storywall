@@ -1,17 +1,24 @@
 import { useState, useRef, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { uploadPublicFile } from '@/api/storywallApi';
 import MinimalSlider from '@/components/creator/MinimalSlider';
-import { Check, EmojiSad } from '@/components/icons';
+import { Check, EmojiSad, ImageIcon } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 
 const isTouchDevice = () => typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
 
-// Inline square crop/zoom editor — no full-screen modal
-export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 200 }) {
+// Inline square crop/zoom editor — no full-screen modal.
+//
+// With `commitRef`, the parent saves the crop itself (onboarding saves it with
+// "Finish Wall", Oz 13 Oct 2026): the ✓ and ☹ buttons are hidden, Replace sits
+// on the photo, and commitRef.current() crops + uploads and resolves to the
+// new URL (null if the upload failed; the editor then shows the error).
+export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 200, commitRef }) {
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
   const dragging = useRef(false);
+  const pointers = useRef(new Set());
   const lastPos = useRef({ x: 0, y: 0 });
   const lastPinchDist = useRef(null);
   const containerRef = useRef(null);
@@ -23,20 +30,56 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
     setOffset({ x: 0, y: 0 });
   }, [imageUrl]);
 
-  // Pointer drag
+  // The photo must always cover the whole frame (Oz, 13 Oct 2026): at zoom 1
+  // it already fills it, so there is nothing to move; zoomed in, it can move
+  // only as far as it still covers every edge. The preview shows the photo
+  // cover-fitted to the frame and scaled about the centre, so at zoom s it
+  // overhangs each side by (s - 1) * size / 2. Keeping the offset within
+  // that also makes the saved crop identical to the preview (the save draws
+  // from the full photo, which beyond that limit would differ).
+  const clampOffset = (o, s) => {
+    const limit = Math.max(0, (s - 1) * size / 2);
+    return {
+      x: Math.min(limit, Math.max(-limit, o.x)),
+      y: Math.min(limit, Math.max(-limit, o.y)),
+    };
+  };
+
+  // Zooming out pulls the photo back so it still covers the frame.
+  useEffect(() => {
+    setOffset(o => clampOffset(o, scale));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scale, size]);
+
+  // Pointer drag. On a phone each finger of a pinch is its own pointer: if
+  // both moved the photo, it jumped back and forth between the two fingers
+  // while pinching (Oz, 13 Oct 2026). So only a single pointer drags, and the
+  // drag restarts from wherever the remaining finger is after a pinch.
   const onPointerDown = (e) => {
-    dragging.current = true;
+    pointers.current.add(e.pointerId);
+    dragging.current = pointers.current.size === 1;
     lastPos.current = { x: e.clientX, y: e.clientY };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
   const onPointerMove = (e) => {
-    if (!dragging.current) return;
+    if (pointers.current.size !== 1) return;
+    if (!dragging.current) {
+      dragging.current = true;
+      lastPos.current = { x: e.clientX, y: e.clientY };
+      return;
+    }
     const dx = e.clientX - lastPos.current.x;
     const dy = e.clientY - lastPos.current.y;
     lastPos.current = { x: e.clientX, y: e.clientY };
-    setOffset(o => ({ x: o.x + dx, y: o.y + dy }));
+    setOffset(o => clampOffset({ x: o.x + dx, y: o.y + dy }, scale));
   };
-  const onPointerUp = () => { dragging.current = false; lastPinchDist.current = null; };
+  const onPointerUp = (e) => {
+    pointers.current.delete(e.pointerId);
+    // Lifting one finger of a pinch must not make the other one jump the
+    // photo: its next move starts a fresh drag from where it is (see above).
+    dragging.current = false;
+    lastPinchDist.current = null;
+  };
 
   const isTouch = isTouchDevice();
 
@@ -49,13 +92,16 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
     const dist = Math.sqrt(dx * dx + dy * dy);
     if (lastPinchDist.current !== null) {
       const delta = dist - lastPinchDist.current;
-      setScale(s => Math.min(4, Math.max(0.5, +(s + delta * 0.005).toFixed(3))));
+      // Never below 1: smaller than the frame would leave empty space.
+      setScale(s => Math.min(4, Math.max(1, +(s + delta * 0.005).toFixed(3))));
     }
     lastPinchDist.current = dist;
   };
+  const onTouchEnd = () => { lastPinchDist.current = null; };
 
   const handleSave = async () => {
     setUploading(true);
+    setUploadError('');
     try {
       let urlToProcess = imageUrl;
 
@@ -68,7 +114,7 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
 
       // Crop using the (now local) blob URL
       const container = containerRef.current;
-      if (!container) { onSaved(imageUrl); return; }
+      if (!container) { onSaved(imageUrl); return imageUrl; }
       const rect = container.getBoundingClientRect();
       const size = 800;
       const canvas = document.createElement('canvas');
@@ -100,18 +146,28 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
       const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
       if (blob) {
         const file = new File([blob], 'profile.jpg', { type: 'image/jpeg' });
-        const { file_url } = await base44.integrations.Core.UploadFile({ file });
+        const { file_url } = await uploadPublicFile(file);
         onSaved(file_url);
-      } else {
-        onSaved(imageUrl);
+        return file_url;
       }
+      throw new Error('Could not make the cropped picture');
     } catch (err) {
+      // Stay in the editor: saving the local preview URL instead (as before)
+      // left a photo that only ever worked on this device, in this tab.
       console.error('Crop/upload failed:', err);
-      onSaved(imageUrl);
+      setUploadError("Couldn't save the photo. Please try again.");
+      return null;
     } finally {
       setUploading(false);
     }
   };
+
+  // Hand the parent the latest save function (it reads scale/offset).
+  useEffect(() => {
+    if (!commitRef) return;
+    commitRef.current = handleSave;
+    return () => { commitRef.current = null; };
+  });
 
   const handleChange = (e) => {
     const file = e.target.files?.[0];
@@ -128,13 +184,15 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
       <div className="flex items-center gap-2">
         <div
           ref={containerRef}
-          className="relative overflow-hidden rounded-2xl bg-[#ECE9E1] cursor-grab active:cursor-grabbing select-none flex-shrink-0"
+          className={`relative overflow-hidden rounded-2xl bg-[#ECE9E1] select-none flex-shrink-0 ${scale > 1 ? 'cursor-grab active:cursor-grabbing' : ''}`}
           style={{ width: size, height: size, touchAction: 'none' }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchEnd}
         >
           <img
             src={imageUrl}
@@ -154,6 +212,18 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
           />
           {/* Crop border hint */}
           <div className="absolute inset-0 rounded-2xl ring-2 ring-[#262624]/30 pointer-events-none" />
+          {/* Replace on the photo itself, so the page's own button below has room */}
+          {commitRef && (
+            <button
+              onPointerDown={e => e.stopPropagation()}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="absolute bottom-3 right-3 h-9 px-3 flex items-center gap-1.5 bg-[#F4F2EC]/90 text-[#262624] text-sm font-medium rounded-xl shadow-sm hover:bg-[#F4F2EC] active:scale-[0.97] transition-all disabled:opacity-50"
+            >
+              <ImageIcon size={16} />
+              Replace
+            </button>
+          )}
         </div>
       </div>
 
@@ -164,13 +234,19 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
         </div>
       )}
 
-      <p className="text-xs text-[#8A877F]">
-        {isTouch
-          ? 'Drag to reposition · Pinch to zoom'
-          : 'Drag to reposition · Use slider to zoom'}
-      </p>
+{/* An upload error takes the hint's place, so it stays in view above a pinned page button */}
+      {uploadError ? (
+        <p className="text-xs text-red-500">{uploadError}</p>
+      ) : (
+        <p className="text-xs text-[#8A877F]">
+          {isTouch
+            ? 'Pinch to zoom, then drag to reposition'
+            : 'Use the slider to zoom, then drag to reposition'}
+        </p>
+      )}
 
       {/* Actions: Replace (text) · Discard (emoji) · Save (check, primary) */}
+      {!commitRef && (
       <div className="flex items-center gap-2 w-full" style={{ maxWidth: size }}>
         <button
           onClick={() => fileInputRef.current?.click()}
@@ -198,6 +274,7 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
           {uploading ? <PixelSpinner size={16} tone="light" /> : <Check size={22} strokeWidth={2.2} />}
         </button>
       </div>
+      )}
       <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleChange} />
     </div>
   );

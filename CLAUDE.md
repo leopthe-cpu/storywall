@@ -19,14 +19,15 @@ Core pieces:
 - React + Vite + Tailwind, hosted on Base44 (app id `6a161402f22a3ebcce243595`, app name "SW"). Base44 also provides auth, the database (entities), file storage and serverless functions (`base44/functions/*`).
 - Data model lives in `base44/entities/*.jsonc` — the important one is `Post.jsonc` (a story: `cards[]` → each card has `elements[]`).
 - A Supabase project exists but holds no app data; StoryWall's data is all in Base44.
-- Source can ALSO be edited by Oz through Base44's own AI builder chat and through Claude (Cowork / Claude Code) via the Base44 connector, sometimes at the same time — so files can change between sessions or even mid-session. Always re-read a file right before editing it.
+- **Migration in progress (Oct 2026):** StoryWall is moving off Base44 to Railway + Supabase + Resend. See `docs/migration-plan.md` and `docs/decisions.md`.
 
-### Two copies of the code: GitHub and Base44
+### GitHub is the only source of truth (since 8 Oct 2026)
 
-- This GitHub repo (`leopthe-cpu/storywall`, **public**) is a copy of the Base44 app's source, imported Sept 2026. The two do **not** sync automatically.
-- The live app runs from Base44. A change pushed here does nothing to the live app until it is also applied in Base44 (and vice versa for edits made in the Base44 builder).
-- Before starting work, compare this repo against the Base44 sandbox and pull in any builder-side changes; after a change, apply it to both and create a Base44 checkpoint.
+- This GitHub repo (`leopthe-cpu/storywall`, **public**) is the only source of truth. The last Base44 version (commit `e359934`, published 8 Oct 2026 19:49 UTC) was pulled in and checked file by file (sha1).
+- **Never edit the app in the Base44 builder or through the Base44 connector.** The live Base44 app is frozen as the fallback and the reference for "works the same" until the new stack is live. Reading it (code, entities, data) is fine.
+- Changes go through branches and pull requests here, never straight to `main` or `develop`.
 - Never commit `.env*` or `base44/.app.jsonc` (gitignored). Secrets such as `ZAI_API_KEY` live in Base44's environment, not in code.
+- This repo is public: keep sensitive docs (security reviews, operating guides, internal notes) out of it, even briefly.
 
 ## Premium access
 

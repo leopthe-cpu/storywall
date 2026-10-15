@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, LogOut, Archive } from '@/components/icons';
-import { base44 } from '@/api/base44Client';
+import { getMe, signOut, filterPosts, updateMe } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
 import EditableUsername from '@/components/profile/EditableUsername';
@@ -8,18 +8,20 @@ import ArchivesModal from '@/components/profile/ArchivesModal';
 
 export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
   const [currentUser, setCurrentUser] = useState(null);
-  const [isPrivate, setIsPrivate] = useState(false);
+  // null until the saved setting has loaded: the switch shows neither state
+  // and ignores taps, so it never flashes "public" or flips the wrong way.
+  const [isPrivate, setIsPrivate] = useState(null);
   const [showArchives, setShowArchives] = useState(false);
   const [archivedCount, setArchivedCount] = useState(0);
 
   // Fetch the full current user (including email) from auth — the `user` prop
   // comes from getPublicProfile which intentionally omits email and role.
   useEffect(() => {
-    base44.auth.me().then(u => {
+    getMe().then(u => {
       setCurrentUser(u);
       setIsPrivate(!!u?.is_private);
       if (u?.id) {
-        base44.entities.Post.filter({ author_id: u.id, status: 'archived' }, '-updated_date', 50)
+        filterPosts({ author_id: u.id, status: 'archived' }, '-updated_at', 50)
           .then(res => setArchivedCount(res.length))
           .catch(() => {});
       }
@@ -27,16 +29,21 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
   }, []);
 
   const handleTogglePrivacy = async () => {
+    if (isPrivate === null) return;
     const newValue = !isPrivate;
     setIsPrivate(newValue);
     try {
-      await base44.auth.updateMe({ is_private: newValue });
+      await updateMe({ is_private: newValue });
     } catch {
       setIsPrivate(!newValue);
     }
   };
 
-  const handleLogout = () => base44.auth.logout('/');
+  // Like Base44's logout('/'): end the session, then a full load of the home page.
+  const handleLogout = async () => {
+    await signOut().catch((e) => console.error('Sign-out failed', e));
+    window.location.assign('/');
+  };
 
   // Email: show the real email if available. If genuinely absent (e.g. Apple
   // hides it), show a provider-based fallback instead of a dash.
@@ -128,9 +135,13 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
               </div>
               <button
                 onClick={handleTogglePrivacy}
-                className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors ${isPrivate ? 'bg-gray-200' : 'bg-black'}`}
+                disabled={isPrivate === null}
+                aria-busy={isPrivate === null}
+                className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors disabled:cursor-default ${isPrivate === null ? 'bg-gray-100' : isPrivate ? 'bg-gray-200' : 'bg-black'}`}
               >
-                <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${isPrivate ? 'left-0.5' : 'right-0.5'}`} />
+                {isPrivate !== null && (
+                  <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${isPrivate ? 'left-0.5' : 'right-0.5'}`} />
+                )}
               </button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { signIn, resendSignupCode } from '@/api/storywallApi';
 import { useAuth } from '@/lib/AuthContext';
 import { ImagePanel } from '@/components/signup/SidePanel';
 import { AuthColumn, AuthInput, AuthButton, VerifyCodeForm, authErrorMessage, finishAuth } from '@/components/auth/AuthShared';
@@ -34,14 +34,14 @@ export default function SignIn() {
     setBusy(true);
     setError('');
     try {
-      await base44.auth.loginViaEmailPassword(email.trim(), password);
+      await signIn(email.trim(), password);
       finishAuth(from);
       return;
     } catch (err) {
       const msg = authErrorMessage(err, "Couldn't sign you in. Try again.");
       // Account exists but its email was never confirmed — send a fresh code.
       if (/verif|confirm/i.test(msg)) {
-        try { await base44.auth.resendOtp(email.trim()); } catch { /* shown on the code screen via resend */ }
+        try { await resendSignupCode(email.trim()); } catch { /* shown on the code screen via resend */ }
         setStage('verify');
       } else {
         setError(msg);
@@ -50,8 +50,8 @@ export default function SignIn() {
     setBusy(false);
   };
 
-  // Password reset still uses Base44's hosted flow.
-  const handleForgot = () => base44.auth.redirectToLogin(window.location.origin + from);
+  // Our own code-based reset screen (Base44's hosted page goes away).
+  const handleForgot = () => navigate('/signin/reset', { state: { from, email: email.trim() } });
 
   if (isLoadingAuth || isAuthenticated) {
     return <div className="fixed inset-0 bg-[#F4F2EC]" />;
@@ -60,7 +60,7 @@ export default function SignIn() {
   // The email-code step renders itself as a standalone full-bleed screen,
   // so it's returned outside the split-screen form layout below.
   if (stage === 'verify') {
-    return <VerifyCodeForm email={email.trim()} password={password} target={from} onBack={() => setStage('form')} />;
+    return <VerifyCodeForm email={email.trim()} target={from} onBack={() => setStage('form')} />;
   }
 
   return (

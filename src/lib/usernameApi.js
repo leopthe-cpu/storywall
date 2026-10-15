@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { invokeFunction } from '@/api/storywallApi';
 
 // Save the signed-in user's username through the setUsername backend
 // function, which enforces format, reserved names and uniqueness server-side
@@ -6,7 +6,7 @@ import { base44 } from '@/api/base44Client';
 // `username` with auth.updateMe — a self-written name isn't served.
 export async function saveUsername(username) {
   try {
-    const res = await base44.functions.invoke('setUsername', { username });
+    const res = await invokeFunction('setUsername', { username });
     if (res?.data?.error) throw new Error(res.data.error);
     return res?.data?.username;
   } catch (e) {

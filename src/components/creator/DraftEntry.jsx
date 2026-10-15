@@ -35,7 +35,7 @@ export default function DraftEntry({ draft, onApply, onDelete, confirmDelete, is
   const clampedOffset = Math.max(0, Math.min(offset, maxOffset));
 
   const coverCard = cards[0];
-  const timeAgo = draft.updated_date ? formatDistanceToNow(new Date(draft.updated_date), { addSuffix: true }) : '';
+  const timeAgo = draft.updated_at ? formatDistanceToNow(new Date(draft.updated_at), { addSuffix: true }) : '';
 
   const activeIndex = isApplied && cards.length > 0
     ? Math.min(currentCardIndex ?? 0, cards.length - 1)

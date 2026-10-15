@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { X, RotateCw, Plus } from '@/components/icons';
-import { base44 } from '@/api/base44Client';
+import { getMe, getPost, createPost, updatePost, deletePost, invokeFunction } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
 import CardCarousel from '@/components/creator/CardCarousel';
 import SkillsLoadingScreen from '@/components/creator/SkillsLoadingScreen';
@@ -35,7 +35,7 @@ function getTodayStr() {
 // Returns string[] on success (may be empty), or null on API/parse failure.
 async function fetchSuggestedSkills(text, tagCount, alreadySelectedTags) {
   try {
-    const response = await base44.functions.invoke('suggestSkills', {
+    const response = await invokeFunction('suggestSkills', {
       text,
       tag_count: tagCount,
       already_selected_tags: alreadySelectedTags
@@ -62,7 +62,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
   const [title, setTitle] = useState(initialTitle || '');
   // Card image export is admin-only for now (planned premium feature).
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = !!user?.is_admin;
   const [allSuggestedTags, setAllSuggestedTags] = useState([]);
   const [suggestedSelected, setSuggestedSelected] = useState(() => new Set());
   const [customTags, setCustomTags] = useState(() => initialTags && initialTags.length ? initialTags.slice() : []);
@@ -93,7 +93,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
   // close/reopen, resets when the calendar day changes.
   useEffect(() => {
     if (!recordId) return;
-    base44.entities.Post.get(recordId).then((post) => {
+    getPost(recordId).then((post) => {
       if (!post) return;
       const today = getTodayStr();
       if (post.skill_refresh_date === today) {
@@ -219,7 +219,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
     // Persist refresh counter to the story record
     if (recordId) {
       try {
-        await base44.entities.Post.update(recordId, {
+        await updatePost(recordId, {
           skill_refresh_count: newRefreshCount,
           skill_refresh_date: today
         });
@@ -256,7 +256,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
     await onPublishStart?.();
     setPublishing(true);
     try {
-      const user = await base44.auth.me();
+      const user = await getMe();
       const cardsPayload = cards.map((c, i) => ({
         id: c.id,
         order: i,
@@ -265,7 +265,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
         backgroundImageId: c.backgroundImageId,
         elements: (c.elements || []).map((el) => ({ ...el }))
       }));
-      const pubRes = await base44.functions.invoke('publishStoryMedia', {
+      const pubRes = await invokeFunction('publishStoryMedia', {
         cards: cardsPayload,
         postId: editingPostId || null
       });
@@ -273,7 +273,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
       const firstPublished = publishedCards[0];
       const publishedCover = firstPublished?.elements?.find((e) => e.type === 'image')?.image_url || '';
       if (editingPostId) {
-        await base44.entities.Post.update(editingPostId, {
+        await updatePost(editingPostId, {
           title: title.trim(),
           tags: selectedTags,
           cards: publishedCards,
@@ -282,9 +282,8 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
           cover_image: publishedCover
         });
       } else {
-        await base44.entities.Post.create({
-          author_id: user.id,
-          author_username: user.username || '',
+        // The database sets the author to the signed-in user.
+        await createPost({
           title: title.trim(),
           tags: selectedTags,
           cards: publishedCards,
@@ -294,7 +293,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
         });
       }
       if (draftId && draftId !== editingPostId) {
-        try {await base44.entities.Post.delete(draftId);} catch (e) {console.error('Failed to delete draft:', e);}
+        try {await deletePost(draftId);} catch (e) {console.error('Failed to delete draft:', e);}
       }
       onPublished(user.username || user.id);
     } catch (e) {

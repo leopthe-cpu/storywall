@@ -14,8 +14,9 @@ import SignIn from '@/pages/SignIn';
 import Verify from '@/pages/Verify';
 import Onboarding from '@/pages/Onboarding';
 import SignUp from '@/pages/SignUp';
+import ResetPassword from '@/pages/ResetPassword';
 import { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { getMe } from '@/api/storywallApi';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 
@@ -27,7 +28,7 @@ function RequireAuth({ element }) {
   useEffect(() => {
     let done = false;
     const t = setTimeout(() => { if (!done) setStatus('timeout'); }, 10000);
-    base44.auth.me()
+    getMe()
       .then(user => {
         done = true; clearTimeout(t);
         if (!user) { setStatus('unauthed'); return; }
@@ -65,6 +66,7 @@ const AuthenticatedApp = () => {
       {/* Entry / auth */}
       <Route path="/" element={<Landing />} />
       <Route path="/signin" element={<SignIn />} />
+      <Route path="/signin/reset" element={<ResetPassword />} />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/verify" element={<Verify />} />
 

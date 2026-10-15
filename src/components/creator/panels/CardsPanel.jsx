@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, ChevronLeft, ChevronRight } from '@/components/icons';
 import { motion } from 'framer-motion';
-import { base44 } from '@/api/base44Client';
+import { getMe, filterPosts, deletePost } from '@/api/storywallApi';
 import CardThumb from '@/components/creator/CardThumb';
 import ThumbMenu, { ReorderBar } from '@/components/creator/ThumbMenu';
 import DraftEntry from '@/components/creator/DraftEntry';
@@ -63,8 +63,8 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
   const loadDrafts = async () => {
     setLoadingDrafts(true);
     try {
-      const user = await base44.auth.me();
-      const results = await base44.entities.Post.filter({ author_id: user.id, status: 'draft' }, '-updated_date', RECENT_DRAFTS_LIMIT);
+      const user = await getMe();
+      const results = await filterPosts({ author_id: user.id, status: 'draft' }, '-updated_at', RECENT_DRAFTS_LIMIT);
       setDrafts(results);
     } catch (e) {
       console.error(e);
@@ -81,7 +81,7 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
     if (confirmDeleteDraftId === id) {
       setConfirmDeleteDraftId(null);
       try {
-        await base44.entities.Post.delete(id);
+        await deletePost(id);
       } catch (e) {
         // Entity may already be deleted (double-click race, stale list) — remove from local list regardless
       }

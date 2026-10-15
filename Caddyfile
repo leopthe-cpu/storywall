@@ -1,0 +1,38 @@
+# Serves the built app (dist/) on Railway. Railway sets PORT and terminates
+# HTTPS in front of this server, so Caddy only speaks plain HTTP here.
+{
+	admin off
+	auto_https off
+}
+
+:{$PORT} {
+	root * /srv
+	encode zstd gzip
+
+	# Same security headers as the Base44-hosted storywall.io (checked
+	# 2026-10-13), so nothing gets weaker with the move.
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(self), microphone=(self), geolocation=(self), payment=(self), usb=(self), magnetometer=(), gyroscope=()"
+		-Server
+	}
+
+	# Build files have a content hash in their name, so they can be cached
+	# for good; a missing one is a real 404, not the app page.
+	handle /assets/* {
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# Everything else: a real file from public/ if it exists, otherwise the
+	# app itself, which handles routes like /signin and /<username>. Never
+	# cached, so a new deploy shows up on the next load.
+	handle {
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
