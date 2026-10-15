@@ -1,14 +1,18 @@
 import type { chatJson, ContentPart } from '../_shared/openrouter.ts';
-import { SYSTEM_PROMPT, VERIFY_PROMPT } from './prompts.ts';
+import { SYSTEM_PROMPT } from './prompts.ts';
+import { dropRepeatedTitles, findMissing, removeInventedBody, restoreMissing } from './coverage.ts';
 
-// The structuring steps of base44/functions/structureStory, unchanged:
-//   1. structure the story into cards,
-//   2. a second AI call checks that no sentence/clause was dropped and that
-//      titles are grounded in their own card,
-//   3. one retry with the missing sentences as feedback, then title fixes
-//      are applied and anything still missing is appended to the last card
-//      so nothing the user wrote is ever silently lost.
-// The AI call is passed in, so the steps can be tested without the network.
+// Structuring steps:
+//   1. the AI structures the story into cards;
+//   2. plain code checks the result word for word (coverage.ts): body text
+//      the user didn't write is removed, and every sentence the user wrote
+//      must appear unchanged;
+//   3. if sentences are missing, one retry with them listed as feedback;
+//      whatever is still missing is put back next to its neighbour, so
+//      nothing the user wrote is ever lost or reworded.
+// Base44 used a second AI call for step 2; a code check is exact, and saves
+// a call per run. The AI call is passed in, so the steps can be tested
+// without the network.
 
 const nullable = (type: string) => ({ type: [type, 'null'] });
 
@@ -44,24 +48,6 @@ export const RESPONSE_SCHEMA = {
     },
   },
   required: ['framework', 'styleTemplate', 'styleSelectionReason', 'cards'],
-  additionalProperties: false,
-};
-
-export const VERIFY_SCHEMA = {
-  type: 'object',
-  properties: {
-    missingSentences: { type: 'array', items: { type: 'string' } },
-    titleCorrections: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: { cardIndex: { type: 'number' }, newTitle: { type: 'string' } },
-        required: ['cardIndex', 'newTitle'],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ['missingSentences', 'titleCorrections'],
   additionalProperties: false,
 };
 
@@ -118,41 +104,22 @@ export async function runStructurePipeline(opts: {
       return { structured: null, attempts: attempt + 1, cost };
     }
 
-    const verifyPrompt = VERIFY_PROMPT +
-      "\n\n--- USER'S ORIGINAL TEXT ---\n" + text +
-      '\n\n--- STRUCTURED CARDS ---\n' + JSON.stringify(
-        structured.cards.map((c, i) => ({ cardIndex: i, title: c.text, body: c.subtitle || null })),
-        null,
-        2,
-      );
-    const check = await chat({ model, name: 'verification', schema: VERIFY_SCHEMA, user: verifyPrompt });
-    addCost(check.cost);
-    // deno-lint-ignore no-explicit-any
-    const verification = (check.data || {}) as any;
-    const missing: string[] = Array.isArray(verification.missingSentences)
-      ? verification.missingSentences.filter((s: unknown) => typeof s === 'string' && s)
-      : [];
-    const corrections: Array<{ cardIndex: number; newTitle: string }> =
-      Array.isArray(verification.titleCorrections) ? verification.titleCorrections : [];
+    removeInventedBody(text, structured.cards);
+    const missing = findMissing(text, structured.cards);
 
     if (missing.length > 0 && attempt < MAX_ATTEMPTS - 1) {
-      feedback = `Your previous attempt dropped these sentences from the user's text — they must all appear somewhere in the cards:\n` +
-        missing.map((s, i) => `${i + 1}. "${s}"`).join('\n') +
-        `\n\nRestructure the story ensuring every sentence from the user's original text is included in at least one card. Keep the same framework and style template.`;
+      feedback = `Your previous attempt left out or reworded these sentences from the user's text. Each must appear in a card exactly as written, character for character:\n` +
+        missing.map((m, i) => `${i + 1}. "${m}"`).join('\n') +
+        `\n\nRestructure the story so every sentence of the user's text appears word for word, in the user's order. Keep the same framework and style template.`;
       attempt++;
       continue;
     }
 
-    for (const c of corrections) {
-      if (Number.isInteger(c?.cardIndex) && c.cardIndex >= 0 && c.cardIndex < structured.cards.length && c.newTitle) {
-        structured.cards[c.cardIndex].text = c.newTitle;
-      }
-    }
     // Safety net: never silently drop what the user wrote.
-    if (missing.length > 0) {
-      const last = structured.cards[structured.cards.length - 1];
-      for (const s of missing) last.subtitle = (last.subtitle ? last.subtitle + ' ' : '') + s;
-    }
+    restoreMissing(text, structured.cards);
+    dropRepeatedTitles(text, structured.cards);
+    // A card left with no text and no attached picture has nothing to show.
+    structured.cards = structured.cards.filter((c) => c.text || c.subtitle || c.attachmentIndex != null);
     break;
   }
   return { structured, attempts: attempt + 1, cost };
