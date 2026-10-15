@@ -92,7 +92,7 @@ test('private wall: everyone sees "This profile is private"; signed-in users can
     await expect(privateHeading(visitor)).toBeVisible();
     await expect(visitor.getByText(`@${username} has made their wall private. Explore other public walls instead.`)).toBeVisible();
     await expect(visitor.getByRole('heading', { name: ACCOUNTS.user.name })).toHaveCount(0);
-    await search(visitor).fill('jody');
+    await search(visitor).fill(ACCOUNTS.other.username);
     await expect(visitor.getByText('No profiles found')).toBeVisible({ timeout: 20_000 });
     await visitor.context().close();
 
@@ -101,10 +101,10 @@ test('private wall: everyone sees "This profile is private"; signed-in users can
     const other = await otherContext.newPage();
     await other.goto(`/${username}`);
     await expect(privateHeading(other)).toBeVisible();
-    await search(other).fill('jody');
-    await other.getByRole('button', { name: /@jody/ }).click({ timeout: 20_000 });
-    await expect(other).toHaveURL(/\/jody$/);
-    await expect(other.getByRole('heading', { level: 1, name: 'Jody' })).toBeVisible();
+    await search(other).fill(ACCOUNTS.other.username);
+    await other.getByRole('button', { name: `@${ACCOUNTS.other.username}` }).click({ timeout: 20_000 });
+    await expect(other).toHaveURL(new RegExp(`/${ACCOUNTS.other.username}$`));
+    await expect(other.getByRole('heading', { level: 1, name: ACCOUNTS.other.name })).toBeVisible();
     await otherContext.close();
 
     // Not checked: what the owner sees. Base44 locks the owner out (same
