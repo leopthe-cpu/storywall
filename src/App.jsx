@@ -15,10 +15,14 @@ import Verify from '@/pages/Verify';
 import Onboarding from '@/pages/Onboarding';
 import SignUp from '@/pages/SignUp';
 import ResetPassword from '@/pages/ResetPassword';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { getMe } from '@/api/storywallApi';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+
+// Card lab: development-only page for checking generated card layouts. The
+// import is behind import.meta.env.DEV, so it isn't part of production builds.
+const CardLab = import.meta.env.DEV ? lazy(() => import('@/pages/CardLab')) : null;
 
 // Protects routes that require a fully onboarded (username set) user
 function RequireAuth({ element }) {
@@ -78,6 +82,8 @@ const AuthenticatedApp = () => {
 
       {/* Prompt Test — admin only (page itself checks role) */}
       <Route path="/prompt-test" element={<RequireAuth element={<PromptTest />} />} />
+
+      {CardLab && <Route path="/dev/card-lab" element={<Suspense fallback={null}><CardLab /></Suspense>} />}
 
       {/* Public profiles */}
       <Route path="/:username" element={<PublicProfile />} />

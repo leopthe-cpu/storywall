@@ -182,7 +182,7 @@ export async function runGeneratePipeline({ text, attachments, onProgress, editM
     ? existingStyleTemplate
     : structured.styleTemplate;
 
-  const { cards: assembledCards, tokens } = buildAICards(cards, styleTemplate);
+  const { cards: assembledCards, tokens } = await buildAICards(cards, styleTemplate);
 
   return {
     cards: assembledCards,

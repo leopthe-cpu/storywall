@@ -9,6 +9,7 @@ import { getImageDisplayDims } from '@/lib/imageLayout';
 import { buildOverlayStyle, buildBlurOverlayStyle } from '@/lib/mediaOverlay';
 import WarpedText from './WarpedText';
 import { cssFontFamily } from '@/lib/fontLibrary';
+import { textLineHeight } from '@/lib/cardLayout';
 
 const isImageLike = (t) => t === 'image' || t === 'video';
 
@@ -148,7 +149,7 @@ export default function CardThumb({ card, displaySize = 64, autoplay = false, to
                   fontWeight: el.font_weight || '400',
                   color: resolveColor(el.color_token, tokens, el.color || '#000000'),
                   fontFamily: cssFontFamily(el.font_family),
-                  lineHeight: baseFontSize >= 32 ? '1.05' : '1.3',
+                  lineHeight: textLineHeight(baseFontSize, el.line_height),
                   fontStyle: el.font_italic ? 'italic' : 'normal',
                   textAlign: el.text_align || 'left',
                   textDecoration: warped ? 'none' : textDeco,

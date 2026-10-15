@@ -12,6 +12,7 @@ import WarpedText from './WarpedText';
 import ImageSkeleton from '@/components/ui/ImageSkeleton';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 import { cssFontFamily } from '@/lib/fontLibrary';
+import { textLineHeight } from '@/lib/cardLayout';
 
 // Corner handles (blue circles) resize the display box (displayWidth/Height).
 // Edge handles (green pills) crop (clipTop/Bottom/Left/Right). The two sets
@@ -733,7 +734,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
       node.style.height = 'auto';
       const fits = (fs) => {
         node.style.fontSize = `${fs * scale}px`;
-        node.style.lineHeight = fs >= 32 ? '1.05' : '1.3';
+        node.style.lineHeight = String(textLineHeight(fs, element.line_height));
         return node.scrollHeight <= roomPx + 1;
       };
       let lo = MIN_TYPING_FONT, hi = baseSize - 1, best = null;
@@ -1286,9 +1287,9 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
             fontWeight: element.font_weight || '400',
             color: resolveColor(element.color_token, tokens, element.color || '#000000'),
             fontFamily: cssFontFamily(element.font_family),
-            lineHeight: baseFontSize >= 32 ? '1.05' : '1.3',
+            lineHeight: textLineHeight(baseFontSize, element.line_height),
             minWidth: 40,
-            minHeight: Math.round(baseFontSize * (baseFontSize >= 32 ? 1.05 : 1.3) * scale),
+            minHeight: Math.round(baseFontSize * textLineHeight(baseFontSize, element.line_height) * scale),
             width: textWidthPx - padPx * 2,
             height: textHeightPx ? textHeightPx - padPx * 2 : undefined,
             maxHeight: maxTextHeightPx - padPx * 2,
@@ -1318,7 +1319,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
               fontWeight: element.font_weight || '400',
               color: '#9CA3AF',
               fontFamily: cssFontFamily(element.font_family),
-              lineHeight: baseFontSize >= 32 ? '1.05' : '1.3',
+              lineHeight: textLineHeight(baseFontSize, element.line_height),
               width: textWidthPx - padPx * 2,
               maxHeight: maxTextHeightPx - padPx * 2,
               overflow: 'hidden',
