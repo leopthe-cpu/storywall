@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { ACCOUNTS } from './helpers.js';
 
 // Pages a visitor sees without signing in. Elements are found by role and
 // visible text only (the Base44 version can't be changed to add test ids),
@@ -12,9 +13,10 @@ test('landing page shows the hero and the claim button', async ({ page }) => {
 });
 
 test('a public wall shows the owner and their stories', async ({ page }) => {
-  await page.goto('/leopteh');
-  await expect(page).toHaveTitle('Oz | storywall');
-  await expect(page.getByRole('heading', { name: 'Oz' }).first()).toBeVisible();
+  const { username, name } = ACCOUNTS.admin;
+  await page.goto(`/${username}`);
+  await expect(page).toHaveTitle(`${name} | storywall`);
+  await expect(page.getByRole('heading', { name }).first()).toBeVisible();
   // Skill tags from published stories are rendered as buttons.
   await expect(page.getByRole('button', { name: 'Storytelling' })).toBeVisible();
 });
@@ -38,8 +40,8 @@ test('the builder requires sign-in', async ({ page }) => {
 test.describe('claiming a username on the landing page', () => {
   test('a taken name is refused', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('textbox', { name: 'Username' }).fill('leopteh');
-    await expect(page.getByText('storywall.io/leopteh is taken')).toBeVisible();
+    await page.getByRole('textbox', { name: 'Username' }).fill(ACCOUNTS.admin.username);
+    await expect(page.getByText(`storywall.io/${ACCOUNTS.admin.username} is taken`)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Claim your wall' })).toBeDisabled();
   });
 

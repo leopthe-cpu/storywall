@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { useAccount, newStoryButton, ACCOUNTS, openDraftsList, waitForDraft, deleteRecentDrafts } from './helpers.js';
 
-// AI Generate, as the admin account `leopteh` (admins are premium; the
+// AI Generate, as the admin account (`leopteh` on staging; admins are premium; the
 // normal test account can't run it). It makes one draft there and deletes
 // it again (only drafts saved in the last hours that contain KEPT).
 // OFF by default: every run uses paid AI (story structure + about 3 pictures)

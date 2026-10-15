@@ -5,10 +5,22 @@ import { test, expect } from '@playwright/test';
 //           checks and Generate only (Generate deletes the draft it makes).
 // - user  = `leo`, a normal (non-admin, non-premium) test-only account: every
 //           other test that changes data uses it and cleans up.
+// - other = `jody`, a third public wall the privacy test searches for (read only).
 // Credentials come from environment variables only; never hard-code them.
+// Usernames and names default to the staging accounts above and can be
+// changed with SW_<ACCOUNT>_USERNAME / SW_<ACCOUNT>_NAME, e.g. to run against
+// production, where `leo` is Oz's real wall and must not be used for tests.
+const env = process.env;
 export const ACCOUNTS = {
-  admin: { username: 'leopteh', name: 'Oz', email: process.env.SW_ADMIN_EMAIL, password: process.env.SW_ADMIN_PASSWORD },
-  user: { username: 'leo', name: 'Leo', email: process.env.SW_USER_EMAIL, password: process.env.SW_USER_PASSWORD },
+  admin: {
+    username: env.SW_ADMIN_USERNAME || 'leopteh', name: env.SW_ADMIN_NAME || 'Oz',
+    email: env.SW_ADMIN_EMAIL, password: env.SW_ADMIN_PASSWORD,
+  },
+  user: {
+    username: env.SW_USER_USERNAME || 'leo', name: env.SW_USER_NAME || 'Leo',
+    email: env.SW_USER_EMAIL, password: env.SW_USER_PASSWORD,
+  },
+  other: { username: env.SW_OTHER_USERNAME || 'jody', name: env.SW_OTHER_NAME || 'Jody' },
 };
 
 export const authFile = (account) => `e2e/.auth/${account}.json`;
