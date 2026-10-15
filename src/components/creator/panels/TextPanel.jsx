@@ -4,7 +4,7 @@ import ColorPicker from '@/components/creator/ColorPicker';
 import ThumbMenu from '@/components/creator/ThumbMenu';
 import MinimalSlider from '@/components/creator/MinimalSlider';
 import { REFERENCE_CARD_SIZE } from '@/components/creator/CanvasArea';
-import { getFontRole, isTitleOnlyFont } from '@/lib/fontLibrary';
+import { cssFontFamily, getFontRole, isTitleOnlyFont } from '@/lib/fontLibrary';
 import FontPicker from '@/components/creator/panels/FontPicker';
 import SizeStepper from '@/components/creator/SizeStepper';
 import { resolveColor, findOrCreateToken } from '@/lib/colorTokens';
@@ -93,7 +93,7 @@ function TextThumb({ element, cardBg, tokens }) {
           fontSize: scaledFontSize,
           fontWeight: element.font_weight || '400',
           color: hasContent ? resolveColor(element.color_token, tokens, element.color || '#000000') : '#9CA3AF',
-          fontFamily: element.font_family || 'Inter',
+          fontFamily: cssFontFamily(element.font_family),
           lineHeight: baseFontSize >= 32 ? '1.05' : '1.3',
           fontStyle: element.font_italic ? 'italic' : 'normal',
           textAlign: element.text_align || 'left',
