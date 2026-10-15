@@ -11,6 +11,7 @@ import { buildOverlayStyle, buildBlurOverlayStyle } from '@/lib/mediaOverlay';
 import WarpedText from './WarpedText';
 import ImageSkeleton from '@/components/ui/ImageSkeleton';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import { cssFontFamily } from '@/lib/fontLibrary';
 
 // Corner handles (blue circles) resize the display box (displayWidth/Height).
 // Edge handles (green pills) crop (clipTop/Bottom/Left/Right). The two sets
@@ -1284,7 +1285,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
             fontSize: textFontSize,
             fontWeight: element.font_weight || '400',
             color: resolveColor(element.color_token, tokens, element.color || '#000000'),
-            fontFamily: element.font_family || 'Inter',
+            fontFamily: cssFontFamily(element.font_family),
             lineHeight: baseFontSize >= 32 ? '1.05' : '1.3',
             minWidth: 40,
             minHeight: Math.round(baseFontSize * (baseFontSize >= 32 ? 1.05 : 1.3) * scale),
@@ -1316,7 +1317,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
               fontSize: textFontSize,
               fontWeight: element.font_weight || '400',
               color: '#9CA3AF',
-              fontFamily: element.font_family || 'Inter',
+              fontFamily: cssFontFamily(element.font_family),
               lineHeight: baseFontSize >= 32 ? '1.05' : '1.3',
               width: textWidthPx - padPx * 2,
               maxHeight: maxTextHeightPx - padPx * 2,

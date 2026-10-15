@@ -1,7 +1,7 @@
 import { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from '@/components/icons';
-import { NEUTRAL_FONTS, DISPLAY_FONTS, ACCENT_FONTS } from '@/lib/fontLibrary';
+import { NEUTRAL_FONTS, DISPLAY_FONTS, ACCENT_FONTS, cssFontFamily } from '@/lib/fontLibrary';
 
 const GROUPS = [
   { label: 'Default', fonts: NEUTRAL_FONTS, role: 'neutral' },
@@ -75,7 +75,7 @@ export default function FontPicker({ currentFont, onSelect, textType }) {
         onClick={() => setOpen((o) => !o)}
         className={`w-full h-7 flex items-center justify-between px-2 rounded text-white/80 text-[11px] transition-colors ${open ? 'bg-white/20' : 'bg-white/10 hover:bg-white/15'}`}
       >
-        <span className="truncate" style={{ fontFamily: currentFont || 'Inter' }}>{currentFont || 'Inter'}</span>
+        <span className="truncate" style={{ fontFamily: cssFontFamily(currentFont) }}>{currentFont || 'Inter'}</span>
         <ChevronDown size={12} className={`text-white/40 flex-shrink-0 ml-1 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
@@ -106,7 +106,7 @@ export default function FontPicker({ currentFont, onSelect, textType }) {
                           ? 'text-white font-medium bg-white/10'
                           : 'text-white/70 hover:bg-white/5'
                     }`}
-                    style={{ fontFamily: f.family, fontWeight: group.role === 'display' ? 700 : 400 }}
+                    style={{ fontFamily: cssFontFamily(f.family), fontWeight: group.role === 'display' ? 700 : 400 }}
                   >
                     <span className="truncate">{f.family}</span>
                     <span className="flex items-center gap-2 flex-shrink-0">
