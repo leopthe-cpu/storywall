@@ -55,8 +55,9 @@ export const AI_STYLE_TEMPLATES = [
   },
 ];
 
-// The structuring prompt (structureStory/prompts.ts) still names the old
-// four templates; until it is updated they map onto the new styles by tone.
+// Stories generated before the redesign name one of the old four templates
+// (the structuring prompt now asks for field-notes, poster or condensed);
+// they map onto the new styles by tone.
 const LEGACY_TEMPLATE_IDS = {
   'editorial-chartreuse': 'field-notes',
   'bold-lavender': 'poster',
