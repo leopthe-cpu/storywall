@@ -283,14 +283,17 @@ export default function StoryCreator() {
       const imageUrl = imgRes?.data?.url;
       if (imageUrl) {
         const isInset = card.photoTreatment === 'inset';
+        // Generated cards record where their picture belongs (imageBox, set by
+        // buildAICards); older stories used a fixed 256×144 inset.
+        const box = card.imageBox || { x: 32, y: 16, w: 256, h: 144 };
         const bgEl = isInset ? {
           id: `${card.id}-bg-retry-${Date.now()}`,
           type: 'image',
           image_url: imageUrl,
           crop_ratio: 'original',
-          x: 10, y: 5,
-          displayWidth: 256,
-          displayHeight: 144,
+          x: (box.x / REFERENCE_CARD_SIZE) * 100, y: (box.y / REFERENCE_CARD_SIZE) * 100,
+          displayWidth: box.w,
+          displayHeight: box.h,
           z_index: 0,
           ai_generated: true,
         } : {

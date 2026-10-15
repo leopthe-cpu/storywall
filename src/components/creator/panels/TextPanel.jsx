@@ -12,6 +12,7 @@ import { TEXT_FX_LIST, TEXT_WARP_LIST, getTextEffectStyle, hasTextWarp } from '@
 import WarpedText from '@/components/creator/WarpedText';
 import { useDraftMedia } from '@/components/creator/DraftMediaContext';
 import { pickReadableTextColor, sampleImageColor } from '@/lib/colorContrast';
+import { textLineHeight } from '@/lib/cardLayout';
 
 // If a photo sits behind where a new text box will land, returns that photo
 // plus the part of it (as 0..1 fractions of the source image) that's behind
@@ -94,7 +95,7 @@ function TextThumb({ element, cardBg, tokens }) {
           fontWeight: element.font_weight || '400',
           color: hasContent ? resolveColor(element.color_token, tokens, element.color || '#000000') : '#9CA3AF',
           fontFamily: cssFontFamily(element.font_family),
-          lineHeight: baseFontSize >= 32 ? '1.05' : '1.3',
+          lineHeight: textLineHeight(baseFontSize, element.line_height),
           fontStyle: element.font_italic ? 'italic' : 'normal',
           textAlign: element.text_align || 'left',
           textDecoration: warped ? 'none' : textDeco,
