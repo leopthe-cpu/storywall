@@ -2,7 +2,14 @@
 import { useState, useEffect } from "react";
 
 const TOAST_LIMIT = 20;
-const TOAST_REMOVE_DELAY = 1000000;
+// How long a dismissed toast stays in memory before it is removed (it is
+// already hidden as soon as it is dismissed, see toaster.jsx).
+const TOAST_REMOVE_DELAY = 1000;
+// Toasts close by themselves after this long unless a caller passes its own
+// `duration` (Infinity keeps one open until its X is tapped). Before Oct
+// 2026 nothing closed toasts at all: these components are plain elements,
+// not Radix, so the Radix-style `duration`/`onOpenChange` did nothing.
+const DEFAULT_DURATION = 5000;
 
 const actionTypes = {
   ADD_TOAST: "ADD_TOAST",
@@ -133,6 +140,9 @@ function toast({ ...props }) {
       },
     },
   });
+
+  const duration = props.duration ?? DEFAULT_DURATION;
+  if (Number.isFinite(duration)) setTimeout(dismiss, duration);
 
   return {
     id,
