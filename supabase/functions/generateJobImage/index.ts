@@ -3,6 +3,7 @@ import { cleanImagePrompt } from '../_shared/imagePrompt.ts';
 import { PUBLIC_BUCKET } from '../_shared/media.ts';
 import { generateImageBytes, MODELS } from '../_shared/openrouter.ts';
 import { hasPremium } from '../_shared/premium.ts';
+import { toWebp } from '../_shared/webp.ts';
 
 // Generate as a server job, step 3 (docs/performance-plan.md, part A).
 // Makes ONE picture of a Generate job. startGeneration calls it once per
@@ -108,7 +109,8 @@ async function makePicture(opts: {
     }
 
     const model = MODELS.image();
-    const image = await generateImageBytes({ model, prompt, aspectRatio });
+    const generated = await generateImageBytes({ model, prompt, aspectRatio });
+    const image = { ...generated, ...(await toWebp(generated.bytes, generated.mediaType)) };
     const ext = EXTENSIONS[image.mediaType];
     if (!ext) throw new Error(`Unsupported image format ${image.mediaType}`);
 
