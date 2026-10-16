@@ -37,7 +37,7 @@ export function textLineHeight(fontSize, lineHeight) {
 }
 
 // Line heights for generated text, by role.
-export const LINE_HEIGHT = { display: 1.08, header: 1.12, body: 1.42 };
+export const LINE_HEIGHT = { display: 1.08, header: 1.12, lead: 1.3, body: 1.42 };
 
 let measureCtx = null;
 function ctx() {

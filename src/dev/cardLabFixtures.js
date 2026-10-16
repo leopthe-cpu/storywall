@@ -1,7 +1,9 @@
 // Test stories for the card lab (src/pages/CardLab.jsx, development only).
 // "today" is the structure Generate produced for Oz's grocery test story on
 // 2026-10-15; "target" is the same story structured as agreed on the card
-// lab sheet; "stress" holds edge cases. Pictures are AI images from that run.
+// lab sheet; "stress" holds edge cases; "short-cards" holds the light cards
+// from Oz's 2026-10-16 staging run. Pictures are AI images
+// from the 2026-10-15 run.
 export const CARD_LAB_FIXTURES = {
   "grocery-target": [
     {
@@ -139,5 +141,12 @@ export const CARD_LAB_FIXTURES = {
       "text": "Short.",
       "subtitle": ""
     }
+  ],
+  "short-cards": [
+    { "text": "Why 40% never came back", "subtitle": "" },
+    { "text": "", "subtitle": "Their first order showed up with something missing or swapped for something else, and nobody told them until the driver was at the door." },
+    { "text": "", "subtitle": "Eng said three weeks. We got a basic version out in nine days." },
+    { "text": "What changed", "subtitle": "Two months later repeat orders from new customers went from 60% to 74%. Tickets about missing items dropped by about a third. We killed the discount campaign too, which saved us around $200k." },
+    { "text": "The problem wasn’t marketing. It was trust.", "subtitle": "" }
   ]
 };
