@@ -1,6 +1,6 @@
 # Performance plan (Generate first, then the app)
 
-Status: proposal for Oz's approval, 2026-10-16. Nothing here is built yet.
+Status: approved by Oz, 2026-10-16. Nothing here is built yet.
 
 ## Where the time goes today
 
@@ -68,14 +68,19 @@ Supabase server functions on the free plan stop after 150 s (400 s on paid plans
    - `startGeneration` (cards only);
    - picture steps;
    - browser watches the job;
-   - Drafts placeholder.
+   - Drafts placeholder;
+   - "ready" toast and email.
 
    Each is tested on staging. One paid Generate run (about $0.20) at the end.
 2. The new loading screen (docs/generate-roadmap.md, section A) on top of the job's real progress.
 3. B, with Oz's OK for the test spend.
 4. C.
 
-## Not decided yet (for Oz)
+## Decided (Oz, 2026-10-16)
 
-- Should the old browser-run Generate stay as a fallback for a while, or be removed as soon as the job version works on production?
-- When a job finishes while the user is elsewhere in the app, should there be a small notice ("Your story is ready in Drafts")?
+- **Fallback:** the old browser-run Generate stays as a backup for a while after the job version works on production. Remove it later, as its own change.
+- **"Ready" toast:** when a job finishes while the user is elsewhere in the app, a quick toast says "Your story is ready in Drafts". It closes by itself after a few seconds, or earlier if the user taps its X.
+- **"Ready" email:** if the story is ready and the user hasn't looked at it within 2 minutes because they're no longer in the app (tab closed or signed out), send one email through Resend: "Your story is ready for your review", with a link to Drafts.
+  - "Looked at it" = the app showed the finished story or the toast; the browser marks this on the job.
+  - At most one email per job. No email if the user saw it in time.
+  - Open for the build: how the 2-minute check runs (a scheduled database job each minute is the likely option, since a server function can't simply wait 2 minutes inside its 150 s limit). Check the email wording and the marketing-email rules (docs/legal-and-privacy-plan.md); this is a service email about the user's own request, which is generally allowed without marketing consent, but verify.
