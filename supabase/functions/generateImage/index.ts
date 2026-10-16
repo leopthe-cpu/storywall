@@ -2,6 +2,7 @@ import { withSupabase } from 'npm:@supabase/server@1.9.1';
 import { DRAFTS_BUCKET, draftPath, isOwnDraft, isPublicUrl, PUBLIC_BUCKET } from '../_shared/media.ts';
 import { generateImageBytes, MODELS, OpenRouterError } from '../_shared/openrouter.ts';
 import { hasPremium, pickModel } from '../_shared/premium.ts';
+import { toWebp } from '../_shared/webp.ts';
 
 // Generates a picture from a text prompt (AI Carousel Builder, admin Prompt
 // Test page). Port of base44/functions/generateImage, now on OpenRouter.
@@ -47,9 +48,10 @@ export default {
       }
 
       const model = await pickModel(ctx.supabaseAdmin, userId, body?.model, MODELS.image());
-      const image = await generateImageBytes({
+      const generated = await generateImageBytes({
         model, prompt, aspectRatio, referenceUrls: referenceUrl ? [referenceUrl] : [],
       });
+      const image = { ...generated, ...(await toWebp(generated.bytes, generated.mediaType)) };
       const ext = EXTENSIONS[image.mediaType];
       if (!ext) return Response.json({ error: 'Unsupported image format' }, { status: 502 });
 
