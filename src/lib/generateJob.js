@@ -77,6 +77,9 @@ export const followedJobs = new Set();
 // Tells the app-wide watcher a job started, so it starts checking.
 export const JOB_STARTED_EVENT = 'storywall:generation-started';
 
+// Asks an open builder to open a draft (the "ready" toast's Open button).
+export const OPEN_DRAFT_EVENT = 'storywall:open-draft';
+
 // Thrown when the caller stopped following (the user left the screen).
 export class StoppedFollowing extends Error {}
 

@@ -14,7 +14,7 @@ import NotesView from '@/components/creator/NotesView';
 import GenerateProgress from '@/components/creator/GenerateProgress';
 import RegenerateChoice from '@/components/creator/RegenerateChoice';
 import { runGeneratePipeline } from '@/lib/generatePipeline';
-import { runGenerateJob, StoppedFollowing } from '@/lib/generateJob';
+import { runGenerateJob, StoppedFollowing, OPEN_DRAFT_EVENT } from '@/lib/generateJob';
 import { migrateToTokens, applyTokenColorChange, findOrCreateToken, resolveColor } from '@/lib/colorTokens';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 import useDocumentTitle from '@/lib/useDocumentTitle';
@@ -1072,6 +1072,24 @@ export default function StoryCreator() {
 
   const handleApplyDraft = useCallback((draft, cardIndex) => {
     applyDraftContent(draft, cardIndex);
+  }, [applyDraftContent]);
+
+  // "Open" on the "Your story is ready" toast while the builder is already
+  // open (GenerationWatcher): open that story the same way as from Drafts,
+  // which saves the story on screen first, then carry over its notes and
+  // Generate settings so it shows as a generated story, not the notes screen.
+  useEffect(() => {
+    const onOpen = async (e) => {
+      const draft = e.detail;
+      if (!draft?.id) return;
+      await applyDraftContent(draft, 0);
+      setRawNotes(draft.raw_notes || '');
+      setAiGenerated(!!draft.ai_generated);
+      if (draft.generation_style) setGenerationStyle(draft.generation_style);
+      setGeneratePhase('done');
+    };
+    window.addEventListener(OPEN_DRAFT_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_DRAFT_EVENT, onOpen);
   }, [applyDraftContent]);
 
   // ── AI Carousel Builder: Generate mode handlers ──
