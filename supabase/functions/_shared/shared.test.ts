@@ -26,11 +26,15 @@ Deno.test('rate limit: 20 per minute per IP, then refused until the window passe
   assertFalse(isRateLimited(ip, 20, 60_000, 70_000), 'window passed');
 });
 
-Deno.test('client IP: x-real-ip, else the last x-forwarded-for hop', () => {
+Deno.test('client IP: cf-connecting-ip, else x-real-ip, else the first x-forwarded-for entry', () => {
+  // What Supabase (behind Cloudflare) actually sends, checked on staging.
+  assertEquals(getClientIP(new Request('http://x', {
+    headers: { 'cf-connecting-ip': '160.79.106.19', 'x-forwarded-for': '160.79.106.19,160.79.106.19, 3.2.51.22' },
+  })), '160.79.106.19');
   assertEquals(getClientIP(new Request('http://x', { headers: { 'x-real-ip': '1.1.1.1' } })), '1.1.1.1');
   assertEquals(
     getClientIP(new Request('http://x', { headers: { 'x-forwarded-for': '9.9.9.9, 2.2.2.2' } })),
-    '2.2.2.2',
+    '9.9.9.9',
   );
   assertEquals(getClientIP(new Request('http://x')), 'unknown');
 });
