@@ -1252,13 +1252,26 @@ export default function StoryCreator() {
       Post →
     </button>
   );
+  // On the notes screen of a story that was already generated, "Story" goes
+  // back to the cards without generating again (before, the only way back
+  // was closing the story and reopening it from Drafts).
+  const hasGeneratedStory = generateMode && aiGenerated && hasRealContent(cards);
   const topPostArea = generatePhase === 'notes' ? (
-    <button
-      onClick={handleGenerateTap}
-      disabled={!rawNotes.trim()}
-      className="bg-black text-white font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-black/90 active:scale-95 transition-all disabled:opacity-40">
-      Generate →
-    </button>
+    <div className="flex items-center gap-2">
+      {hasGeneratedStory && (
+        <button
+          onClick={() => setGeneratePhase('done')}
+          className="bg-black/5 text-black/80 font-medium text-sm px-3 py-1.5 rounded-[6px] hover:bg-black/10 transition-all whitespace-nowrap">
+          Story
+        </button>
+      )}
+      <button
+        onClick={handleGenerateTap}
+        disabled={!rawNotes.trim()}
+        className="bg-black text-white font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-black/90 active:scale-95 transition-all disabled:opacity-40 whitespace-nowrap">
+        Generate →
+      </button>
+    </div>
   ) : generateMode && aiGenerated ? (
     <div className="flex items-center gap-2">
       <button
