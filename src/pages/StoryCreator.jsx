@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useReducer } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2, PerspectiveView } from '@/components/icons';
+import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2, PerspectiveView, Keyboard } from '@/components/icons';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
 import { getMe, createPost, updatePost, invokeFunction, uploadPublicFile } from '@/api/storywallApi';
 import { registerMedia } from '@/lib/mediaLibrary';
@@ -1247,7 +1247,7 @@ export default function StoryCreator() {
       onClick={handleOpenPostFlow}
       disabled={openingPostFlow}
       aria-busy={openingPostFlow}
-      className="bg-white text-black font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-white/90 active:scale-95 transition-all disabled:opacity-70 flex items-center gap-2">
+      className="bg-white text-black font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-white/90 active:scale-95 transition-all disabled:opacity-70 flex items-center gap-2 whitespace-nowrap">
       {openingPostFlow && <PixelSpinner size={12} />}
       Post →
     </button>
@@ -1274,10 +1274,14 @@ export default function StoryCreator() {
     </div>
   ) : generateMode && aiGenerated ? (
     <div className="flex items-center gap-2">
+      {/* Notes as an icon (Oz, staging test 2026-10-16): the word took the
+          room Post needs, so "Post →" wrapped onto two lines. */}
       <button
         onClick={handleBackToNotes}
-        className="bg-white/10 text-white/80 font-medium text-sm px-3 py-1.5 rounded-[6px] hover:bg-white/20 transition-all">
-        Notes
+        aria-label="Notes"
+        title="Notes"
+        className="flex-shrink-0 w-8 h-8 rounded-[6px] flex items-center justify-center bg-white/10 text-white/80 hover:bg-white/20 transition-colors">
+        <Keyboard size={18} />
       </button>
       {postButton}
     </div>
