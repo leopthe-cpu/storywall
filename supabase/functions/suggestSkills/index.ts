@@ -12,9 +12,15 @@ import { buildSystemPrompt, extractJsonArray, matchKeywordSkills } from './rules
 
 const TIMEOUT_MS = 20_000;
 const MAX_TEXT = 20_000;
+// AI calls per user per day (UTC). Normal use is about 5 per story (first
+// suggestion, a retry, 3 refreshes), so this allows ~12 stories a day while
+// stopping a script from running up AI costs. Keyword matches are free and
+// don't count. Counted in the database (public.consume_ai_quota), where users
+// can't reset it.
+const DAILY_AI_LIMIT = 60;
 
 export default {
-  fetch: withSupabase({ auth: 'user' }, async (req) => {
+  fetch: withSupabase({ auth: 'user' }, async (req, ctx) => {
     const started = Date.now();
     try {
       const body = await req.json().catch(() => ({}));
@@ -34,6 +40,20 @@ export default {
       if (keywordTags.length >= tagCount) {
         console.log(`[suggestSkills] keyword fast-path ${keywordTags.length}/${tagCount}, no AI call`);
         return Response.json({ tags: keywordTags }, { status: 200 });
+      }
+
+      // Over today's limit (or the counter can't be reached): no AI call,
+      // just the keyword matches. Fails closed so a database hiccup can't
+      // turn into unlimited AI calls.
+      const { data: withinLimit, error: quotaError } = await ctx.supabaseAdmin.rpc('consume_ai_quota', {
+        p_user: ctx.userClaims?.id, p_kind: 'skills', p_limit: DAILY_AI_LIMIT,
+      });
+      if (quotaError || withinLimit !== true) {
+        console.log(`[suggestSkills] AI skipped: ${quotaError ? `quota check failed: ${quotaError.message}` : 'daily limit reached'}`);
+        return Response.json(
+          { tags: keywordTags, ...(keywordTags.length === 0 ? { error: true } : {}), limited: true },
+          { status: 200 },
+        );
       }
 
       // Ask the AI only for what the keywords didn't cover, and tell it about
