@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { getPost } from '@/api/storywallApi';
 import { getSupabase } from '@/api/supabaseClient';
 import { toast } from '@/components/ui/use-toast';
-import { followedJobs, JOB_STARTED_EVENT } from '@/lib/generateJob';
+import { attachJobsToDrafts, followedJobs, JOB_STARTED_EVENT, OPEN_DRAFT_EVENT } from '@/lib/generateJob';
 
 // "Your story is ready" toast (docs/performance-plan.md, decided by Oz
 // 2026-10-16): when a Generate run finishes while the user is elsewhere in
@@ -12,13 +14,38 @@ import { followedJobs, JOB_STARTED_EVENT } from '@/lib/generateJob';
 // (once on load, then every 10 s while one is going), so it costs nothing
 // for everyone else. Runs a generating screen is following are skipped:
 // that screen shows the story itself.
+//
+// The toast's Open button opens the story (Oz, production test 2026-10-16):
+// laid out first if the user left before the end, then opened in the
+// builder; if the builder is already open, it opens there the same way as
+// from Drafts, which saves the story on screen first.
 
 const CHECK_MS = 10_000;
 const RECENT_MS = 15 * 60 * 1000;
-const TOAST_MS = 6000;
+const TOAST_MS = 8000; // a bit longer than default: it has a button
 
 export default function GenerationWatcher() {
   const timerRef = useRef(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  // Read when Open is tapped, not when the toast was made.
+  const pathRef = useRef(location.pathname);
+  pathRef.current = location.pathname;
+
+  const openStory = useCallback(async (postId) => {
+    try {
+      const post = await getPost(postId);
+      const [draft] = await attachJobsToDrafts([post]);
+      if (pathRef.current === '/create') {
+        window.dispatchEvent(new CustomEvent(OPEN_DRAFT_EVENT, { detail: draft }));
+      } else {
+        navigate('/create', { state: { editStory: draft } });
+      }
+    } catch (e) {
+      console.warn('[generation-watcher] could not open the story:', e?.message);
+      toast({ title: "Couldn't open the story", description: 'Find it in Drafts in the story builder.' });
+    }
+  }, [navigate]);
 
   // The signed-in user from the local session (no network call). Read on
   // every check rather than once, so signing in or out mid-visit is handled.
@@ -28,7 +55,7 @@ export default function GenerationWatcher() {
     const user = session?.user;
     if (!user?.id) return;
     const { data: jobs, error } = await getSupabase().from('generation_jobs')
-      .select('id, status')
+      .select('id, status, post_id')
       .eq('user_id', user.id)
       .is('seen_at', null)
       .in('status', ['queued', 'writing', 'pictures', 'done'])
@@ -40,16 +67,24 @@ export default function GenerationWatcher() {
       const { error: seenError } = await getSupabase().from('generation_jobs')
         .update({ seen_at: new Date().toISOString() }).eq('id', job.id).is('seen_at', null);
       if (seenError) continue;
-      toast({
+      const { dismiss } = toast({
         title: 'Your story is ready',
-        description: "Find it in Drafts in the story builder.",
+        description: 'Tap Open to review it.',
         duration: TOAST_MS,
+        action: job.post_id ? (
+          <button
+            type="button"
+            onClick={() => { dismiss(); openStory(job.post_id); }}
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-md border px-3 text-sm font-medium hover:bg-secondary">
+            Open
+          </button>
+        ) : undefined,
       });
     }
     if ((jobs || []).some((j) => j.status !== 'done')) {
       timerRef.current = setTimeout(check, CHECK_MS);
     }
-  }, []);
+  }, [openStory]);
 
   useEffect(() => {
     check();
