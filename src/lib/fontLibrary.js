@@ -44,3 +44,11 @@ export function isTitleOnlyFont(family) {
   const font = FONT_LIBRARY.find(f => f.family === family);
   return !!font?.titleOnly;
 }
+// CSS font-family value for a stored font name. The name is quoted because
+// CSS rejects an unquoted family name containing a digit ("Source Sans 3"):
+// the whole declaration is dropped and the text silently renders in the
+// inherited font instead. Inter stays the fallback, as before.
+export function cssFontFamily(family) {
+  const name = String(family || 'Inter').replace(/["\\]/g, '');
+  return `"${name}", Inter, sans-serif`;
+}

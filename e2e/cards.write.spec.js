@@ -59,7 +59,9 @@ test('template cards: editor, publish preview and wall look as recorded', async 
   // Publish preview: the card itself (same carousel as on the wall; the
   // skills below it vary with the AI's suggestions).
   await page.getByRole('button', { name: 'Post →' }).first().click();
-  await expect(page.getByPlaceholder('Give your story a title...')).toBeVisible();
+  // Waits for skill suggestions, which can take several seconds when the AI
+  // is asked (same as startStory in helpers.js).
+  await expect(page.getByPlaceholder('Give your story a title...')).toBeVisible({ timeout: 30_000 });
   // The Skills section: its header row (label + Regenerate) and the
   // suggestions below it, so button 0 is Regenerate and 1 the first skill.
   const skills = page.getByText('Skills', { exact: true }).locator('xpath=../..');

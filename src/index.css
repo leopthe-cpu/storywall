@@ -1,6 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Anton&family=Changa+One&family=Comfortaa:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&family=Fraunces:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Righteous&family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap');
+/* Fonts used by the story templates (storyTemplates.js) and the AI styles (aiStyleTemplates.js)
+   that the line above doesn't load. Without them a card silently falls back to the browser's
+   default serif, which is what made Generate's body text look off. */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@900&family=Archivo+Black&family=Barlow:wght@400;500&family=Barlow+Condensed:wght@600;700&family=Bebas+Neue&family=Danfo&family=IBM+Plex+Serif:ital,wght@0,400;1,400&family=Source+Sans+3:wght@400;600&family=Staatliches&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -443,7 +447,8 @@ input, textarea, select {
   font-optical-sizing: auto;
 }
 
-/* Skills loading screen: the paper grid drifts slowly downward forever.
+/* Skills loading screen: the paper grid drifts downward forever (2s per
+   cell; 3s felt too slow, Oz 2026-10-16).
    The layer is one cell (38px) taller than the screen and moves exactly one
    cell per loop, so the restart is invisible. transform (not
    background-position) keeps it on the GPU and smooth. */
@@ -452,7 +457,7 @@ input, textarea, select {
   to { transform: translate3d(0, 38px, 0); }
 }
 .grid-drift {
-  animation: grid-drift 3s linear infinite;
+  animation: grid-drift 2s linear infinite;
   will-change: transform;
 }
 @media (prefers-reduced-motion: reduce) {

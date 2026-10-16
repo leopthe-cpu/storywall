@@ -5,8 +5,8 @@ import { hasPremium, pickModel } from '../_shared/premium.ts';
 import { type Attachment, runStructurePipeline } from './pipeline.ts';
 
 // AI Carousel Builder, step 1: turns the user's notes into structured cards.
-// Port of base44/functions/structureStory (same instructions, same checks),
-// now on OpenRouter. Premium only, checked here on the server.
+// Started as a port of base44/functions/structureStory; instructions and the
+// word-for-word check changed for the card redesign (see pipeline.ts). On OpenRouter. Premium only, checked here on the server.
 // Body: { text, attachments?: [{ url, type }], model? (admins only) }  →  { structured }
 
 const MAX_TEXT = 20_000;

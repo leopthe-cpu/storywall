@@ -1,73 +1,69 @@
-// AI Carousel Builder — curated style templates for generated stories.
-// Each template is a COMPLETE package: 2 fonts (display + accent), 3 colors
-// (dominant, accent, secondary), a lighting mode (warm or calm), and a photo
-// treatment (full-bleed or inset).
-// The structuring call picks ONE package per story based on tone — never
-// mixes fonts, colors, or treatments across packages.
+// AI Carousel Builder — style templates and card assembly for generated stories.
+//
+// A style is a complete package: a display face for titles and headers, a
+// readable body face, and three colours. The structuring call picks one per
+// story; fonts and colours are never mixed across styles. The three styles
+// (Field notes, Poster, Condensed) were chosen by Oz from the card lab sheet
+// on 2026-10-15. Body text always uses a text face: the old templates used a
+// condensed display face (Barlow Condensed) for paragraphs, which read badly.
+//
+// Layout comes from cardLayout.js: real text measurement, one type scale per
+// story, and a small set of card layouts (cover, photo, statement, text).
 
-const REFERENCE_CARD_SIZE = 320;
+import {
+  BODY_SIZES, CARD, CONTENT_WIDTH, LINE_HEIGHT, MARGIN, SCALE,
+  loadStyleFonts, measureBox, splitSentences, wrapText,
+} from '@/lib/cardLayout';
 
-// Bookend/hook cards get a larger title; middle cards get a smaller one.
-const COVER_TITLE_SIZE = '40';
-const BOOKEND_TITLE_SIZE = '32';
-const MIDDLE_TITLE_SIZE = '24';
-const SUBTITLE_SIZE = '14';
-const TEXT_WIDTH = 256; // 80% of 320px reference
-
-// Inset image dimensions: 16:9 ratio, 80% card width
-const INSET_IMG_WIDTH = TEXT_WIDTH; // 256px
-const INSET_IMG_HEIGHT = Math.round(INSET_IMG_WIDTH * 9 / 16); // 144px
+const REFERENCE_CARD_SIZE = CARD;
+const BOX_PADDING = 2;
 
 export const AI_STYLE_TEMPLATES = [
   {
-    id: 'editorial-chartreuse',
-    name: 'Editorial Chartreuse',
+    id: 'field-notes',
+    name: 'Field notes',
     grade: 'warm',
-    lightingMode: 'warm',
-    photoTreatment: 'full-bleed',
-    displayFont: { family: 'Oswald', weight: '700' },
-    accentFont: { family: 'IBM Plex Serif', weight: '400', italic: true },
-    dominant: '#171208',
-    accent: '#D7FF5C',
-    secondary: '#C9C2A0',
+    displayFont: { family: 'Fraunces', weight: '600' },
+    bodyFont: { family: 'Source Sans 3', weight: '400' },
+    // Visual size of the display face relative to the others at the same px.
+    displayScale: 1,
+    dominant: '#13231D',
+    ink: '#EFEBE2',
+    accent: '#E2A84B',
   },
   {
-    id: 'bold-lavender',
-    name: 'Bold Lavender',
+    id: 'poster',
+    name: 'Poster',
     grade: 'cool',
-    lightingMode: 'warm',
-    photoTreatment: 'inset',
-    displayFont: { family: 'Archivo Black', weight: '400' },
-    accentFont: { family: 'Fraunces', weight: '400', italic: true },
-    dominant: '#14101A',
-    accent: '#E8AEE3',
-    secondary: '#B9A8C4',
+    displayFont: { family: 'Anton', weight: '400', uppercase: true },
+    bodyFont: { family: 'DM Sans', weight: '400' },
+    displayScale: 1.08,
+    dominant: '#E8EBEE',
+    ink: '#15181C',
+    accent: '#2C55E8',
   },
   {
-    id: 'playful-coral',
-    name: 'Playful Coral',
-    grade: 'warm',
-    lightingMode: 'warm',
-    photoTreatment: 'full-bleed',
-    displayFont: { family: 'Staatliches', weight: '400' },
-    accentFont: { family: 'Space Grotesk', weight: '400' },
-    dominant: '#170F0A',
-    accent: '#FF6B3D',
-    secondary: '#D9C7AE',
-  },
-  {
-    id: 'clean-cream',
-    name: 'Clean Cream',
+    id: 'condensed',
+    name: 'Condensed',
     grade: 'neutral',
-    lightingMode: 'calm',
-    photoTreatment: 'inset',
-    displayFont: { family: 'Barlow Condensed', weight: '700' },
-    accentFont: { family: 'DM Sans', weight: '400' },
-    dominant: '#10140F',
-    accent: '#F1ECDD',
-    secondary: '#A9B79E',
+    displayFont: { family: 'Barlow Condensed', weight: '700', uppercase: true },
+    bodyFont: { family: 'Barlow', weight: '400' },
+    displayScale: 1.12,
+    dominant: '#1C1E22',
+    ink: '#F2F2EF',
+    accent: '#FF7A45',
   },
 ];
+
+// Stories generated before the redesign name one of the old four templates
+// (the structuring prompt now asks for field-notes, poster or condensed);
+// they map onto the new styles by tone.
+const LEGACY_TEMPLATE_IDS = {
+  'editorial-chartreuse': 'field-notes',
+  'bold-lavender': 'poster',
+  'playful-coral': 'poster',
+  'clean-cream': 'condensed',
+};
 
 // Frameworks the structuring call can choose from (must match the prompt).
 export const FRAMEWORKS = [
@@ -86,9 +82,11 @@ export const FRAMEWORKS = [
   'Generic 4-beat',
 ];
 
-// Get a style template by ID (falls back to clean-cream).
+// Get a style template by ID (old IDs map to their replacement; unknown IDs
+// fall back to Condensed, the closest to the old default).
 export function getStyleTemplate(id) {
-  return AI_STYLE_TEMPLATES.find(t => t.id === id) || AI_STYLE_TEMPLATES[3];
+  const resolved = LEGACY_TEMPLATE_IDS[id] || id;
+  return AI_STYLE_TEMPLATES.find(t => t.id === resolved) || AI_STYLE_TEMPLATES[2];
 }
 
 // Get style templates by grade affinity.
@@ -97,169 +95,319 @@ export function getTemplatesByGrade(grade) {
   return AI_STYLE_TEMPLATES.filter(t => t.grade === grade || t.grade === 'neutral');
 }
 
-// Build card objects from structured AI data + a style template.
-// Each structured card has: { text, subtitle, needsImage, imagePrompt, grade, isBookend, attachmentUrl }
-// Returns card objects compatible with the existing card canvas.
-//
-// Photo treatment is per-story (part of the package), not per-card:
-// - full-bleed: image fills the card edge-to-edge, text overlaid with a scrim.
-// - inset: image sits inside the card at 16:9 with a margin, text stacked below.
-// Flat cards (no image) use the same text layout regardless of treatment.
-export function buildAICards(structuredCards, styleTemplate) {
-  const tpl = typeof styleTemplate === 'string' ? getStyleTemplate(styleTemplate) : styleTemplate;
-  const ts = Date.now();
-  const isInset = tpl.photoTreatment === 'inset';
+// ── Layout ──
 
-  // Create color tokens from the template's palette. All cards reference
-  // these tokens instead of hardcoded colors — the same token system used
-  // by manually built stories, so Card Theme editing works identically.
-  const dominantToken = { id: `tk-${ts}-d`, name: 'Dominant', color: tpl.dominant };
-  const accentToken = { id: `tk-${ts}-a`, name: 'Accent', color: tpl.accent };
-  const secondaryToken = { id: `tk-${ts}-s`, name: 'Secondary', color: tpl.secondary };
-  const tokens = [dominantToken, accentToken, secondaryToken];
+// Inset photo: full content width at 16:9, top-aligned. It may get shorter
+// (down to MIN_PHOTO_HEIGHT) to make room for the text under it.
+const PHOTO_HEIGHT = Math.round(CONTENT_WIDTH * 9 / 16); // 153
+const MIN_PHOTO_HEIGHT = 112;
+const PHOTO_GAP = 16;
+// Statements are short lines set large; longer text is a normal text card.
+const STATEMENT_MAX_CHARS = 70;
+// A cover title must leave most of its picture visible.
+const COVER_MAX_TEXT_HEIGHT = Math.round((CARD - 2 * MARGIN) * 0.6);
+const AVAILABLE = CARD - 2 * MARGIN;
+// A short body-only card is set larger (see the text card in buildAICards)
+// only if it then fills at most about 60% of the space between the margins.
+const LEAD_MAX_HEIGHT = Math.round(AVAILABLE * 0.6);
 
-  const cards = structuredCards.map((cardData, i) => {
-    const cardId = `ai-${tpl.id}-${i}-${ts}-${Math.random().toString(36).slice(2)}`;
-    const elements = [];
-    const isCover = i === 0;
-    const isBookend = cardData.isBookend || isCover || i === structuredCards.length - 1;
-    const titleSize = isCover ? COVER_TITLE_SIZE : (isBookend ? BOOKEND_TITLE_SIZE : MIDDLE_TITLE_SIZE);
-    const hasImage = !!cardData.imageUrl;
+function sizesFor(tpl, body) {
+  const d = tpl.displayScale || 1;
+  return {
+    body,
+    header: Math.round(body * SCALE.header * d),
+    statement: Math.round(body * SCALE.statement * d),
+    cover: Math.round(body * SCALE.cover * d),
+    gap: Math.round(body * 0.75),
+  };
+}
 
-    let backgroundImageId = undefined;
+// Heights of a header + body block at the given sizes.
+// Display sizes (statement, cover) get the tightest leading, headers a
+// little more, body text the most.
+function headerLineHeight(size, bodySize) {
+  return size >= bodySize * SCALE.statement ? LINE_HEIGHT.display : LINE_HEIGHT.header;
+}
 
-    // ── Image element ──
-    if (hasImage) {
-      if (isInset) {
-        // INSET: image sits inside the card at 16:9 with a margin.
-        // No overlay/scrim — text lives below the image as stacked content.
-        elements.push({
-          id: `${cardId}-bg`,
-          type: cardData.imageType === 'video' ? 'video' : 'image',
-          image_url: cardData.imageUrl,
-          crop_ratio: 'original',
-          x: 10, // 32px margin (10% of 320)
-          y: 5,  // 16px margin from top (5% of 320)
-          displayWidth: INSET_IMG_WIDTH,
-          displayHeight: INSET_IMG_HEIGHT,
-          z_index: 0,
-          ai_generated: !!cardData.aiGenerated,
-        });
-        backgroundImageId = `${cardId}-bg`;
-      } else {
-        // FULL-BLEED: image fills the card, text overlaid with a color scrim.
-        elements.push({
-          id: `${cardId}-bg`,
-          type: cardData.imageType === 'video' ? 'video' : 'image',
-          image_url: cardData.imageUrl,
-          crop_ratio: 'original',
-          x: 0,
-          y: 0,
-          displayWidth: REFERENCE_CARD_SIZE, displayHeight: REFERENCE_CARD_SIZE,
-          clipTop: 0, clipBottom: 0, clipLeft: 0, clipRight: 0,
-          z_index: 0,
-          ai_generated: !!cardData.aiGenerated,
-          overlay_type: 'Color',
-          overlay_color: tpl.dominant,
-          overlay_position: 'Bottom',
-          overlay_intensity: 80,
-        });
-        backgroundImageId = `${cardId}-bg`;
-      }
-    }
+// A body set at a size above the story's body size (a short body-only card,
+// see LEAD_MAX_HEIGHT) gets tighter leading than reading text.
+function bodyLineHeight(size, bodySize) {
+  return size > bodySize ? LINE_HEIGHT.lead : LINE_HEIGHT.body;
+}
 
-    // ── Title text ──
-    // Inset photo cards: accent font (serif weight on the headline)
-    // Full-bleed photo cards: display font (sans-serif punch)
-    // Flat cards: accent font (serif weight on reflective beats)
-    if (cardData.text) {
-      let titleY, titleFont, titleWeight, titleItalic;
-      if (isCover) {
-        // Cover card always uses the display font at bold weight for maximum prominence
-        titleY = hasImage && isInset ? 53 : (cardData.subtitle ? 15 : 38);
-        titleFont = tpl.displayFont.family;
-        titleWeight = '700';
-        titleItalic = false;
-      } else if (hasImage && isInset) {
-        titleY = 53; // below the 16:9 image (image bottom ~50% + gap)
-        titleFont = tpl.accentFont.family;
-        titleWeight = tpl.accentFont.weight || '400';
-        titleItalic = !!tpl.accentFont.italic;
-      } else if (hasImage) {
-        titleY = cardData.subtitle ? 15 : 38;
-        titleFont = tpl.displayFont.family;
-        titleWeight = tpl.displayFont.weight;
-        titleItalic = false;
-      } else {
-        titleY = cardData.subtitle ? 15 : 38;
-        titleFont = tpl.accentFont.family;
-        titleWeight = tpl.accentFont.weight || '400';
-        titleItalic = !!tpl.accentFont.italic;
-      }
-      elements.push({
-        id: `${cardId}-title`,
-        type: 'text',
-        content: cardData.text,
-        x: 10,
-        y: titleY,
-        font_family: titleFont,
-        font_size: titleSize,
-        font_weight: titleWeight,
-        font_italic: titleItalic,
-        font_underline: false,
-        font_strikethrough: false,
-        text_align: 'left',
-        color: tpl.accent,
-        color_token: accentToken.id,
-        text_type: 'header',
-        z_index: 1000,
-        displayWidth: TEXT_WIDTH,
-        displayHeight: 0,
-      });
-    }
+function blockHeights(tpl, header, body, headerSize, bodySize, gap, width = CONTENT_WIDTH, bodyAt = bodySize) {
+  const h = header ? measureBox(header, tpl.displayFont, headerSize, headerLineHeight(headerSize, bodySize), width) : 0;
+  const b = body ? measureBox(body, tpl.bodyFont, bodyAt, bodyLineHeight(bodyAt, bodySize), width) : 0;
+  return { h, b, total: h + b + (h && b ? gap : 0) };
+}
 
-    // ── Subtitle/body text — display font at regular weight for readability ──
-    // The accent font is reserved for titles only; body text uses the display
-    // font at a non-bold weight suited for paragraph-length reading.
-    if (cardData.subtitle) {
-      const bodyY = cardData.text
-        ? ((hasImage && isInset) ? 63 : 58)
-        : ((hasImage && isInset) ? 53 : 20);
-      elements.push({
-        id: `${cardId}-subtitle`,
-        type: 'text',
-        content: cardData.subtitle,
-        x: 10,
-        y: bodyY,
-        font_family: tpl.displayFont.family,
-        font_size: SUBTITLE_SIZE,
-        font_weight: '400',
-        font_italic: false,
-        font_underline: false,
-        font_strikethrough: false,
-        text_align: 'left',
-        color: tpl.secondary,
-        color_token: secondaryToken.id,
-        text_type: 'body',
-        z_index: 1001,
-        displayWidth: TEXT_WIDTH,
-        displayHeight: 0,
-      });
-    }
+// Narrowest box width that keeps the same number of lines as the full
+// content width: the lines come out about even (like CSS text-wrap:
+// balance) instead of one long line and a short one. The box is then
+// centred between the margins, so the empty space left and right is even
+// too. Never below half the content width. Only for short blocks: a
+// paragraph (more than BALANCE_MAX_BODY_LINES) keeps the full width, so
+// reading text doesn't turn into a narrow column that changes width from
+// card to card.
+const BALANCE_MAX_BODY_LINES = 3;
+function balancedWidth(tpl, header, body, headerSize, bodySize, gap, bodyAt = bodySize) {
+  if (body && wrapText(body, tpl.bodyFont, bodyAt, CONTENT_WIDTH - 2).length > BALANCE_MAX_BODY_LINES) return CONTENT_WIDTH;
+  const full = blockHeights(tpl, header, body, headerSize, bodySize, gap, CONTENT_WIDTH, bodyAt);
+  const same = (w) => {
+    const t = blockHeights(tpl, header, body, headerSize, bodySize, gap, w, bodyAt);
+    return t.h === full.h && t.b === full.b;
+  };
+  let lo = Math.round(CONTENT_WIDTH / 2);
+  let hi = CONTENT_WIDTH;
+  if (same(lo)) return lo;
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (same(mid)) hi = mid; else lo = mid;
+  }
+  return hi;
+}
 
-    return {
-      id: cardId,
-      background_color: tpl.dominant,
-      background_token: dominantToken.id,
-      elements,
-      backgroundImageId,
-      photoTreatment: tpl.photoTreatment,
-      imageGenerationFailed: !!cardData.imageGenerationFailed,
-      imagePrompt: cardData.imagePrompt || '',
-    };
+// Top of a text-only block: centred vertically between the margins, so the
+// space above and below is the same.
+function centredTop(total) {
+  return MARGIN + (AVAILABLE - total) / 2;
+}
+
+// What kind of card each structured card becomes.
+function planCards(structuredCards) {
+  return structuredCards.map((c, i) => {
+    const header = (c.text || '').trim();
+    const body = (c.subtitle || '').trim();
+    // A card that asked for a picture keeps the photo layout even if the
+    // picture failed, so a retried picture lands in its reserved space.
+    const wantsPhoto = !!c.imageUrl || (!!c.needsImage && !!c.imageGenerationFailed);
+    let kind;
+    if (i === 0) kind = 'cover';
+    else if (wantsPhoto) kind = 'photo';
+    else if (header && !body && header.length <= STATEMENT_MAX_CHARS) kind = 'statement';
+    else kind = 'text';
+    return { src: c, kind, header, body };
   });
+}
 
-  return { cards, tokens };
+// Does every text-only card fit at this body size, without splitting?
+function storyFits(tpl, plans, body) {
+  const s = sizesFor(tpl, body);
+  return plans.every((p) => {
+    if (p.kind === 'photo') return true; // photos adapt or split, see layoutPhoto
+    if (p.kind === 'statement') return blockHeights(tpl, p.header, '', s.statement, s.body, s.gap).total <= AVAILABLE;
+    if (p.kind === 'cover') {
+      const max = p.src.imageUrl ? COVER_MAX_TEXT_HEIGHT : AVAILABLE;
+      return blockHeights(tpl, p.header, p.body, s.cover, s.body, s.gap).total <= max;
+    }
+    return blockHeights(tpl, p.header, p.body, s.header, s.body, s.gap).total <= AVAILABLE;
+  });
+}
+
+// Moves whole sentences off the end of `body` until the rest fits `maxHeight`
+// together with the header. Returns [kept, overflow]; text is never changed,
+// only divided between this card and a continuation card.
+function splitToFit(tpl, header, body, headerSize, bodySize, gap, maxHeight) {
+  const sentences = splitSentences(body);
+  let keep = sentences.length;
+  while (keep > 1) {
+    const kept = sentences.slice(0, keep).join('').trim();
+    if (blockHeights(tpl, header, kept, headerSize, bodySize, gap).total <= maxHeight) break;
+    keep -= 1;
+  }
+  return [sentences.slice(0, keep).join('').trim(), sentences.slice(keep).join('').trim()];
+}
+
+function textElement(id, content, top, height, size, font, role, colorToken, color, z, lineHeight, width = CONTENT_WIDTH) {
+  // Narrower boxes (balancedWidth) are centred between the margins.
+  const left = MARGIN + (CONTENT_WIDTH - width) / 2;
+  return {
+    id,
+    type: 'text',
+    content,
+    x: ((left - BOX_PADDING) / REFERENCE_CARD_SIZE) * 100,
+    y: (top / REFERENCE_CARD_SIZE) * 100,
+    displayWidth: width + 2 * BOX_PADDING,
+    displayHeight: Math.ceil(height),
+    font_family: font.family,
+    font_size: String(size),
+    font_weight: font.weight || '400',
+    font_italic: !!font.italic,
+    font_underline: false,
+    font_strikethrough: false,
+    text_transform: font.uppercase ? 'uppercase' : 'none',
+    text_align: 'left',
+    color,
+    color_token: colorToken,
+    text_type: role,
+    line_height: lineHeight,
+    z_index: z,
+    // Sized by the layout engine: the editor's one-time estimate must not
+    // run again and overwrite it (see DraggableElement).
+    font_size_estimated: true,
+  };
+}
+
+// Stacks header and body from `top`, returns the text elements.
+// `width` is the text box width (default: the full content width); `bodyAt`
+// the size the body is set at (default: the story's body size).
+function stack(cardId, tpl, tokens, top, header, body, headerSize, bodySize, gap, width = CONTENT_WIDTH, bodyAt = bodySize) {
+  const els = [];
+  const { h, b } = blockHeights(tpl, header, body, headerSize, bodySize, gap, width, bodyAt);
+  if (header) {
+    els.push(textElement(`${cardId}-title`, header, top, h, headerSize, tpl.displayFont,
+      'header', tokens.ink.id, tpl.ink, 1000, headerLineHeight(headerSize, bodySize), width));
+  }
+  if (body) {
+    els.push(textElement(`${cardId}-subtitle`, body, top + (h ? h + gap : 0), b, bodyAt, tpl.bodyFont,
+      'body', tokens.ink.id, tpl.ink, 1001, bodyLineHeight(bodyAt, bodySize), width));
+  }
+  return els;
+}
+
+// Places a text-only block (no picture): balanced line widths, centred
+// left-right and top-bottom.
+function centredStack(cardId, tpl, tokens, header, body, headerSize, bodySize, gap, bodyAt = bodySize) {
+  const width = balancedWidth(tpl, header, body, headerSize, bodySize, gap, bodyAt);
+  const { total } = blockHeights(tpl, header, body, headerSize, bodySize, gap, width, bodyAt);
+  return stack(cardId, tpl, tokens, centredTop(total), header, body, headerSize, bodySize, gap, width, bodyAt);
+}
+
+// Builds card objects from structured AI data + a style template.
+// Each structured card has: { text (header), subtitle (body), needsImage,
+// imagePrompt, imageUrl?, imageType?, aiGenerated?, imageGenerationFailed? }.
+// Returns { cards, tokens } compatible with the card canvas. Text is never
+// edited here; a card whose body doesn't fit continues on a new card, split
+// between sentences.
+export async function buildAICards(structuredCards, styleTemplate) {
+  const tpl = typeof styleTemplate === 'string' ? getStyleTemplate(styleTemplate) : (styleTemplate || getStyleTemplate());
+  await loadStyleFonts(tpl);
+  const ts = Date.now();
+
+  // Same token system as manually built stories, so Card Theme editing works.
+  const tokens = {
+    dominant: { id: `tk-${ts}-d`, name: 'Background', color: tpl.dominant },
+    ink: { id: `tk-${ts}-i`, name: 'Text', color: tpl.ink },
+    accent: { id: `tk-${ts}-a`, name: 'Accent', color: tpl.accent },
+  };
+
+  const plans = planCards(structuredCards);
+  const bodySize = BODY_SIZES.find((size) => storyFits(tpl, plans, size)) ?? BODY_SIZES[BODY_SIZES.length - 1];
+  const s = sizesFor(tpl, bodySize);
+
+  const cards = [];
+  const newCard = (src, extra = {}) => {
+    const id = `ai-${tpl.id}-${cards.length}-${ts}-${Math.random().toString(36).slice(2)}`;
+    return {
+      id,
+      background_color: tpl.dominant,
+      background_token: tokens.dominant.id,
+      elements: [],
+      backgroundImageId: undefined,
+      photoTreatment: 'inset',
+      imageGenerationFailed: !!src.imageGenerationFailed,
+      imagePrompt: src.imagePrompt || '',
+      ...extra,
+    };
+  };
+  // Text that didn't fit continues on a plain text card right after.
+  const pushContinuation = (src, overflow) => {
+    let rest = overflow;
+    while (rest) {
+      const card = newCard({}, { imageGenerationFailed: false, imagePrompt: '' });
+      const [kept, more] = splitToFit(tpl, '', rest, s.header, s.body, s.gap, AVAILABLE);
+      card.elements = centredStack(card.id, tpl, tokens, '', kept, s.header, s.body, s.gap);
+      cards.push(card);
+      rest = more;
+    }
+  };
+
+  for (const p of plans) {
+    const src = p.src;
+    const hasImage = !!src.imageUrl;
+    const imageEl = (box, extra = {}) => ({
+      id: '',
+      type: src.imageType === 'video' ? 'video' : 'image',
+      image_url: src.imageUrl,
+      crop_ratio: 'original',
+      x: (box.x / REFERENCE_CARD_SIZE) * 100,
+      y: (box.y / REFERENCE_CARD_SIZE) * 100,
+      displayWidth: box.w,
+      displayHeight: box.h,
+      z_index: 0,
+      ai_generated: !!src.aiGenerated,
+      ...extra,
+    });
+
+    if (p.kind === 'cover') {
+      const card = newCard(src, { photoTreatment: hasImage ? 'full-bleed' : 'inset' });
+      const { total } = blockHeights(tpl, p.header, p.body, s.cover, s.body, s.gap);
+      if (hasImage) {
+        // Full-bleed picture under a scrim in the card colour; title anchored bottom-left.
+        const img = imageEl({ x: 0, y: 0, w: CARD, h: CARD }, {
+          clipTop: 0, clipBottom: 0, clipLeft: 0, clipRight: 0,
+          overlay_type: 'Color', overlay_color: tpl.dominant, overlay_position: 'Bottom', overlay_intensity: 80,
+        });
+        img.id = `${card.id}-bg`;
+        card.elements.push(img);
+        card.backgroundImageId = img.id;
+      }
+      const top = hasImage ? CARD - MARGIN - total : MARGIN + (AVAILABLE - total) * 0.55;
+      card.elements.push(...stack(card.id, tpl, tokens, top, p.header, p.body, s.cover, s.body, s.gap));
+      cards.push(card);
+      continue;
+    }
+
+    if (p.kind === 'photo') {
+      const card = newCard(src);
+      // Shrink the picture (never below MIN_PHOTO_HEIGHT) before moving text away.
+      const textRoomAt = (photoH) => CARD - MARGIN - (MARGIN + photoH + PHOTO_GAP);
+      const { total } = blockHeights(tpl, p.header, p.body, s.header, s.body, s.gap);
+      const photoH = Math.max(MIN_PHOTO_HEIGHT, Math.min(PHOTO_HEIGHT, CARD - 2 * MARGIN - PHOTO_GAP - total));
+      let [body, overflow] = [p.body, ''];
+      if (total > textRoomAt(photoH)) {
+        [body, overflow] = splitToFit(tpl, p.header, p.body, s.header, s.body, s.gap, textRoomAt(photoH));
+      }
+      const box = { x: MARGIN, y: MARGIN, w: CONTENT_WIDTH, h: photoH };
+      // Where a retried picture goes when generation failed (StoryCreator).
+      card.imageBox = box;
+      if (hasImage) {
+        const img = imageEl(box);
+        img.id = `${card.id}-bg`;
+        card.elements.push(img);
+        card.backgroundImageId = img.id;
+      }
+      card.elements.push(...stack(card.id, tpl, tokens, MARGIN + photoH + PHOTO_GAP, p.header, body, s.header, s.body, s.gap));
+      cards.push(card);
+      pushContinuation(src, overflow);
+      continue;
+    }
+
+    if (p.kind === 'statement') {
+      const card = newCard(src);
+      card.elements.push(...centredStack(card.id, tpl, tokens, p.header, '', s.statement, s.body, s.gap));
+      cards.push(card);
+      continue;
+    }
+
+    // Text card.
+    const card = newCard(src);
+    let [body, overflow] = [p.body, ''];
+    if (blockHeights(tpl, p.header, p.body, s.header, s.body, s.gap).total > AVAILABLE) {
+      [body, overflow] = splitToFit(tpl, p.header, p.body, s.header, s.body, s.gap, AVAILABLE);
+    }
+    // A short body with no header would sit small in a big empty card: set it
+    // at the header size (in the body font) when it still takes at most
+    // LEAD_MAX_HEIGHT that way. Same number as the header size, so the story
+    // doesn't gain a text size.
+    const lead = !p.header && !overflow &&
+      blockHeights(tpl, '', body, s.header, s.body, s.gap, CONTENT_WIDTH, s.header).total <= LEAD_MAX_HEIGHT;
+    card.elements.push(...centredStack(card.id, tpl, tokens, p.header, body, s.header, s.body, s.gap, lead ? s.header : s.body));
+    cards.push(card);
+    pushContinuation(src, overflow);
+  }
+
+  return { cards, tokens: [tokens.dominant, tokens.ink, tokens.accent] };
 }
 
 export { REFERENCE_CARD_SIZE };

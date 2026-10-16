@@ -1,6 +1,7 @@
 import { assertEquals } from 'jsr:@std/assert@1';
 import { parseJsonContent } from './openrouter.ts';
 import { buildPrompt, runStructurePipeline } from '../structureStory/pipeline.ts';
+import { dropRepeatedTitles, findMissing, normalize, removeInventedBody, restoreMissing, userSentences } from '../structureStory/coverage.ts';
 import { extractJsonArray, matchKeywordSkills } from '../suggestSkills/rules.ts';
 
 Deno.test('parseJsonContent: plain, fenced, wrapped in text, invalid', () => {
@@ -28,51 +29,47 @@ const card = (text: string | null, subtitle: string | null) => ({
   isBookend: false, attachmentIndex: null,
 });
 
-// A fake AI: answers the structuring and checking calls from two queues.
-function fakeChat(structures: unknown[], checks: unknown[]) {
+// A fake AI: answers each structuring call from a queue.
+function fakeChat(structures: unknown[]) {
   const calls: string[] = [];
   // deno-lint-ignore no-explicit-any
   const chat = (opts: any) => {
     calls.push(opts.name);
-    const data = opts.name === 'structured_story' ? structures.shift() : checks.shift();
-    return Promise.resolve({ data: structuredClone(data), cost: 0.001, model: opts.model });
+    return Promise.resolve({ data: structuredClone(structures.shift()), cost: 0.001, model: opts.model });
   };
   return { chat, calls };
 }
 
-Deno.test('pipeline: clean first attempt, title correction applied', async () => {
-  const { chat, calls } = fakeChat(
-    [{ framework: 'STAR', cards: [card('Hook', 'Body one.'), card(null, 'Body two.')] }],
-    [{ missingSentences: [], titleCorrections: [{ cardIndex: 0, newTitle: 'Body one' }] }],
-  );
+const STORY = 'I wasn’t convinced. I spent two weeks calling customers. The problem wasn’t marketing. It was trust.';
+
+Deno.test('pipeline: a word-for-word answer is accepted in one call', async () => {
+  const { chat, calls } = fakeChat([{
+    cards: [card('Why they left', null), card('I wasn’t convinced.', 'I spent two weeks calling customers.'),
+      card(null, 'The problem wasn’t marketing. It was trust.')],
+  }]);
   // deno-lint-ignore no-explicit-any
-  const res = await runStructurePipeline({ text: 'x', attachments: [], model: 'm', chat: chat as any });
-  assertEquals(calls, ['structured_story', 'verification']);
+  const res = await runStructurePipeline({ text: STORY, attachments: [], model: 'm', chat: chat as any });
+  assertEquals(calls, ['structured_story']);
   assertEquals(res.attempts, 1);
-  assertEquals(res.structured?.cards[0].text, 'Body one');
-  assertEquals(Math.round(res.cost * 1000), 2);
+  assertEquals(res.structured?.cards.length, 3);
 });
 
-Deno.test('pipeline: retries once, then appends still-missing sentences to the last card', async () => {
-  const { chat, calls } = fakeChat(
-    [
-      { cards: [card('A', 'One.')] },
-      { cards: [card('A', 'One.'), card('B', 'Two.')] },
-    ],
-    [
-      { missingSentences: ['Two.', 'Three.'], titleCorrections: [] },
-      { missingSentences: ['Three.'], titleCorrections: [] },
-    ],
-  );
+Deno.test('pipeline: reworded body is removed, retried once, then the original is put back in place', async () => {
+  const { chat, calls } = fakeChat([
+    { cards: [card('Hook', 'I wasn’t convinced. I called customers for two weeks.'), card(null, 'It was trust.')] },
+    { cards: [card('Hook', 'I wasn’t convinced. I called customers for two weeks.'), card(null, 'It was trust.')] },
+  ]);
   // deno-lint-ignore no-explicit-any
-  const res = await runStructurePipeline({ text: 'x', attachments: [], model: 'm', chat: chat as any });
-  assertEquals(calls, ['structured_story', 'verification', 'structured_story', 'verification']);
+  const res = await runStructurePipeline({ text: STORY, attachments: [], model: 'm', chat: chat as any });
+  assertEquals(calls, ['structured_story', 'structured_story']);
   assertEquals(res.attempts, 2);
-  assertEquals(res.structured?.cards[1].subtitle, 'Two. Three.');
+  // The paraphrase is gone; both missing sentences are back after their neighbour.
+  assertEquals(res.structured?.cards[0].subtitle, 'I wasn’t convinced. I spent two weeks calling customers. The problem wasn’t marketing.');
+  assertEquals(res.structured?.cards[1].subtitle, 'It was trust.');
 });
 
 Deno.test('pipeline: unusable answer returns no structure', async () => {
-  const { chat } = fakeChat([{ cards: [] }], []);
+  const { chat } = fakeChat([{ cards: [] }]);
   // deno-lint-ignore no-explicit-any
   const res = await runStructurePipeline({ text: 'x', attachments: [], model: 'm', chat: chat as any });
   assertEquals(res.structured, null);
@@ -85,4 +82,39 @@ Deno.test('skills: keyword fast-path and answer parsing (Base44 rules)', () => {
   );
   assertEquals(extractJsonArray('Thinking...\n["Data Analysis", " UX Design "]'), ['Data Analysis', 'UX Design']);
   assertEquals(extractJsonArray(''), []);
+});
+
+Deno.test('coverage: sentences, curly quotes and whitespace', () => {
+  assertEquals(userSentences('One. Two!\nThree line\nFour?'), ['One.', 'Two!', 'Three line', 'Four?']);
+  assertEquals(normalize('It’s  “fine”'), 'It\'s "fine"');
+  // A sentence split between title and body of the same card still counts.
+  assertEquals(findMissing('Within two months, it worked.', [card('Within two months,', 'it worked.')]), []);
+  assertEquals(findMissing('A. B.', [card(null, 'A.')]), ['B.']);
+});
+
+Deno.test('coverage: invented body text is removed, titles are left alone', () => {
+  const cards = [card('My own hook', 'A real sentence. An invented one.')];
+  assertEquals(removeInventedBody('A real sentence. Another.', cards), 1);
+  assertEquals(cards[0].subtitle, 'A real sentence.');
+  assertEquals(cards[0].text, 'My own hook');
+  // A fragment of a sentence that was cut in two is removed (the whole
+  // sentence is restored later); a title + body pair forming one sentence stays.
+  const split = [card(null, 'They left.'), card(null, 'and nobody told them.'), card('Within two months,', 'it worked.')];
+  assertEquals(removeInventedBody('They left, and nobody told them. Within two months, it worked.', split), 2);
+  assertEquals(split[2].subtitle, 'it worked.');
+});
+
+Deno.test('coverage: restore keeps order and the user\'s exact characters', () => {
+  const text = 'First “one”. Second. Third.';
+  const cards = [card(null, 'First “one”.'), card(null, 'Third.')];
+  restoreMissing(text, cards);
+  assertEquals(cards[0].subtitle, 'First “one”. Second.');
+  assertEquals(findMissing(text, cards), []);
+});
+
+Deno.test('coverage: a title that is a piece of a sentence shown in full is dropped', () => {
+  const text = 'So I pitched a small fix: a message. It was trust.';
+  const cards = [card('So I pitched a small fix:', null), card('A nine-day fix', 'So I pitched a small fix: a message.'), card('It was trust.', null)];
+  dropRepeatedTitles(text, cards);
+  assertEquals(cards.map((c) => c.text), [null, 'A nine-day fix', 'It was trust.']);
 });
