@@ -122,3 +122,28 @@ export function FlipVertical({ style, ...rest }) {
 // settings button (was a hamburger/Menu glyph).
 export const PerspectiveView = wrap(I.PerspectiveView, 'PerspectiveView');
 export const SelectFace3d = wrap(I.SelectFace3d, 'SelectFace3d');
+
+// Keyboard (Oz, 2026-10-16: the builder's "Notes" button, back to the notes
+// a story was generated from). Iconoir has no keyboard glyph, so it's drawn
+// here in the same style: a 24px outline at the shared stroke width, keys as
+// short round-capped strokes.
+export function Keyboard({ size = 24, color, strokeWidth = 1.8, absoluteStrokeWidth, fill, style, ...rest }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden={rest['aria-label'] ? undefined : true}
+      style={color ? { color, ...style } : style}
+      {...rest}
+    >
+      <rect x="2" y="5.5" width="20" height="13" rx="2.5" />
+      <path d="M6 9.5h.01M9.33 9.5h.01M12.67 9.5h.01M16 9.5h.01M18 9.5h.01M6 12.5h.01M9.33 12.5h.01M12.67 12.5h.01M16 12.5h.01M18 12.5h.01M8 15.5h8" />
+    </svg>
+  );
+}
