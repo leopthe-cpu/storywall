@@ -1114,6 +1114,19 @@ export default function StoryCreator() {
     } catch (e) {
       console.error('[StoryCreator] generation failed:', e);
       setGeneratePhase('notes');
+      // Without this the user was dropped back on the notes screen with no
+      // explanation (e.g. when the AI provider was out of credit). Their notes
+      // are kept, so the message says so.
+      const status = e?.status;
+      toast({
+        variant: 'destructive',
+        title: "Couldn't generate your story",
+        description: status === 403
+          ? 'Generate is a premium feature on your account. Your notes are still here.'
+          : status === 429
+            ? "You've generated a lot today. Your notes are still here; please try again later."
+            : 'Something went wrong on our side. Your notes are still here; please try again in a few minutes.',
+      });
     }
   };
 
