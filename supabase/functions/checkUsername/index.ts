@@ -1,5 +1,5 @@
 import { withSupabase } from 'npm:@supabase/server@1.9.1';
-import { getClientIP, isRateLimited } from '../_shared/rateLimit.ts';
+import { getClientIP, isRateLimited, isRateLimitedShared } from '../_shared/rateLimit.ts';
 import { isAllowedUsername, normalizeUsername } from '../_shared/username.ts';
 
 // Is a username free? Port of base44/functions/checkUsername.
@@ -13,7 +13,9 @@ import { isAllowedUsername, normalizeUsername } from '../_shared/username.ts';
 export default {
   fetch: withSupabase({ auth: ['user', 'publishable'] }, async (req, ctx) => {
     try {
-      if (isRateLimited(getClientIP(req))) {
+      // In-memory limit first (free), then the shared one in the database.
+      const ip = getClientIP(req);
+      if (isRateLimited(ip) || await isRateLimitedShared(ctx.supabaseAdmin, 'username', ip, 30)) {
         return Response.json({ available: false }, { status: 429 });
       }
       const body = await req.json().catch(() => ({}));
