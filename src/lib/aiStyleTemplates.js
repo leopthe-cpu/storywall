@@ -362,13 +362,28 @@ export async function buildAICards(structuredCards, styleTemplate) {
       const card = newCard(src);
       // Shrink the picture (never below MIN_PHOTO_HEIGHT) before moving text away.
       const textRoomAt = (photoH) => CARD - MARGIN - (MARGIN + photoH + PHOTO_GAP);
+      const photoHFor = (total) => Math.max(MIN_PHOTO_HEIGHT, Math.min(PHOTO_HEIGHT, CARD - 2 * MARGIN - PHOTO_GAP - total));
       const { total } = blockHeights(tpl, p.header, p.body, s.header, s.body, s.gap);
-      const photoH = Math.max(MIN_PHOTO_HEIGHT, Math.min(PHOTO_HEIGHT, CARD - 2 * MARGIN - PHOTO_GAP - total));
+      let photoH = photoHFor(total);
       let [body, overflow] = [p.body, ''];
       if (total > textRoomAt(photoH)) {
         [body, overflow] = splitToFit(tpl, p.header, p.body, s.header, s.body, s.gap, textRoomAt(photoH));
       }
-      const box = { x: MARGIN, y: MARGIN, w: CONTENT_WIDTH, h: photoH };
+      // splitToFit always keeps the first sentence. When even that one doesn't
+      // fit under the picture (one long sentence), the whole body continues on
+      // the next card and this card keeps the picture and the title, with the
+      // picture back at full size. Without this the text ran off the bottom
+      // of the card and the editor pushed it up over the title (Oz's 2026-10-16
+      // production run, card 7).
+      if (body && blockHeights(tpl, p.header, body, s.header, s.body, s.gap).total > textRoomAt(photoH)) {
+        [body, overflow] = ['', p.body];
+        photoH = photoHFor(blockHeights(tpl, p.header, '', s.header, s.body, s.gap).total);
+      }
+      // With no body under it, the picture (and title, if any) sits in the
+      // middle of the card instead of leaving the bottom half empty.
+      const headerOnly = p.header ? PHOTO_GAP + blockHeights(tpl, p.header, '', s.header, s.body, s.gap).total : 0;
+      const photoTop = body ? MARGIN : MARGIN + (AVAILABLE - photoH - headerOnly) / 2;
+      const box = { x: MARGIN, y: photoTop, w: CONTENT_WIDTH, h: photoH };
       // Where a retried picture goes when generation failed (StoryCreator).
       card.imageBox = box;
       if (hasImage) {
@@ -377,7 +392,7 @@ export async function buildAICards(structuredCards, styleTemplate) {
         card.elements.push(img);
         card.backgroundImageId = img.id;
       }
-      card.elements.push(...stack(card.id, tpl, tokens, MARGIN + photoH + PHOTO_GAP, p.header, body, s.header, s.body, s.gap));
+      card.elements.push(...stack(card.id, tpl, tokens, photoTop + photoH + PHOTO_GAP, p.header, body, s.header, s.body, s.gap));
       cards.push(card);
       pushContinuation(src, overflow);
       continue;
