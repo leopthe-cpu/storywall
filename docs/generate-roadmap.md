@@ -32,6 +32,17 @@ Everything below applies to both, except the floating "come back later" card: th
   - Making you look good. Easy job.
 - **Floating card under the progress (Generate only),** in the style of the "you're already signed in" card on sign-up: "Sit back, we'll finish this for you. You can leave: your story will be waiting in Drafts in the builder." This depends on generation running without the tab being open (section D).
 
+## A2. Full-screen spinners get the grid too (tomorrow)
+
+These screens are a blank page with only the spinner. They get the paper grid behind the spinner (`GridBackdrop`), so no loading screen is just a spinner on blank (Oz, 2026-10-16):
+
+- `src/App.jsx`: app start, while checking who is signed in (white).
+- `src/pages/PublicProfile.jsx`: a wall loading (paper colour, no grid).
+- `src/pages/Onboarding.jsx`: onboarding loading (paper colour, no grid).
+- `src/components/creator/GenerateProgress.jsx`: gets the grid as part of section A.
+
+Not included: `src/pages/PromptTest.jsx` (admin test tool) and the small spinners inside buttons, panels and the card editor.
+
 ## B. Generate input: an open canvas instead of a text form (later)
 
 - **Free canvas, like Apple Freeform.** The text cursor is always blinking, so you can type or paste right away.
