@@ -12,7 +12,8 @@ import { CARD_LAB_FIXTURES } from '@/dev/cardLabFixtures';
 // - text boxes don't overlap each other
 // - text stays inside the margins (a 4px tolerance for glyph overhang)
 // - text doesn't run into an inset picture
-// - at most 4 text sizes per story, none below 16px
+// - at most 3 text sizes per card, none below 16px (sizes vary from card
+//   to card on purpose: text steps up where the card has room)
 
 const DISPLAY = 280;
 const TOLERANCE = 4;
@@ -73,9 +74,13 @@ export default function CardLab() {
       const res = runs.map((run) => {
         const nodes = rootRef.current.querySelectorAll(`[data-run="${run.key}"] [data-card]`);
         const sizes = new Set(run.cards.flatMap((c) => c.elements.filter((e) => e.type === 'text').map((e) => Number(e.font_size))));
-        const cards = [...nodes].map((n, i) => ({ card: i + 1, problems: checkCard(n) }));
+        const cards = [...nodes].map((n, i) => {
+          const problems = checkCard(n);
+          const cardSizes = new Set((run.cards[i]?.elements || []).filter((e) => e.type === 'text').map((e) => Number(e.font_size)));
+          if (cardSizes.size > 3) problems.push(`${cardSizes.size} text sizes`);
+          return { card: i + 1, problems };
+        });
         const storyProblems = [];
-        if (sizes.size > 4) storyProblems.push(`${sizes.size} text sizes`);
         if ([...sizes].some((s) => s < 16)) storyProblems.push('text below 16px');
         return { run: run.key, cardCount: run.cards.length, sizes: [...sizes].sort((a, b) => a - b), storyProblems, cards: cards.filter((c) => c.problems.length) };
       });
