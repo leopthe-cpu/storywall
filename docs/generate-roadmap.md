@@ -54,6 +54,15 @@ Wanted (Oz, 2026-10-16, see his Instagram examples): each style has 3 colours (b
 - Keep it within the existing colour tokens (`Background`, `Text`, `Accent`), so Card Theme editing still recolours the whole story.
 - Test in the card lab first, all three styles, then one paid staging run.
 
+## A4. More templates, one per story framework (Oz, 2026-10-16)
+
+The Templates panel offers only 2 templates today (`PICKER_TEMPLATES` in `src/lib/storyTemplates.js`: Bold Poster and Bold Poster — Photo). Wanted: one template per framework the structuring AI already uses (STAR, RICE, Before→After→Bridge, Problem→Solution→Impact, Turning Point, Origin Story, Failure→Lesson→Comeback, By The Numbers, Build→Measure→Learn, Mentor Story, Career Timeline):
+
+- Each is a short made-up story (5–7 cards) that shows the framework's beats, with text placeholders the user replaces and picture placeholders where a photo belongs.
+- Fonts and colours are picked per template from the three generated-story styles (Field notes, Poster, Condensed), and use the colour variation from A3 so a template doesn't look flat.
+- Same rendering rules as every card (CLAUDE.md, rendering model); check each in the card lab, then on staging on a phone.
+- Applying a template starts a new story (existing rule), so no risk to the user's draft.
+
 ## B. Generate input: an open canvas instead of a text form (later)
 
 - **Free canvas, like Apple Freeform.** The text cursor is always blinking, so you can type or paste right away.
