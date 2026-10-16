@@ -12,7 +12,7 @@
 
 import {
   BODY_SIZES, CARD, CONTENT_WIDTH, LINE_HEIGHT, MARGIN, SCALE,
-  loadStyleFonts, measureBox, splitSentences,
+  loadStyleFonts, measureBox, splitSentences, wrapText,
 } from '@/lib/cardLayout';
 
 const REFERENCE_CARD_SIZE = CARD;
@@ -107,6 +107,9 @@ const STATEMENT_MAX_CHARS = 70;
 // A cover title must leave most of its picture visible.
 const COVER_MAX_TEXT_HEIGHT = Math.round((CARD - 2 * MARGIN) * 0.6);
 const AVAILABLE = CARD - 2 * MARGIN;
+// A short body-only card is set larger (see the text card in buildAICards)
+// only if it then fills at most about 60% of the space between the margins.
+const LEAD_MAX_HEIGHT = Math.round(AVAILABLE * 0.6);
 
 function sizesFor(tpl, body) {
   const d = tpl.displayScale || 1;
@@ -126,10 +129,48 @@ function headerLineHeight(size, bodySize) {
   return size >= bodySize * SCALE.statement ? LINE_HEIGHT.display : LINE_HEIGHT.header;
 }
 
-function blockHeights(tpl, header, body, headerSize, bodySize, gap) {
-  const h = header ? measureBox(header, tpl.displayFont, headerSize, headerLineHeight(headerSize, bodySize)) : 0;
-  const b = body ? measureBox(body, tpl.bodyFont, bodySize, LINE_HEIGHT.body) : 0;
+// A body set at a size above the story's body size (a short body-only card,
+// see LEAD_MAX_HEIGHT) gets tighter leading than reading text.
+function bodyLineHeight(size, bodySize) {
+  return size > bodySize ? LINE_HEIGHT.lead : LINE_HEIGHT.body;
+}
+
+function blockHeights(tpl, header, body, headerSize, bodySize, gap, width = CONTENT_WIDTH, bodyAt = bodySize) {
+  const h = header ? measureBox(header, tpl.displayFont, headerSize, headerLineHeight(headerSize, bodySize), width) : 0;
+  const b = body ? measureBox(body, tpl.bodyFont, bodyAt, bodyLineHeight(bodyAt, bodySize), width) : 0;
   return { h, b, total: h + b + (h && b ? gap : 0) };
+}
+
+// Narrowest box width that keeps the same number of lines as the full
+// content width: the lines come out about even (like CSS text-wrap:
+// balance) instead of one long line and a short one. The box is then
+// centred between the margins, so the empty space left and right is even
+// too. Never below half the content width. Only for short blocks: a
+// paragraph (more than BALANCE_MAX_BODY_LINES) keeps the full width, so
+// reading text doesn't turn into a narrow column that changes width from
+// card to card.
+const BALANCE_MAX_BODY_LINES = 3;
+function balancedWidth(tpl, header, body, headerSize, bodySize, gap, bodyAt = bodySize) {
+  if (body && wrapText(body, tpl.bodyFont, bodyAt, CONTENT_WIDTH - 2).length > BALANCE_MAX_BODY_LINES) return CONTENT_WIDTH;
+  const full = blockHeights(tpl, header, body, headerSize, bodySize, gap, CONTENT_WIDTH, bodyAt);
+  const same = (w) => {
+    const t = blockHeights(tpl, header, body, headerSize, bodySize, gap, w, bodyAt);
+    return t.h === full.h && t.b === full.b;
+  };
+  let lo = Math.round(CONTENT_WIDTH / 2);
+  let hi = CONTENT_WIDTH;
+  if (same(lo)) return lo;
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (same(mid)) hi = mid; else lo = mid;
+  }
+  return hi;
+}
+
+// Top of a text-only block: centred vertically between the margins, so the
+// space above and below is the same.
+function centredTop(total) {
+  return MARGIN + (AVAILABLE - total) / 2;
 }
 
 // What kind of card each structured card becomes.
@@ -177,14 +218,16 @@ function splitToFit(tpl, header, body, headerSize, bodySize, gap, maxHeight) {
   return [sentences.slice(0, keep).join('').trim(), sentences.slice(keep).join('').trim()];
 }
 
-function textElement(id, content, top, height, size, font, role, colorToken, color, z, lineHeight) {
+function textElement(id, content, top, height, size, font, role, colorToken, color, z, lineHeight, width = CONTENT_WIDTH) {
+  // Narrower boxes (balancedWidth) are centred between the margins.
+  const left = MARGIN + (CONTENT_WIDTH - width) / 2;
   return {
     id,
     type: 'text',
     content,
-    x: ((MARGIN - BOX_PADDING) / REFERENCE_CARD_SIZE) * 100,
+    x: ((left - BOX_PADDING) / REFERENCE_CARD_SIZE) * 100,
     y: (top / REFERENCE_CARD_SIZE) * 100,
-    displayWidth: CONTENT_WIDTH + 2 * BOX_PADDING,
+    displayWidth: width + 2 * BOX_PADDING,
     displayHeight: Math.ceil(height),
     font_family: font.family,
     font_size: String(size),
@@ -206,18 +249,28 @@ function textElement(id, content, top, height, size, font, role, colorToken, col
 }
 
 // Stacks header and body from `top`, returns the text elements.
-function stack(cardId, tpl, tokens, top, header, body, headerSize, bodySize, gap) {
+// `width` is the text box width (default: the full content width); `bodyAt`
+// the size the body is set at (default: the story's body size).
+function stack(cardId, tpl, tokens, top, header, body, headerSize, bodySize, gap, width = CONTENT_WIDTH, bodyAt = bodySize) {
   const els = [];
-  const { h, b } = blockHeights(tpl, header, body, headerSize, bodySize, gap);
+  const { h, b } = blockHeights(tpl, header, body, headerSize, bodySize, gap, width, bodyAt);
   if (header) {
     els.push(textElement(`${cardId}-title`, header, top, h, headerSize, tpl.displayFont,
-      'header', tokens.ink.id, tpl.ink, 1000, headerLineHeight(headerSize, bodySize)));
+      'header', tokens.ink.id, tpl.ink, 1000, headerLineHeight(headerSize, bodySize), width));
   }
   if (body) {
-    els.push(textElement(`${cardId}-subtitle`, body, top + (h ? h + gap : 0), b, bodySize, tpl.bodyFont,
-      'body', tokens.ink.id, tpl.ink, 1001, LINE_HEIGHT.body));
+    els.push(textElement(`${cardId}-subtitle`, body, top + (h ? h + gap : 0), b, bodyAt, tpl.bodyFont,
+      'body', tokens.ink.id, tpl.ink, 1001, bodyLineHeight(bodyAt, bodySize), width));
   }
   return els;
+}
+
+// Places a text-only block (no picture): balanced line widths, centred
+// left-right and top-bottom.
+function centredStack(cardId, tpl, tokens, header, body, headerSize, bodySize, gap, bodyAt = bodySize) {
+  const width = balancedWidth(tpl, header, body, headerSize, bodySize, gap, bodyAt);
+  const { total } = blockHeights(tpl, header, body, headerSize, bodySize, gap, width, bodyAt);
+  return stack(cardId, tpl, tokens, centredTop(total), header, body, headerSize, bodySize, gap, width, bodyAt);
 }
 
 // Builds card objects from structured AI data + a style template.
@@ -263,8 +316,7 @@ export async function buildAICards(structuredCards, styleTemplate) {
     while (rest) {
       const card = newCard({}, { imageGenerationFailed: false, imagePrompt: '' });
       const [kept, more] = splitToFit(tpl, '', rest, s.header, s.body, s.gap, AVAILABLE);
-      const { total } = blockHeights(tpl, '', kept, s.header, s.body, s.gap);
-      card.elements = stack(card.id, tpl, tokens, MARGIN + (AVAILABLE - total) * 0.42, '', kept, s.header, s.body, s.gap);
+      card.elements = centredStack(card.id, tpl, tokens, '', kept, s.header, s.body, s.gap);
       cards.push(card);
       rest = more;
     }
@@ -333,9 +385,7 @@ export async function buildAICards(structuredCards, styleTemplate) {
 
     if (p.kind === 'statement') {
       const card = newCard(src);
-      const { total } = blockHeights(tpl, p.header, '', s.statement, s.body, s.gap);
-      // Optically centred: a little above the middle.
-      card.elements.push(...stack(card.id, tpl, tokens, MARGIN + (AVAILABLE - total) * 0.42, p.header, '', s.statement, s.body, s.gap));
+      card.elements.push(...centredStack(card.id, tpl, tokens, p.header, '', s.statement, s.body, s.gap));
       cards.push(card);
       continue;
     }
@@ -346,8 +396,13 @@ export async function buildAICards(structuredCards, styleTemplate) {
     if (blockHeights(tpl, p.header, p.body, s.header, s.body, s.gap).total > AVAILABLE) {
       [body, overflow] = splitToFit(tpl, p.header, p.body, s.header, s.body, s.gap, AVAILABLE);
     }
-    const { total } = blockHeights(tpl, p.header, body, s.header, s.body, s.gap);
-    card.elements.push(...stack(card.id, tpl, tokens, MARGIN + (AVAILABLE - total) * 0.42, p.header, body, s.header, s.body, s.gap));
+    // A short body with no header would sit small in a big empty card: set it
+    // at the header size (in the body font) when it still takes at most
+    // LEAD_MAX_HEIGHT that way. Same number as the header size, so the story
+    // doesn't gain a text size.
+    const lead = !p.header && !overflow &&
+      blockHeights(tpl, '', body, s.header, s.body, s.gap, CONTENT_WIDTH, s.header).total <= LEAD_MAX_HEIGHT;
+    card.elements.push(...centredStack(card.id, tpl, tokens, p.header, body, s.header, s.body, s.gap, lead ? s.header : s.body));
     cards.push(card);
     pushContinuation(src, overflow);
   }
