@@ -8,8 +8,8 @@ import { type Attachment, runStructurePipeline } from '../structureStory/pipelin
 // Starts a Generate run and answers straight away with the job id; the cards
 // are written in the background (EdgeRuntime.waitUntil), so closing the tab
 // no longer loses the result. The browser watches the generation_jobs row.
-// Pictures are a separate step (one call per picture, each with its own time
-// limit), so this function only lists the pictures the story needs.
+// Pictures are a separate step: once the cards are written, this function
+// starts one generateJobImage call per picture (each with its own time limit).
 //
 // Body: { text, attachments?: [{ url, type }], postId? }  →  { jobId, postId }
 // postId: the user's own draft to put the result in; a new draft otherwise.
@@ -61,6 +61,18 @@ export default {
         return Response.json({ error: 'A story is already being generated', jobId: active[0].id }, { status: 409 });
       }
 
+      // A draft given by the caller must be their own and still a draft.
+      // Checked before the daily count, so a bad request doesn't use a run.
+      let postId: string | null = typeof body?.postId === 'string' ? body.postId : null;
+      if (postId) {
+        const { data: post, error } = await admin.from('posts')
+          .select('author_id, status').eq('id', postId).maybeSingle();
+        if (error) throw error;
+        if (!post || post.author_id !== userId || post.status !== 'draft') {
+          return Response.json({ error: 'Invalid postId' }, { status: 400 });
+        }
+      }
+
       const { data: withinLimit, error: quotaError } = await admin.rpc('consume_ai_quota', {
         p_user: userId, p_kind: 'generate', p_limit: DAILY_GENERATE_LIMIT,
       });
@@ -92,16 +104,8 @@ export default {
         forModel.push({ type, imageUrl });
       }
 
-      // The draft the result lands in: the caller's own draft, or a new one.
-      let postId: string | null = typeof body?.postId === 'string' ? body.postId : null;
-      if (postId) {
-        const { data: post, error } = await admin.from('posts')
-          .select('author_id, status').eq('id', postId).maybeSingle();
-        if (error) throw error;
-        if (!post || post.author_id !== userId || post.status !== 'draft') {
-          return Response.json({ error: 'Invalid postId' }, { status: 400 });
-        }
-      } else {
+      // No draft given: the result lands in a new one.
+      if (!postId) {
         const { data: post, error } = await admin.from('posts')
           .insert({ author_id: userId, title: '', status: 'draft', ai_generated: true })
           .select('id').single();
@@ -124,7 +128,10 @@ export default {
       };
       running.set(job.id, markFailed);
       EdgeRuntime.waitUntil(
-        writeCards(admin, job.id, text, forModel).finally(() => running.delete(job.id)),
+        writeCards(admin, job.id, text, forModel, {
+          authorization: req.headers.get('authorization') ?? '',
+          apikey: req.headers.get('apikey') ?? '',
+        }).finally(() => running.delete(job.id)),
       );
 
       return Response.json({ jobId: job.id, postId }, { status: 200 });
@@ -136,10 +143,16 @@ export default {
 };
 
 // Writes the cards (the same structuring as structureStory) and saves them
-// into the job. The layout is done in the browser, so only the text and
-// picture prompts are stored.
-// deno-lint-ignore no-explicit-any
-async function writeCards(admin: any, jobId: string, text: string, attachments: Attachment[]) {
+// into the job, then starts the pictures. The layout is done in the browser,
+// so only the text and picture prompts are stored.
+async function writeCards(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  jobId: string,
+  text: string,
+  attachments: Attachment[],
+  auth: { authorization: string; apikey: string },
+) {
   const started = Date.now();
   try {
     const model = MODELS.structure();
@@ -174,10 +187,43 @@ async function writeCards(admin: any, jobId: string, text: string, attachments: 
       ...(pictures.length ? {} : { finished_at: new Date().toISOString() }),
     }).eq('id', jobId);
     if (error) throw error;
+    await Promise.all(pictures.map((p) => startPicture(admin, jobId, p.index, auth)));
   } catch (error) {
     console.log(`[startGeneration] job=${jobId} failed: ${(error as Error)?.message || error}`);
     await admin.from('generation_jobs')
       .update({ status: 'failed', error: 'writing failed', finished_at: new Date().toISOString() })
       .eq('id', jobId);
   }
+}
+
+// Starts one picture (generateJobImage answers at once and works in the
+// background). It is called with the user's own sign-in, which it checks like
+// any user call. If the call can't be started, the picture is marked failed
+// so the app offers the retry button.
+async function startPicture(
+  // deno-lint-ignore no-explicit-any
+  admin: any,
+  jobId: string,
+  index: number,
+  auth: { authorization: string; apikey: string },
+) {
+  try {
+    const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/generateJobImage`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: auth.authorization,
+        ...(auth.apikey ? { apikey: auth.apikey } : {}),
+      },
+      body: JSON.stringify({ jobId, index }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    if (res.status === 202) return;
+    console.log(`[startGeneration] job=${jobId} index=${index}: picture call answered ${res.status}`);
+  } catch (error) {
+    console.log(`[startGeneration] job=${jobId} index=${index}: picture call failed: ${(error as Error)?.message || error}`);
+  }
+  await admin.rpc('update_job_picture', {
+    p_job: jobId, p_index: index, p_from: ['pending'], p_patch: { status: 'failed', error: 'not started' },
+  });
 }
