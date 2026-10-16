@@ -1,5 +1,6 @@
 import { assertEquals } from 'jsr:@std/assert@1';
 import { parseJsonContent } from './openrouter.ts';
+import { cleanImagePrompt } from './imagePrompt.ts';
 import { buildPrompt, runStructurePipeline } from '../structureStory/pipeline.ts';
 import { dropRepeatedTitles, findMissing, normalize, removeInventedBody, restoreMissing, userSentences } from '../structureStory/coverage.ts';
 import { extractJsonArray, matchKeywordSkills } from '../suggestSkills/rules.ts';
@@ -117,4 +118,17 @@ Deno.test('coverage: a title that is a piece of a sentence shown in full is drop
   const cards = [card('So I pitched a small fix:', null), card('A nine-day fix', 'So I pitched a small fix: a message.'), card('It was trust.', null)];
   dropRepeatedTitles(text, cards);
   assertEquals(cards.map((c) => c.text), [null, 'A nine-day fix', 'It was trust.']);
+});
+
+Deno.test('cleanImagePrompt: keeps clean prompts, strips people, refuses what is left empty', () => {
+  assertEquals(cleanImagePrompt('A grocery bag on a doorstep, warm light.'), 'A grocery bag on a doorstep, warm light.');
+  assertEquals(
+    cleanImagePrompt('A warehouse aisle at dawn. A man smiling at the camera.'),
+    'A warehouse aisle at dawn. Objects, places and details only.',
+  );
+  assertEquals(cleanImagePrompt('Portrait of a woman.'), null);
+  assertEquals(cleanImagePrompt(''), null);
+  assertEquals(cleanImagePrompt(null), null);
+  // Whole words only: "manager" and "eyeglass" are not people.
+  assertEquals(cleanImagePrompt('A manager desk with eyeglasses.'), 'A manager desk with eyeglasses.');
 });
