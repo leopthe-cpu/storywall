@@ -7,9 +7,11 @@ Oz's direction, 2026-10-16. Order agreed for the next sessions:
 3. The new Generate loading screen (section A).
 4. Next week or later: decide what to build next. Sections B and C are documented here so the performance work doesn't have to be redone for them.
 
-## A. Generate loading screen (do after performance)
+## A. One loading screen for Generate and skills (do after performance)
 
-Replaces `src/components/creator/GenerateProgress.jsx` (today: white screen, spinner, a percentage that sits at 0% for a long time and then jumps to 33%).
+Generate (`src/components/creator/GenerateProgress.jsx`) and skill tagging (`src/components/creator/SkillsLoadingScreen.jsx`) get the same loading screen: same look, same behaviour, built once as a shared component (Oz, 2026-10-16). Today they differ: Generate is a white screen with a spinner and a percentage that sits at 0% for a long time and then jumps to 33%; skills already has the drifting grid.
+
+Everything below applies to both, except the floating "come back later" card: that one is Generate only. During skill tagging the user has to stay, because they pick their skills and review the story right after. The rotating lines can come from one shared list, plus a few skills-specific ones (e.g. "Reading between your lines…", "Spotting what you're good at…").
 
 - **Background:** the paper grid that drifts down, as on the skills loading screen (`GridBackdrop` with `drift`, `.grid-drift` in `src/index.css`). It drifts a bit faster than today (3s per grid cell is too slow).
 - **Percentage:** set in the StoryWall logo font, FK Raster Grotesk (https://fonts.floriankarsten.com/fk-raster-grotesk). Before shipping, check the font's licence for web use and self-host it. It isn't in the repo yet.
@@ -28,7 +30,18 @@ Replaces `src/components/creator/GenerateProgress.jsx` (today: white screen, spi
   - Hiding the typos you didn't make…
   - Saving a seat for your photos…
   - Making you look good. Easy job.
-- **Floating card under the progress,** in the style of the "you're already signed in" card on sign-up: "Sit back, we'll finish this for you. You can leave: your story will be waiting in Drafts in the builder." This depends on generation running without the tab being open (section D).
+- **Floating card under the progress (Generate only),** in the style of the "you're already signed in" card on sign-up: "Sit back, we'll finish this for you. You can leave: your story will be waiting in Drafts in the builder." This depends on generation running without the tab being open (section D).
+
+## A2. Full-screen spinners get the grid too (tomorrow)
+
+These screens are a blank page with only the spinner. They get the paper grid behind the spinner (`GridBackdrop`), so no loading screen is just a spinner on blank (Oz, 2026-10-16):
+
+- `src/App.jsx`: app start, while checking who is signed in (white).
+- `src/pages/PublicProfile.jsx`: a wall loading (paper colour, no grid).
+- `src/pages/Onboarding.jsx`: onboarding loading (paper colour, no grid).
+- `src/components/creator/GenerateProgress.jsx`: gets the grid as part of section A.
+
+Not included: `src/pages/PromptTest.jsx` (admin test tool) and the small spinners inside buttons, panels and the card editor.
 
 ## B. Generate input: an open canvas instead of a text form (later)
 
