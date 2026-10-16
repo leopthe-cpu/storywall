@@ -1,4 +1,4 @@
-import { invokeFunction } from '@/api/storywallApi';
+import { invokeFunction, updatePost } from '@/api/storywallApi';
 import { getSupabase } from '@/api/supabaseClient';
 import { buildAICards } from '@/lib/aiStyleTemplates';
 import { markMissingPictures, placeAttachments } from '@/lib/generatePipeline';
@@ -145,4 +145,61 @@ export async function runGenerateJob({ text, attachments, postId, onProgress }) 
   getSupabase().from('generation_jobs').update({ seen_at: new Date().toISOString() }).eq('id', job.id)
     .then(({ error }) => { if (error) console.warn('[generate-job] could not mark the job seen:', error.message); });
   return { ...result, jobId: job.id, postId: job.post_id };
+}
+
+// ---------- Drafts (part A, step 5)
+//
+// A Generate run writes into a draft that stays empty (no cards) until its
+// result is laid out. Normally that happens on the generating screen; when
+// the user left before the end, it happens here, the next time the Drafts
+// list loads: a finished job is laid out and saved into its draft, so it
+// opens like any other draft. A job still running shows as a placeholder
+// ("Formatting your story…"), and one that failed says so.
+
+const STALE_AFTER_MS = 10 * 60 * 1000; // same as the server (startGeneration)
+
+function jobState(job) {
+  if (!job) return null;
+  if (job.status === 'done') return 'done';
+  if (job.status === 'failed') return 'failed';
+  return Date.now() - new Date(job.created_at).getTime() > STALE_AFTER_MS ? 'failed' : 'running';
+}
+
+// Returns the drafts with `generation` = 'running' | 'failed' on the empty
+// ones that belong to a Generate run, and finished runs laid out and saved.
+export async function attachJobsToDrafts(drafts) {
+  const empty = (drafts || []).filter((d) => !(d.cards || []).length);
+  if (!empty.length) return drafts;
+  const { data: jobs, error } = await getSupabase().from('generation_jobs')
+    .select('id, post_id, status, created_at, options, result, pictures')
+    .in('post_id', empty.map((d) => d.id))
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.warn('[generate-job] could not read jobs for drafts:', error.message);
+    return drafts;
+  }
+  const latest = new Map();
+  for (const job of jobs || []) if (!latest.has(job.post_id)) latest.set(job.post_id, job);
+
+  return Promise.all(drafts.map(async (draft) => {
+    const job = latest.get(draft.id);
+    const state = (draft.cards || []).length ? null : jobState(job);
+    if (!state) return draft;
+    if (state !== 'done') return { ...draft, generation: state };
+    try {
+      const result = await assembleJob(job);
+      const saved = await updatePost(draft.id, {
+        cards: result.cards,
+        color_tokens: result.tokens || [],
+        generation_style: result.styleTemplate,
+        ai_generated: true,
+      });
+      getSupabase().from('generation_jobs').update({ seen_at: new Date().toISOString() }).eq('id', job.id)
+        .then(({ error: seenError }) => { if (seenError) console.warn('[generate-job] could not mark the job seen:', seenError.message); });
+      return saved || { ...draft, cards: result.cards, color_tokens: result.tokens || [] };
+    } catch (e) {
+      console.warn('[generate-job] could not lay out a finished job:', e?.message);
+      return { ...draft, generation: 'failed' };
+    }
+  }));
 }
