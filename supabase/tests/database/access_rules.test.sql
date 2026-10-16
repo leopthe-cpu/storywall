@@ -4,7 +4,7 @@
 -- decision 14). Run with `supabase test db`; everything is rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(41);
+select plan(40);
 
 -- ── Test data (as the database owner) ────────────────────────────────────
 insert into auth.users (id, email, raw_user_meta_data) values
@@ -48,11 +48,12 @@ select throws_ok($$ update public.profiles set username = 'alice' where username
 
 -- ── Visitor (not signed in) ──────────────────────────────────────────────
 set local role anon;
-select is((select count(*)::int from public.profiles), 3, 'visitor sees the 3 public profiles');
-select is((select count(*)::int from public.profiles where username = 'priv'), 0,
-  'visitor cannot see a private profile');
-select is((select array_agg(title order by title) from public.posts), array['A published'],
-  'visitor sees only published stories of public profiles');
+-- Visitors read walls only through the getPublicProfile function (migration
+-- 20261016130000), never the tables directly, so bulk listing is impossible.
+select throws_ok($$ select * from public.profiles $$, '42501', null,
+  'visitor cannot read profiles directly (walls load through getPublicProfile)');
+select throws_ok($$ select * from public.posts $$, '42501', null,
+  'visitor cannot read stories directly (walls load through getPublicProfile)');
 select throws_ok($$ select * from public.post_notes $$, '42501', null, 'visitor cannot read story notes');
 select throws_ok($$ select * from public.media $$, '42501', null, 'visitor cannot read media');
 select throws_ok($$ insert into public.posts (author_id, title) values ('00000000-0000-0000-0000-00000000000a', 'x') $$,
