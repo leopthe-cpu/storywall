@@ -17,6 +17,17 @@
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=(self), microphone=(self), geolocation=(self), payment=(self), usb=(self), magnetometer=(), gyroscope=()"
+		# Content-Security-Policy (2026-10-16): only our own scripts run (no
+		# inline or third-party scripts), so an injected <script> or event
+		# handler can't execute. Styles: ours + Google Fonts (inline styles
+		# are needed by React/Framer Motion). Pictures, video and audio may
+		# come from any https host (user content, link favicons). Network
+		# calls: our origin, https (Supabase API/storage, Google Fonts, image
+		# fetches for card export) and Supabase realtime over wss. Tested with
+		# the built app on landing, sign-in, walls and the builder: no
+		# violations. If something new is blocked, the browser console says
+		# which directive to extend.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https: wss://*.supabase.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
 		-Server
 	}
 
