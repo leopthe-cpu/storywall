@@ -3,6 +3,7 @@ import { Trash2, ChevronLeft, ChevronRight } from '@/components/icons';
 import { formatDistanceToNow } from 'date-fns';
 import CardThumb from '@/components/creator/CardThumb';
 import MiniatureStrip from '@/components/creator/MiniatureStrip';
+import PixelSpinner from '@/components/ui/PixelSpinner';
 
 const MAIN_SIZE = 72;
 const THUMB_SIZE = 28;
@@ -41,6 +42,43 @@ export default function DraftEntry({ draft, onApply, onDelete, confirmDelete, is
     ? Math.min(currentCardIndex ?? 0, cards.length - 1)
     : null;
   const counterLabel = cards.length > 0 ? `${(activeIndex ?? 0) + 1}/${cards.length}` : null;
+
+  // A Generate run that hasn't produced cards yet (src/lib/generateJob.js,
+  // attachJobsToDrafts): still running, so not openable yet, or failed.
+  if (draft.generation) {
+    const running = draft.generation === 'running';
+    return (
+      <div className="relative flex items-center gap-3 rounded-xl p-2.5 bg-white/5">
+        <div
+          className="rounded-lg flex-shrink-0 bg-white/5 flex items-center justify-center"
+          style={{ width: MAIN_SIZE, height: MAIN_SIZE }}
+        >
+          {running ? <PixelSpinner size={18} tone="light" /> : <span className="text-white/30 text-lg">!</span>}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-white/80 text-xs font-medium">
+            {running ? 'Formatting your story…' : "Couldn't generate this story"}
+          </p>
+          <p className="text-white/30 text-[10px] mt-1 leading-snug">
+            {running
+              ? "It keeps going if you leave. It'll open from here when it's ready."
+              : 'Something went wrong on our side. Delete this and try Generate again.'}
+          </p>
+        </div>
+        {!running && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            aria-label="Delete draft"
+            className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+              confirmDelete ? 'bg-red-500/40 text-red-300' : 'bg-white/10 hover:bg-red-500/30 text-white/40'
+            }`}
+          >
+            <Trash2 size={12} />
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div

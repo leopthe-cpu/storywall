@@ -10,6 +10,7 @@ import { PICKER_TEMPLATES } from '@/lib/storyTemplates';
 import TemplateRow from '@/components/creator/TemplateRow';
 import LazyMount from '@/components/profile/LazyMount';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import { attachJobsToDrafts } from '@/lib/generateJob';
 
 // Drafts tab shows only the most recently-updated drafts rather than every
 // draft ever saved — each row renders its own cover thumbnail plus a full
@@ -60,22 +61,32 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
   const [confirmDeleteDraftId, setConfirmDeleteDraftId] = useState(null);
   const [reorderMode, setReorderMode] = useState(false);
 
-  const loadDrafts = async () => {
-    setLoadingDrafts(true);
+  // `quiet`: refresh without the loading spinner (used while a Generate run
+  // is still formatting a draft, so its row turns into the story when done).
+  const loadDrafts = async ({ quiet = false } = {}) => {
+    if (!quiet) setLoadingDrafts(true);
     try {
       const user = await getMe();
       const results = await filterPosts({ author_id: user.id, status: 'draft' }, '-updated_at', RECENT_DRAFTS_LIMIT);
-      setDrafts(results);
+      setDrafts(await attachJobsToDrafts(results));
     } catch (e) {
       console.error(e);
     } finally {
-      setLoadingDrafts(false);
+      if (!quiet) setLoadingDrafts(false);
     }
   };
 
   useEffect(() => {
     if (tab === 'Drafts') loadDrafts();
   }, [tab]);
+
+  // While a draft is still being generated, check again every few seconds.
+  const anyGenerating = drafts.some((d) => d.generation === 'running');
+  useEffect(() => {
+    if (tab !== 'Drafts' || !anyGenerating) return undefined;
+    const timer = setTimeout(() => loadDrafts({ quiet: true }), 5000);
+    return () => clearTimeout(timer);
+  }, [tab, anyGenerating, drafts]);
 
   const deleteDraft = async (id) => {
     if (confirmDeleteDraftId === id) {

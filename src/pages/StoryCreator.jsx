@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useReducer } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2, PerspectiveView } from '@/components/icons';
+import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2, PerspectiveView, Keyboard } from '@/components/icons';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
 import { getMe, createPost, updatePost, invokeFunction, uploadPublicFile } from '@/api/storywallApi';
 import { registerMedia } from '@/lib/mediaLibrary';
@@ -14,6 +14,7 @@ import NotesView from '@/components/creator/NotesView';
 import GenerateProgress from '@/components/creator/GenerateProgress';
 import RegenerateChoice from '@/components/creator/RegenerateChoice';
 import { runGeneratePipeline } from '@/lib/generatePipeline';
+import { runGenerateJob, StoppedFollowing } from '@/lib/generateJob';
 import { migrateToTokens, applyTokenColorChange, findOrCreateToken, resolveColor } from '@/lib/colorTokens';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 import useDocumentTitle from '@/lib/useDocumentTitle';
@@ -1089,19 +1090,52 @@ export default function StoryCreator() {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+  // False once the builder is closed, so a Generate run stops being followed
+  // here (it keeps going on the server).
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const handleGenerate = async (editMode = 'full') => {
     if (!rawNotes.trim()) return;
     setGeneratePhase('generating');
     setGenProgress({ completedSteps: 0, totalSteps: 1, label: 'Starting…' });
     try {
-      const result = await runGeneratePipeline({
-        text: rawNotes,
-        attachments,
-        editMode,
-        existingCards: editMode === 'edits_only' ? cards : [],
-        existingStyleTemplate: editMode === 'edits_only' ? generationStyle : undefined,
-        onProgress: (p) => setGenProgress(p),
-      });
+      // A full run goes through the server job (src/lib/generateJob.js), so
+      // leaving the page doesn't lose it. It writes into this story's draft:
+      // any pending autosave is settled first so the draft id is known, and
+      // the draft the server created (if there was none) becomes this one.
+      // When the job version isn't available (null), and for "edits only",
+      // the old browser pipeline runs as before.
+      let result = null;
+      if (editMode === 'full') {
+        await cancelAutosave();
+        result = await runGenerateJob({
+          text: rawNotes,
+          attachments,
+          postId: draftIdRef.current,
+          onProgress: (p) => setGenProgress(p),
+          // Leaving the builder stops following; the run continues on the
+          // server, then the "ready" toast and Drafts take over.
+          isActive: () => mountedRef.current,
+        });
+        if (result?.postId && !draftIdRef.current) {
+          setDraftId(result.postId);
+          draftIdRef.current = result.postId;
+        }
+      }
+      if (!result) {
+        result = await runGeneratePipeline({
+          text: rawNotes,
+          attachments,
+          editMode,
+          existingCards: editMode === 'edits_only' ? cards : [],
+          existingStyleTemplate: editMode === 'edits_only' ? generationStyle : undefined,
+          onProgress: (p) => setGenProgress(p),
+        });
+      }
       setCards(result.cards);
       setColorTokens(result.tokens || []);
       setCurrentCardIndex(0);
@@ -1112,6 +1146,7 @@ export default function StoryCreator() {
       setShowRegenerateChoice(false);
       resetBaseline(result.cards, result.tokens || []);
     } catch (e) {
+      if (e instanceof StoppedFollowing) return;
       console.error('[StoryCreator] generation failed:', e);
       setGeneratePhase('notes');
       // Without this the user was dropped back on the notes screen with no
@@ -1134,19 +1169,33 @@ export default function StoryCreator() {
     setGeneratePhase('notes');
   };
 
+  // True while Post saves the story before opening the publish screen. The
+  // save can take a few seconds (it waits for any save already running), and
+  // with no feedback a tap looked ignored (Oz, staging test 2026-10-16).
+  const [openingPostFlow, setOpeningPostFlow] = useState(false);
+  const openingPostFlowRef = useRef(false);
+
   const handleOpenPostFlow = useCallback(async () => {
-    await flushActiveTextEdit();
-    // Strip any text box that was never typed into (most commonly, the
-    // default box every fresh card starts with — see newCard() above)
-    // before the preview/publish screen and the draft it saves ever see it.
-    // Same "wait one tick" reasoning as flushActiveTextEdit above: setCards
-    // here doesn't land in cardsRef until React applies it, and persistDraft
-    // reads cardsRef synchronously.
-    purgeAllEmptyText();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await cancelAutosave();
-    await persistDraft();
-    setShowPostFlow(true);
+    if (openingPostFlowRef.current) return;
+    openingPostFlowRef.current = true;
+    setOpeningPostFlow(true);
+    try {
+      await flushActiveTextEdit();
+      // Strip any text box that was never typed into (most commonly, the
+      // default box every fresh card starts with — see newCard() above)
+      // before the preview/publish screen and the draft it saves ever see it.
+      // Same "wait one tick" reasoning as flushActiveTextEdit above: setCards
+      // here doesn't land in cardsRef until React applies it, and persistDraft
+      // reads cardsRef synchronously.
+      purgeAllEmptyText();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await cancelAutosave();
+      await persistDraft();
+      setShowPostFlow(true);
+    } finally {
+      openingPostFlowRef.current = false;
+      setOpeningPostFlow(false);
+    }
   }, [flushActiveTextEdit, purgeAllEmptyText, cancelAutosave, persistDraft]);
 
   const handleGenerateTap = () => {
@@ -1205,32 +1254,51 @@ export default function StoryCreator() {
       </button>
     </div>
   ) : <div />;
-  const topPostArea = generatePhase === 'notes' ? (
-    <button
-      onClick={handleGenerateTap}
-      disabled={!rawNotes.trim()}
-      className="bg-black text-white font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-black/90 active:scale-95 transition-all disabled:opacity-40">
-      Generate →
-    </button>
-  ) : generateMode && aiGenerated ? (
-    <div className="flex items-center gap-2">
-      <button
-        onClick={handleBackToNotes}
-        className="bg-white/10 text-white/80 font-medium text-sm px-3 py-1.5 rounded-[6px] hover:bg-white/20 transition-all">
-        Notes
-      </button>
-      <button
-        onClick={handleOpenPostFlow}
-        className="bg-white text-black font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-white/90 active:scale-95 transition-all">
-        Post →
-      </button>
-    </div>
-  ) : (
+  const postButton = (
     <button
       onClick={handleOpenPostFlow}
-      className="bg-white text-black font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-white/90 active:scale-95 transition-all">
+      disabled={openingPostFlow}
+      aria-busy={openingPostFlow}
+      className="bg-white text-black font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-white/90 active:scale-95 transition-all disabled:opacity-70 flex items-center gap-2 whitespace-nowrap">
+      {openingPostFlow && <PixelSpinner size={12} />}
       Post →
     </button>
+  );
+  // On the notes screen of a story that was already generated, "Story" goes
+  // back to the cards without generating again (before, the only way back
+  // was closing the story and reopening it from Drafts).
+  const hasGeneratedStory = generateMode && aiGenerated && hasRealContent(cards);
+  const topPostArea = generatePhase === 'notes' ? (
+    <div className="flex items-center gap-2">
+      {hasGeneratedStory && (
+        <button
+          onClick={() => setGeneratePhase('done')}
+          className="bg-black/5 text-black/80 font-medium text-sm px-3 py-1.5 rounded-[6px] hover:bg-black/10 transition-all whitespace-nowrap">
+          Story
+        </button>
+      )}
+      <button
+        onClick={handleGenerateTap}
+        disabled={!rawNotes.trim()}
+        className="bg-black text-white font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-black/90 active:scale-95 transition-all disabled:opacity-40 whitespace-nowrap">
+        Generate →
+      </button>
+    </div>
+  ) : generateMode && aiGenerated ? (
+    <div className="flex items-center gap-2">
+      {/* Notes as an icon (Oz, staging test 2026-10-16): the word took the
+          room Post needs, so "Post →" wrapped onto two lines. */}
+      <button
+        onClick={handleBackToNotes}
+        aria-label="Notes"
+        title="Notes"
+        className="flex-shrink-0 w-8 h-8 rounded-[6px] flex items-center justify-center bg-white/10 text-white/80 hover:bg-white/20 transition-colors">
+        <Keyboard size={18} />
+      </button>
+      {postButton}
+    </div>
+  ) : (
+    postButton
   );
 
   return (

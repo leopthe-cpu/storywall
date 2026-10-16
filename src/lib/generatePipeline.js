@@ -28,6 +28,30 @@ function validateSanitizedPrompt(sanitized) {
   return { valid: true, reason: 'passed' };
 }
 
+// Puts the user's attached pictures on the cards the AI chose for them.
+// Shared with the server-job version (src/lib/generateJob.js).
+export function placeAttachments(cards, attachments) {
+  (attachments || []).forEach((att, i) => {
+    const card = cards.find(c => c.attachmentIndex === i);
+    if (card) {
+      card.imageUrl = att.url;
+      card.imageType = att.type || 'image';
+      card.needsImage = true;
+    }
+  });
+}
+
+// A card that needed a picture but has none shows the failure badge and the
+// retry button, whatever the reason (no prompt, refused prompt, failed call).
+export function markMissingPictures(cards) {
+  cards.forEach((card, i) => {
+    if (card.needsImage && !card.imageUrl && !card.imageGenerationFailed) {
+      console.log(`[generate-pipeline] card ${i}: marking imageGenerationFailed — needed image but has none after pipeline`);
+      card.imageGenerationFailed = true;
+    }
+  });
+}
+
 // Full generation pipeline: structure → generate images → assemble cards.
 // Reports progress via onProgress callback.
 //
@@ -72,15 +96,7 @@ export async function runGeneratePipeline({ text, attachments, onProgress, editM
     });
   }
 
-  // Add user-attached images to their cards
-  attachments.forEach((att, i) => {
-    const card = cards.find(c => c.attachmentIndex === i);
-    if (card) {
-      card.imageUrl = att.url;
-      card.imageType = att.type || 'image';
-      card.needsImage = true;
-    }
-  });
+  placeAttachments(cards, attachments);
 
   // Step 2: Generate images for cards that need them (full mode only)
   if (editMode === 'full') {
@@ -173,12 +189,7 @@ export async function runGeneratePipeline({ text, attachments, onProgress, editM
   // the pipeline shows the failure state. This catches ALL failure paths:
   // no imagePrompt, face-validation rejection, generateImage failure/exception.
   // Regardless of which step caused the gap, the user sees the badge + retry.
-  cards.forEach((card, i) => {
-    if (card.needsImage && !card.imageUrl && !card.imageGenerationFailed) {
-      console.log(`[generate-pipeline] card ${i}: marking imageGenerationFailed — needed image but has none after pipeline`);
-      card.imageGenerationFailed = true;
-    }
-  });
+  markMissingPictures(cards);
 
   // Step 4: Assemble cards using the style template
   const styleTemplate = editMode === 'edits_only' && existingStyleTemplate

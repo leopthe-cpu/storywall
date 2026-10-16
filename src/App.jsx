@@ -19,6 +19,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { getMe } from '@/api/storywallApi';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import GenerationWatcher from '@/components/GenerationWatcher';
 
 // Card lab: development-only page for checking generated card layouts. The
 // import is behind import.meta.env.DEV, so it isn't part of production builds.
@@ -102,6 +103,7 @@ function App() {
             <AuthenticatedApp />
           </Router>
           <Toaster />
+          <GenerationWatcher />
         </ErrorBoundary>
       </QueryClientProvider>
     </AuthProvider>
