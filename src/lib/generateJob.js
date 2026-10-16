@@ -69,11 +69,26 @@ function progressOf(job) {
   return { completedSteps: totalSteps, totalSteps, label: 'Assembling carousel…' };
 }
 
-// Follows a job until it is done (or failed), reporting progress.
-export async function waitForJob(jobId, onProgress) {
+// Jobs a generating screen is following right now. The app-wide watcher
+// (GenerationWatcher) doesn't show its "ready" toast for these: the screen
+// shows the story itself.
+export const followedJobs = new Set();
+
+// Tells the app-wide watcher a job started, so it starts checking.
+export const JOB_STARTED_EVENT = 'storywall:generation-started';
+
+// Thrown when the caller stopped following (the user left the screen).
+export class StoppedFollowing extends Error {}
+
+// Follows a job until it is done (or failed), reporting progress. `isActive`
+// returning false stops following (the job itself keeps going on the
+// server; the watcher and Drafts take over).
+export async function waitForJob(jobId, onProgress, isActive = () => true) {
   const started = Date.now();
   for (;;) {
+    if (!isActive()) throw new StoppedFollowing();
     const job = await readJob(jobId);
+    if (!isActive()) throw new StoppedFollowing();
     onProgress?.(progressOf(job));
     if (job.status === 'done') return job;
     if (job.status === 'failed') {
@@ -126,7 +141,7 @@ export async function assembleJob(job) {
 // The whole run: start (or join) the job, follow it, lay it out.
 // Returns null when the job version isn't available, so the caller can use
 // the old pipeline instead.
-export async function runGenerateJob({ text, attachments, postId, onProgress }) {
+export async function runGenerateJob({ text, attachments, postId, onProgress, isActive = () => true }) {
   let started;
   try {
     started = await startJob({ text, attachments, postId });
@@ -138,7 +153,14 @@ export async function runGenerateJob({ text, attachments, postId, onProgress }) 
     throw e;
   }
   onProgress?.({ completedSteps: 0, totalSteps: 1, label: 'Writing your cards…' });
-  const job = await waitForJob(started.jobId, onProgress);
+  window.dispatchEvent(new Event(JOB_STARTED_EVENT));
+  followedJobs.add(started.jobId);
+  let job;
+  try {
+    job = await waitForJob(started.jobId, onProgress, isActive);
+  } finally {
+    followedJobs.delete(started.jobId);
+  }
   const result = await assembleJob(job);
   // Seen: the finished story is on screen, so no "ready" e-mail is needed.
   // Best effort; a failure here must not lose the story.

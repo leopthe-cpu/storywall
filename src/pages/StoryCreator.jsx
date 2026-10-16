@@ -14,7 +14,7 @@ import NotesView from '@/components/creator/NotesView';
 import GenerateProgress from '@/components/creator/GenerateProgress';
 import RegenerateChoice from '@/components/creator/RegenerateChoice';
 import { runGeneratePipeline } from '@/lib/generatePipeline';
-import { runGenerateJob } from '@/lib/generateJob';
+import { runGenerateJob, StoppedFollowing } from '@/lib/generateJob';
 import { migrateToTokens, applyTokenColorChange, findOrCreateToken, resolveColor } from '@/lib/colorTokens';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 import useDocumentTitle from '@/lib/useDocumentTitle';
@@ -1090,6 +1090,14 @@ export default function StoryCreator() {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+  // False once the builder is closed, so a Generate run stops being followed
+  // here (it keeps going on the server).
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const handleGenerate = async (editMode = 'full') => {
     if (!rawNotes.trim()) return;
     setGeneratePhase('generating');
@@ -1109,6 +1117,9 @@ export default function StoryCreator() {
           attachments,
           postId: draftIdRef.current,
           onProgress: (p) => setGenProgress(p),
+          // Leaving the builder stops following; the run continues on the
+          // server, then the "ready" toast and Drafts take over.
+          isActive: () => mountedRef.current,
         });
         if (result?.postId && !draftIdRef.current) {
           setDraftId(result.postId);
@@ -1135,6 +1146,7 @@ export default function StoryCreator() {
       setShowRegenerateChoice(false);
       resetBaseline(result.cards, result.tokens || []);
     } catch (e) {
+      if (e instanceof StoppedFollowing) return;
       console.error('[StoryCreator] generation failed:', e);
       setGeneratePhase('notes');
       // Without this the user was dropped back on the notes screen with no
