@@ -43,6 +43,17 @@ These screens are a blank page with only the spinner. They get the paper grid be
 
 Not included: `src/pages/PromptTest.jsx` (admin test tool) and the small spinners inside buttons, panels and the card editor.
 
+## A3. Colour variation across a story's cards (soon, before the canvas input)
+
+Today every card of a generated story has the same background and text colour: the style's one pair (Field notes dark green, Poster light grey, Condensed charcoal). Only a different story, which picks a different style, gets different colours.
+
+Wanted (Oz, 2026-10-16, see his Instagram examples): each style has 3 colours (background, text, accent) and the cards take turns, e.g. dark card, light card, accent card. Rules to settle:
+
+- Which cards switch: e.g. the cover and statement cards use the accent colour as background, text cards alternate dark and light, photo cards stay on the base colour.
+- Contrast: text must stay readable on every background (check each pair against WCAG AA contrast).
+- Keep it within the existing colour tokens (`Background`, `Text`, `Accent`), so Card Theme editing still recolours the whole story.
+- Test in the card lab first, all three styles, then one paid staging run.
+
 ## B. Generate input: an open canvas instead of a text form (later)
 
 - **Free canvas, like Apple Freeform.** The text cursor is always blinking, so you can type or paste right away.

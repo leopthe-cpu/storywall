@@ -3,7 +3,8 @@
 // 2026-10-15; "target" is the same story structured as agreed on the card
 // lab sheet; "stress" holds edge cases; "short-cards" holds the light cards
 // from Oz's 2026-10-16 staging run. Pictures are AI images
-// from the 2026-10-15 run.
+// from the 2026-10-15 run. "photo-long-sentence" is card 7 of the
+// 2026-10-16 production run: one sentence too long to sit under a picture.
 export const CARD_LAB_FIXTURES = {
   "grocery-target": [
     {
@@ -148,5 +149,11 @@ export const CARD_LAB_FIXTURES = {
     { "text": "", "subtitle": "Eng said three weeks. We got a basic version out in nine days." },
     { "text": "What changed", "subtitle": "Two months later repeat orders from new customers went from 60% to 74%. Tickets about missing items dropped by about a third. We killed the discount campaign too, which saved us around $200k." },
     { "text": "The problem wasn’t marketing. It was trust.", "subtitle": "" }
+  ],
+  "photo-long-sentence": [
+    { "text": "Why 40% never came back", "subtitle": "" },
+    { "text": "A much smaller fix", "subtitle": "I pushed back on the discounts and pitched something way smaller: send a message while the order is being picked, and let people approve or refuse the replacement with one tap.", "imageUrl": "https://igakvqlzvglvuqflngey.supabase.co/storage/v1/object/public/public-media/16fb633a-b7a8-4787-898e-5138278f1095/generated/47c824b0-aaed-452f-8089-17085f4c07ef.png" },
+    { "text": "", "subtitle": "I pushed back on the discounts and pitched something way smaller: send a message while the order is being picked, and let people approve or refuse the replacement with one tap.", "imageUrl": "https://igakvqlzvglvuqflngey.supabase.co/storage/v1/object/public/public-media/16fb633a-b7a8-4787-898e-5138278f1095/generated/47c824b0-aaed-452f-8089-17085f4c07ef.png" },
+    { "text": "", "subtitle": "Eng said three weeks. We got a basic version out in nine days." }
   ]
 };
