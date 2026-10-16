@@ -1157,19 +1157,33 @@ export default function StoryCreator() {
     setGeneratePhase('notes');
   };
 
+  // True while Post saves the story before opening the publish screen. The
+  // save can take a few seconds (it waits for any save already running), and
+  // with no feedback a tap looked ignored (Oz, staging test 2026-10-16).
+  const [openingPostFlow, setOpeningPostFlow] = useState(false);
+  const openingPostFlowRef = useRef(false);
+
   const handleOpenPostFlow = useCallback(async () => {
-    await flushActiveTextEdit();
-    // Strip any text box that was never typed into (most commonly, the
-    // default box every fresh card starts with — see newCard() above)
-    // before the preview/publish screen and the draft it saves ever see it.
-    // Same "wait one tick" reasoning as flushActiveTextEdit above: setCards
-    // here doesn't land in cardsRef until React applies it, and persistDraft
-    // reads cardsRef synchronously.
-    purgeAllEmptyText();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await cancelAutosave();
-    await persistDraft();
-    setShowPostFlow(true);
+    if (openingPostFlowRef.current) return;
+    openingPostFlowRef.current = true;
+    setOpeningPostFlow(true);
+    try {
+      await flushActiveTextEdit();
+      // Strip any text box that was never typed into (most commonly, the
+      // default box every fresh card starts with — see newCard() above)
+      // before the preview/publish screen and the draft it saves ever see it.
+      // Same "wait one tick" reasoning as flushActiveTextEdit above: setCards
+      // here doesn't land in cardsRef until React applies it, and persistDraft
+      // reads cardsRef synchronously.
+      purgeAllEmptyText();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await cancelAutosave();
+      await persistDraft();
+      setShowPostFlow(true);
+    } finally {
+      openingPostFlowRef.current = false;
+      setOpeningPostFlow(false);
+    }
   }, [flushActiveTextEdit, purgeAllEmptyText, cancelAutosave, persistDraft]);
 
   const handleGenerateTap = () => {
@@ -1228,6 +1242,16 @@ export default function StoryCreator() {
       </button>
     </div>
   ) : <div />;
+  const postButton = (
+    <button
+      onClick={handleOpenPostFlow}
+      disabled={openingPostFlow}
+      aria-busy={openingPostFlow}
+      className="bg-white text-black font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-white/90 active:scale-95 transition-all disabled:opacity-70 flex items-center gap-2">
+      {openingPostFlow && <PixelSpinner size={12} />}
+      Post →
+    </button>
+  );
   const topPostArea = generatePhase === 'notes' ? (
     <button
       onClick={handleGenerateTap}
@@ -1242,18 +1266,10 @@ export default function StoryCreator() {
         className="bg-white/10 text-white/80 font-medium text-sm px-3 py-1.5 rounded-[6px] hover:bg-white/20 transition-all">
         Notes
       </button>
-      <button
-        onClick={handleOpenPostFlow}
-        className="bg-white text-black font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-white/90 active:scale-95 transition-all">
-        Post →
-      </button>
+      {postButton}
     </div>
   ) : (
-    <button
-      onClick={handleOpenPostFlow}
-      className="bg-white text-black font-semibold text-sm px-4 py-1.5 rounded-[6px] hover:bg-white/90 active:scale-95 transition-all">
-      Post →
-    </button>
+    postButton
   );
 
   return (
