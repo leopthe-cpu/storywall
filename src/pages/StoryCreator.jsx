@@ -14,6 +14,7 @@ import NotesView from '@/components/creator/NotesView';
 import GenerateProgress from '@/components/creator/GenerateProgress';
 import RegenerateChoice from '@/components/creator/RegenerateChoice';
 import { runGeneratePipeline } from '@/lib/generatePipeline';
+import { runGenerateJob } from '@/lib/generateJob';
 import { migrateToTokens, applyTokenColorChange, findOrCreateToken, resolveColor } from '@/lib/colorTokens';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 import useDocumentTitle from '@/lib/useDocumentTitle';
@@ -1094,14 +1095,36 @@ export default function StoryCreator() {
     setGeneratePhase('generating');
     setGenProgress({ completedSteps: 0, totalSteps: 1, label: 'Starting…' });
     try {
-      const result = await runGeneratePipeline({
-        text: rawNotes,
-        attachments,
-        editMode,
-        existingCards: editMode === 'edits_only' ? cards : [],
-        existingStyleTemplate: editMode === 'edits_only' ? generationStyle : undefined,
-        onProgress: (p) => setGenProgress(p),
-      });
+      // A full run goes through the server job (src/lib/generateJob.js), so
+      // leaving the page doesn't lose it. It writes into this story's draft:
+      // any pending autosave is settled first so the draft id is known, and
+      // the draft the server created (if there was none) becomes this one.
+      // When the job version isn't available (null), and for "edits only",
+      // the old browser pipeline runs as before.
+      let result = null;
+      if (editMode === 'full') {
+        await cancelAutosave();
+        result = await runGenerateJob({
+          text: rawNotes,
+          attachments,
+          postId: draftIdRef.current,
+          onProgress: (p) => setGenProgress(p),
+        });
+        if (result?.postId && !draftIdRef.current) {
+          setDraftId(result.postId);
+          draftIdRef.current = result.postId;
+        }
+      }
+      if (!result) {
+        result = await runGeneratePipeline({
+          text: rawNotes,
+          attachments,
+          editMode,
+          existingCards: editMode === 'edits_only' ? cards : [],
+          existingStyleTemplate: editMode === 'edits_only' ? generationStyle : undefined,
+          onProgress: (p) => setGenProgress(p),
+        });
+      }
       setCards(result.cards);
       setColorTokens(result.tokens || []);
       setCurrentCardIndex(0);
