@@ -7,6 +7,7 @@ import ThumbMenu, { ReorderBar } from '@/components/creator/ThumbMenu';
 import DraftEntry from '@/components/creator/DraftEntry';
 import { templatesEnabled, SHOW_TEMPLATES_AND_STYLES } from '@/lib/featureFlags';
 import { PICKER_TEMPLATES } from '@/lib/storyTemplates';
+import { FRAMEWORK_TEMPLATES } from '@/lib/frameworkTemplates';
 import TemplateRow from '@/components/creator/TemplateRow';
 import LazyMount from '@/components/profile/LazyMount';
 import SectionLoader from '@/components/ui/SectionLoader';
@@ -206,7 +207,7 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
       {tab === 'Templates' && (
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3">
           <div className="flex flex-col gap-2">
-            {PICKER_TEMPLATES.map(template => (
+            {[...FRAMEWORK_TEMPLATES, ...PICKER_TEMPLATES].map(template => (
               <LazyMount key={template.id} placeholder={TEMPLATE_ROW_PLACEHOLDER}>
                 {() => (
                   <TemplateRow

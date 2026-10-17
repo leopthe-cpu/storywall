@@ -9,6 +9,7 @@ import BottomIsland, { ISLAND_CHROME } from '@/components/creator/BottomIsland';
 import PostFlowSheet from '@/components/creator/PostFlowSheet';
 import { DraftMediaProvider } from '@/components/creator/DraftMediaContext';
 import { applyTemplateToStory } from '@/lib/storyTemplates';
+import { frameworkTemplateForStory, isFrameworkTemplate } from '@/lib/frameworkTemplates';
 import { aiCarouselBuilderEnabled } from '@/lib/featureFlags';
 import NotesView from '@/components/creator/NotesView';
 import GenerateProgress from '@/components/creator/GenerateProgress';
@@ -979,8 +980,24 @@ export default function StoryCreator() {
       });
       return;
     }
-    const newCards = applyTemplateToStory(template, cardsRef.current, true);
-    const { cards: migratedCards, tokens: migratedTokens } = migrateToTokens(newCards, colorTokensRef.current);
+    // Framework templates come laid out with their own colour tokens, like a
+    // generated story; the older templates are plain colours, turned into
+    // tokens here.
+    let migratedCards, migratedTokens;
+    if (isFrameworkTemplate(template)) {
+      let laidOut;
+      try {
+        laidOut = await frameworkTemplateForStory(template);
+      } catch (e) {
+        console.error('[StoryCreator] template layout failed:', e);
+        toast({ variant: 'destructive', title: "Couldn't open this template", description: 'Check your connection and try again.' });
+        return;
+      }
+      ({ cards: migratedCards, tokens: migratedTokens } = migrateToTokens(laidOut.cards, laidOut.tokens));
+    } else {
+      const newCards = applyTemplateToStory(template, cardsRef.current, true);
+      ({ cards: migratedCards, tokens: migratedTokens } = migrateToTokens(newCards, colorTokensRef.current));
+    }
     // A template replaces every card, so it starts a NEW story: detach from
     // the draft (or published story) that was open. The story being left was
     // just saved above and stays in Drafts untouched. Without this, the next
