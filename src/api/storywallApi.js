@@ -236,6 +236,42 @@ export async function reorderPosts(items) {
     sb.from('posts').update({ display_order }).eq('id', id).then(check)));
 }
 
+// ---------- Data export ("Download my data")
+
+// Everything StoryWall stores about the signed-in user, as one object: the
+// profile, every story (drafts, published, archived) with its private notes,
+// the media library, Generate runs and onboarding drafts. Right of access /
+// portability (GDPR Art. 15 and 20, LGPD Art. 18). Media files are listed
+// by link, not copied in: public files open directly, private draft files
+// are references the app signs on demand.
+// Each read goes through the user's own access rules, so it can only ever
+// return the user's own rows.
+export async function exportMyData() {
+  const user = await requireUser();
+  const sb = getSupabase();
+  const [profile, posts, media, jobs, onboarding] = await Promise.all([
+    sb.from('profiles').select('*').eq('id', user.id).single().then(check),
+    sb.from('posts').select('*').eq('author_id', user.id).order('created_at', { ascending: true }).then(check),
+    sb.from('media').select('*').eq('user_id', user.id).order('created_at', { ascending: true }).then(check),
+    sb.from('generation_jobs').select('id, post_id, status, created_at, finished_at, error')
+      .eq('user_id', user.id).order('created_at', { ascending: true }).then(check),
+    sb.from('onboarding_drafts').select('*').eq('user_id', user.id).then(check),
+  ]);
+  const notes = posts.length
+    ? check(await sb.from('post_notes').select('post_id, raw_notes').in('post_id', posts.map((p) => p.id)))
+    : [];
+  const notesByPost = Object.fromEntries(notes.map((n) => [n.post_id, n.raw_notes]));
+  return {
+    exported_at: new Date().toISOString(),
+    account: { id: user.id, email: user.email, created_at: user.created_at },
+    profile,
+    stories: posts.map((p) => (notesByPost[p.id] ? { ...p, raw_notes: notesByPost[p.id] } : p)),
+    media_library: media,
+    generate_runs: jobs,
+    onboarding_drafts: onboarding,
+  };
+}
+
 // ---------- Onboarding drafts (owner-only)
 
 export async function listOnboardingDrafts() {
