@@ -1488,7 +1488,6 @@ export default function StoryCreator() {
         visible={generatePhase === 'generating'}
         completedSteps={genProgress.completedSteps}
         totalSteps={genProgress.totalSteps}
-        currentStep={genProgress.label}
       />
 
       {showRegenerateChoice &&
