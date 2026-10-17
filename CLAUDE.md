@@ -16,10 +16,10 @@ Core pieces:
 
 ## Stack / hosting
 
-- React + Vite + Tailwind, hosted on Base44 (app id `6a161402f22a3ebcce243595`, app name "SW"). Base44 also provides auth, the database (entities), file storage and serverless functions (`base44/functions/*`).
-- Data model lives in `base44/entities/*.jsonc` — the important one is `Post.jsonc` (a story: `cards[]` → each card has `elements[]`).
-- A Supabase project exists but holds no app data; StoryWall's data is all in Base44.
-- **Migration in progress (Oct 2026):** StoryWall is moving off Base44 to Railway + Supabase + Resend. See `docs/migration-plan.md` and `docs/decisions.md`.
+- React + Vite + Tailwind. **Live on the new stack since Oct 2026:** the app is hosted on Railway (production `storywall.io`, staging `web-staging-c748.up.railway.app`); Supabase provides auth, the Postgres database, file storage (`drafts` private, `public-media` public) and Edge Functions (`supabase/functions/*`); Resend sends email from `send.storywall.io`.
+- Two Supabase projects: staging and production. Database changes are migrations in `supabase/migrations/`, applied by the Supabase GitHub integration (`develop` → staging, `main` → production), with pgTAP tests in `supabase/tests/database/`. Edge Functions are deployed by hand (not by the integration).
+- Data model: tables in `supabase/migrations/20261009190000_initial_schema.sql` and later migrations. A story is a `posts` row whose `cards` jsonb holds `cards[]` → each card has `elements[]`; private notes live in `post_notes`.
+- Base44 (app id `6a161402f22a3ebcce243595`, app name "SW") is the frozen fallback until it is shut down (planned around 24 Oct 2026, depending on tests). `base44/` keeps its code for reference. See `docs/migration-plan.md` and `docs/decisions.md`.
 
 ### GitHub is the only source of truth (since 8 Oct 2026)
 
@@ -31,23 +31,20 @@ Core pieces:
 
 ## Premium access
 
-- Premium is granted by admins only, via the `PremiumGrant` entity (one row per user, `user_id`). Admins (`role === 'admin'`) are always premium.
-- The check is enforced server-side in `base44/shared/premium.ts` (`hasPremium`), used by `structureStory` and `generateImage`. Any new premium backend function must call it.
-- The client reads `PremiumGrant` only to show/hide the Generate UI (`PublicProfile.jsx`). Never gate premium features on client state alone, and never add access flags to the `User` entity.
-- The old `is_premium` field on `User` is being retired (Sept 2026) — don't use it in new code.
+- Premium is granted by admins only, via the `premium_grants` table (one row per user, `user_id`). Admins (rows in `admins`) are always premium.
+- The check is enforced server-side in `supabase/functions/_shared/premium.ts` (`hasPremium`), used by `structureStory`, `startGeneration`, `generateJobImage` and `generateImage`. Any new premium backend function must call it.
+- The client reads its access through the `my_access` database function (`myAccess()` in `src/api/storywallApi.js`) only to show/hide the Generate UI. Never gate premium features on client state alone, and never add access flags to the profile.
 
 ## Card image export (admin-only, planned premium)
 
 - "Download all cards as images" button under the publish-flow preview (`PostFlowSheet.jsx`), and "Download images" in a published story's ⋯ menu on the profile (`StoryKebab` → sheet in `PublicProfile.jsx`, auto-starts). Both shown only when `user.role === 'admin'`.
 - `src/components/creator/DownloadCardsButton.jsx` re-renders each card through `CardThumb` at 1080×1080 in a hidden layer and rasterises it with `html-to-image`; `src/lib/cardExport.js` saves a single PNG, a zip (desktop) or the share sheet (phones). Both libraries load lazily on click.
 - It refuses (with a message) rather than exporting broken cards when an image hasn't loaded or its host blocks CORS. Not captured: the "Blur" photo overlay (backdrop-filter); videos export their current frame.
-- When it becomes a premium feature, gate it with `PremiumGrant` like Generate — it's client-only, so there's no server check to add.
+- When it becomes a premium feature, gate it with premium access like Generate — it's client-only, so there's no server check to add.
 
-## ⚠️ Critical gotcha: the schema STRIPS undeclared fields
+## Old gotcha (Base44 only): the schema stripped undeclared fields
 
-Base44 silently drops any card/element field that is NOT declared in `base44/entities/Post.jsonc` when a story is saved — even though the schema says `additionalProperties: true`. This caused real bugs (text font sizes resetting after reload, Text FX disappearing, image settings lost).
-
-**Rule:** whenever you add a new field to a card or element, add it to `Post.jsonc` in the same change (via Base44's schema update, which also rewrites the jsonc). Verify with a query that the field round-trips.
+On Base44, any card/element field not declared in `base44/entities/Post.jsonc` was silently dropped on save (text sizes resetting, Text FX disappearing). On Supabase, `posts.cards` is jsonb and keeps every field as saved (checked Oct 2026: `line_height`, `font_size_estimated`, `naturalWidth` round-trip). Only top-level story fields are filtered (`POST_IGNORED` in `src/api/storywallApi.js`), so a new top-level column needs a migration.
 
 ## Rendering model (read before touching the canvas)
 
