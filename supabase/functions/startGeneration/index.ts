@@ -11,7 +11,7 @@ import { type Attachment, runStructurePipeline } from '../structureStory/pipelin
 // Pictures are a separate step: once the cards are written, this function
 // starts one generateJobImage call per picture (each with its own time limit).
 //
-// Body: { text, attachments?: [{ url, type }], postId? }  →  { jobId, postId }
+// Body: { text, attachments?: [{ url, type }], postId?, theme? }  →  { jobId, postId }
 // postId: the user's own draft to put the result in; a new draft otherwise.
 
 const MAX_TEXT = 20_000;
@@ -116,8 +116,20 @@ export default {
         .upsert({ post_id: postId, raw_notes: text }, { onConflict: 'post_id' });
       if (notesError) throw notesError;
 
+      // Colour theme picked on the notes screen: three hex colours, kept
+      // with the job so the browser lays the story out in them whenever it
+      // does (also later, from Drafts). Anything else is ignored.
+      const t = body?.theme;
+      const isHex = (c: unknown) => typeof c === 'string' && /^#[0-9a-fA-F]{6}$/.test(c);
+      const theme = t && isHex(t.dominant) && isHex(t.ink) && isHex(t.accent)
+        ? { dominant: t.dominant, ink: t.ink, accent: t.accent }
+        : null;
+
       const { data: job, error: jobError } = await admin.from('generation_jobs')
-        .insert({ user_id: userId, post_id: postId, status: 'writing', options: { attachments: kept } })
+        .insert({
+          user_id: userId, post_id: postId, status: 'writing',
+          options: { attachments: kept, ...(theme ? { theme } : {}) },
+        })
         .select('id').single();
       if (jobError) throw jobError;
 

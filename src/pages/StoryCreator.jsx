@@ -1137,6 +1137,9 @@ export default function StoryCreator() {
   // in Drafts) if the user leaves. "Edits only" and the fallback pipeline
   // run in this tab, so they don't offer leaving.
   const [genCanLeave, setGenCanLeave] = useState(false);
+  // Colour theme picked on the notes screen (ThemePicker); null = each
+  // style's own colours.
+  const [genTheme, setGenTheme] = useState(null);
 
   const handleGenerate = async (editMode = 'full') => {
     if (!rawNotes.trim()) return;
@@ -1157,6 +1160,7 @@ export default function StoryCreator() {
           text: rawNotes,
           attachments,
           postId: draftIdRef.current,
+          theme: genTheme,
           // Progress only arrives once the server job exists; from then on
           // leaving is safe, so the "Sit back" card can say so.
           onProgress: (p) => { setGenProgress(p); setGenCanLeave(true); },
@@ -1176,6 +1180,7 @@ export default function StoryCreator() {
           editMode,
           existingCards: editMode === 'edits_only' ? cards : [],
           existingStyleTemplate: editMode === 'edits_only' ? generationStyle : undefined,
+          theme: genTheme,
           onProgress: (p) => setGenProgress(p),
         });
       }
@@ -1389,6 +1394,8 @@ export default function StoryCreator() {
           attachments={attachments}
           onAddAttachment={handleAddAttachment}
           onRemoveAttachment={handleRemoveAttachment}
+          theme={genTheme}
+          onThemeChange={setGenTheme}
         />
       ) : (
       <div className="flex-1 flex flex-col md:flex-row min-h-0">
