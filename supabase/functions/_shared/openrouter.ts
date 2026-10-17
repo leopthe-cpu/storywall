@@ -9,6 +9,15 @@
 
 const BASE_URL = 'https://openrouter.ai/api/v1';
 
+// Only route to providers that don't store or train on what we send (users'
+// notes and stories). OpenRouter's terms: "Some Models may store or train on
+// your Inputs"; `data_collection: "deny"` restricts routing to providers that
+// don't (provider-selection docs, checked Oct 2026). The account's privacy
+// settings say the same (training off, set by Oz on 2026-10-17); this keeps
+// it true even if those settings change. The images endpoint has no such
+// option per request, so pictures rely on the account settings.
+const PRIVATE_ROUTING = { data_collection: 'deny' } as const;
+
 // Which model does what. Each can be switched with an Edge Function secret
 // of the same name, without a code change. Defaults chosen by Oz from the
 // side-by-side test on staging (decision 22).
@@ -96,7 +105,7 @@ export async function chatJson(opts: {
       json_schema: { name: opts.name, strict: true, schema: opts.schema },
     },
     // Only route to providers that honour response_format for this model.
-    provider: { require_parameters: true },
+    provider: { require_parameters: true, ...PRIVATE_ROUTING },
     ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
   }, opts.timeoutMs ?? 90_000);
   return {
@@ -122,6 +131,7 @@ export async function chatText(opts: {
       { role: 'system', content: opts.system },
       { role: 'user', content: opts.user },
     ],
+    provider: PRIVATE_ROUTING,
     ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
     ...(opts.maxTokens !== undefined ? { max_tokens: opts.maxTokens } : {}),
   }, opts.timeoutMs ?? 30_000);
