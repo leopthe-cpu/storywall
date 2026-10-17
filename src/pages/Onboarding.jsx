@@ -10,6 +10,7 @@ import ProfilePhotoEditor from '@/components/profile/ProfilePhotoEditor';
 import { ProfileHeroCard, ProfileInfo } from '@/components/profile/ProfileHeader';
 import { ImagePanel, PreviewPanel } from '@/components/signup/SidePanel';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import PageLoader from '@/components/ui/PageLoader';
 import useDocumentTitle from '@/lib/useDocumentTitle';
 
 // Desktop side-panel caption per step. Step 1 shows a photo; steps 2–5 show a
@@ -276,13 +277,7 @@ export default function Onboarding() {
     if (step > 1 && checkState === 'taken') setStep(1);
   }, [step, checkState]);
 
-  if (!authChecked) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-[#F4F2EC]">
-        <PixelSpinner size={24} />
-      </div>
-    );
-  }
+  if (!authChecked) return <PageLoader />;
 
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
 

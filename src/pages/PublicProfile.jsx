@@ -20,7 +20,7 @@ import PrivateProfileState from '@/components/profile/PrivateProfileState';
 import NotFoundProfileState from '@/components/profile/NotFoundProfileState';
 import LazyMount from '@/components/profile/LazyMount';
 import { ProfileHeroCard, ProfileInfo } from '@/components/profile/ProfileHeader';
-import PixelSpinner from '@/components/ui/PixelSpinner';
+import PageLoader from '@/components/ui/PageLoader';
 import useDocumentTitle from '@/lib/useDocumentTitle';
 
 // Desktop story-card width matches the desktop profile-picture column width
@@ -282,13 +282,7 @@ export default function PublicProfile() {
     />
   ) : null;
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F4F2EC]">
-        <PixelSpinner size={24} />
-      </div>
-    );
-  }
+  if (loading) return <PageLoader />;
 
   if (profileStatus === 'not_found') {
     return <NotFoundProfileState username={username} />;
