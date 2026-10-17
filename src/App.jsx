@@ -41,7 +41,7 @@ function RequireAuth({ element }) {
   }, []);
 
   // PageLoader shows its own "Taking a while…" + Retry after 10 s.
-  if (status === 'loading') return <PageLoader background="#FFFFFF" />;
+  if (status === 'loading') return <PageLoader />;
   if (status === 'unauthed') return <Navigate to="/signin" state={{ from: location.pathname }} replace />;
   if (status === 'needs_onboarding') return <Navigate to="/onboarding" replace />;
   return element;
