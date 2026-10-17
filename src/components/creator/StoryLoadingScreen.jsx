@@ -84,7 +84,8 @@ function useRotatingLine(lines) {
   return lines[index % lines.length];
 }
 
-export default function StoryLoadingScreen({ ceiling, tau, lines, onBack, children }) {
+// `footer` floats at the bottom of the screen (Generate's "Sit back" card).
+export default function StoryLoadingScreen({ ceiling, tau, lines, onBack, footer }) {
   const pct = useEasedProgress(ceiling, tau);
   const line = useRotatingLine(lines);
 
@@ -124,8 +125,12 @@ export default function StoryLoadingScreen({ ceiling, tau, lines, onBack, childr
             </motion.div>
           </AnimatePresence>
         </div>
-        {children}
       </div>
+      {footer && (
+        <div className="absolute inset-x-0 bottom-0 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] flex justify-center">
+          {footer}
+        </div>
+      )}
     </motion.div>
   );
 }
