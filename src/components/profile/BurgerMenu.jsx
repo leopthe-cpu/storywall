@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
-import { X, LogOut, Archive } from '@/components/icons';
+import { X, LogOut, Archive, Download } from '@/components/icons';
 import { getMe, signOut, filterPosts, updateMe } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
 import EditableUsername from '@/components/profile/EditableUsername';
 import ArchivesModal from '@/components/profile/ArchivesModal';
+import BusyLabel from '@/components/ui/BusyLabel';
+import { downloadMyData } from '@/lib/dataExport';
 
 export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -27,6 +29,21 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
       }
     }).catch(() => {});
   }, []);
+
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+  const handleDownloadData = async () => {
+    setExporting(true);
+    setExportError('');
+    try {
+      await downloadMyData();
+    } catch (e) {
+      console.error('[BurgerMenu] data export failed:', e);
+      setExportError("Couldn't prepare your data. Check your connection and try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleTogglePrivacy = async () => {
     if (isPrivate === null) return;
@@ -144,6 +161,23 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
                 )}
               </button>
             </div>
+            <button
+              onClick={handleDownloadData}
+              disabled={exporting}
+              aria-busy={exporting}
+              className="w-full flex items-center justify-between py-2 group disabled:opacity-60"
+            >
+              <div className="flex items-center gap-2.5 text-left">
+                <Download size={16} className="text-gray-400 group-hover:text-gray-600 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    <BusyLabel busy={exporting} label="Preparing…" tone="dark" size={12}>Download my data</BusyLabel>
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">Your profile and stories as a file</p>
+                </div>
+              </div>
+            </button>
+            {exportError && <p className="text-xs text-red-600 mt-1">{exportError}</p>}
           </div>
 
           {/* Appearance — gated behind ENABLE_DARK_MODE feature flag */}
