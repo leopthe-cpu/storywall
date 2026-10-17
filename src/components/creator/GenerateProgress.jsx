@@ -1,4 +1,4 @@
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import StoryLoadingScreen, { SHARED_LINES, stepCeiling } from '@/components/creator/StoryLoadingScreen';
 
 // Progress overlay shown while a Generate run goes. The steps come from the
@@ -16,11 +16,43 @@ function ceilingOf(completed, total) {
   return { ceiling: stepCeiling(completed - 1, total - 1, 50, 95), tau: 3000 };
 }
 
-export default function GenerateProgress({ visible, completedSteps, totalSteps }) {
+// "Sit back" card (roadmap A, Oz 2026-10-16), styled like the floating bar
+// on the "already signed in" screen. Only shown when onLeave is set: the run
+// is a server job, so leaving is safe and the story waits in Drafts (the
+// "ready" toast also tells the user when it's done).
+function SitBackCard({ onLeave }) {
+  return (
+    <motion.div
+      className="w-full max-w-sm bg-[#FAF9F5]/95 backdrop-blur rounded-2xl p-4 shadow-2xl"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.6, duration: 0.3 }}
+    >
+      <p className="text-[15px] font-semibold text-[#262624]">Sit back, we&apos;ll finish this for you.</p>
+      <p className="text-sm text-[#6B6964] mt-1">You can leave: your story will be waiting in Drafts in the builder.</p>
+      <button
+        type="button"
+        onClick={onLeave}
+        className="mt-3 w-full h-11 rounded-xl bg-[#262624] text-[#F4F2EC] text-sm font-semibold active:scale-[0.98] transition-all"
+      >
+        Go to my wall
+      </button>
+    </motion.div>
+  );
+}
+
+export default function GenerateProgress({ visible, completedSteps, totalSteps, onLeave }) {
   const { ceiling, tau } = ceilingOf(completedSteps, totalSteps);
   return (
     <AnimatePresence>
-      {visible && <StoryLoadingScreen ceiling={ceiling} tau={tau} lines={SHARED_LINES} />}
+      {visible && (
+        <StoryLoadingScreen
+          ceiling={ceiling}
+          tau={tau}
+          lines={SHARED_LINES}
+          footer={onLeave ? <SitBackCard onLeave={onLeave} /> : null}
+        />
+      )}
     </AnimatePresence>
   );
 }

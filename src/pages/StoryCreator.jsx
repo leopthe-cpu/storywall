@@ -1133,10 +1133,16 @@ export default function StoryCreator() {
     return () => { mountedRef.current = false; };
   }, []);
 
+  // True once a Generate run is a server job, which keeps going (and lands
+  // in Drafts) if the user leaves. "Edits only" and the fallback pipeline
+  // run in this tab, so they don't offer leaving.
+  const [genCanLeave, setGenCanLeave] = useState(false);
+
   const handleGenerate = async (editMode = 'full') => {
     if (!rawNotes.trim()) return;
     setGeneratePhase('generating');
     setGenProgress({ completedSteps: 0, totalSteps: 1, label: 'Starting…' });
+    setGenCanLeave(false);
     try {
       // A full run goes through the server job (src/lib/generateJob.js), so
       // leaving the page doesn't lose it. It writes into this story's draft:
@@ -1151,7 +1157,9 @@ export default function StoryCreator() {
           text: rawNotes,
           attachments,
           postId: draftIdRef.current,
-          onProgress: (p) => setGenProgress(p),
+          // Progress only arrives once the server job exists; from then on
+          // leaving is safe, so the "Sit back" card can say so.
+          onProgress: (p) => { setGenProgress(p); setGenCanLeave(true); },
           // Leaving the builder stops following; the run continues on the
           // server, then the "ready" toast and Drafts take over.
           isActive: () => mountedRef.current,
@@ -1488,6 +1496,7 @@ export default function StoryCreator() {
         visible={generatePhase === 'generating'}
         completedSteps={genProgress.completedSteps}
         totalSteps={genProgress.totalSteps}
+        onLeave={genCanLeave ? navigateToProfile : null}
       />
 
       {showRegenerateChoice &&
