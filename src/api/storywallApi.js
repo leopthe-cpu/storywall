@@ -272,6 +272,12 @@ export async function exportMyData() {
   };
 }
 
+// Deletes the signed-in user's account, files and data for good (the
+// deleteAccount function). `confirm` is the username typed back.
+export async function deleteMyAccount(confirm) {
+  await invokeFunction('deleteAccount', { confirm });
+}
+
 // ---------- Onboarding drafts (owner-only)
 
 export async function listOnboardingDrafts() {

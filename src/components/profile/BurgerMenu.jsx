@@ -7,6 +7,7 @@ import EditableUsername from '@/components/profile/EditableUsername';
 import ArchivesModal from '@/components/profile/ArchivesModal';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { downloadMyData } from '@/lib/dataExport';
+import DeleteAccountSheet from '@/components/profile/DeleteAccountSheet';
 
 export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -30,6 +31,7 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
     }).catch(() => {});
   }, []);
 
+  const [showDelete, setShowDelete] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState('');
   const handleDownloadData = async () => {
@@ -178,6 +180,12 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
               </div>
             </button>
             {exportError && <p className="text-xs text-red-600 mt-1">{exportError}</p>}
+            <button
+              onClick={() => setShowDelete(true)}
+              className="w-full text-left py-2 text-sm font-medium text-red-600 hover:text-red-700"
+            >
+              Delete my account
+            </button>
           </div>
 
           {/* Appearance — gated behind ENABLE_DARK_MODE feature flag */}
@@ -214,6 +222,14 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
 
       {showArchives && (
         <ArchivesModal onClose={() => setShowArchives(false)} onRestored={onArchivesChanged} />
+      )}
+
+      {showDelete && (
+        <DeleteAccountSheet
+          username={currentUser?.username || user?.username}
+          onClose={() => setShowDelete(false)}
+          onDownload={handleDownloadData}
+        />
       )}
     </div>
   );

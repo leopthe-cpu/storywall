@@ -447,3 +447,6 @@ verify_jwt = true
 
 [functions.suggestSkills]
 verify_jwt = true
+
+[functions.deleteAccount]
+verify_jwt = true
