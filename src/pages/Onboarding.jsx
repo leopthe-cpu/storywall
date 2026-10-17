@@ -12,6 +12,7 @@ import { ImagePanel, PreviewPanel } from '@/components/signup/SidePanel';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 import PageLoader from '@/components/ui/PageLoader';
 import useDocumentTitle from '@/lib/useDocumentTitle';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 // Desktop side-panel caption per step. Step 1 shows a photo; steps 2–5 show a
 // live preview of the profile being built.
@@ -400,7 +401,7 @@ export default function Onboarding() {
                 disabled={saving || (step === 1 && !canContinueStep1)}
                 className="w-full bg-[#262624] text-[#F4F2EC] py-4 rounded-2xl font-semibold text-base disabled:opacity-50 hover:bg-[#30302E] active:scale-[0.98] transition-all"
               >
-                {saving ? 'Saving...' : step === TOTAL_STEPS ? 'Finish Wall' : 'Continue'}
+                <BusyLabel busy={saving} label="Saving…">{step === TOTAL_STEPS ? 'Finish Wall' : 'Continue'}</BusyLabel>
               </button>
               {isSkippable && step < TOTAL_STEPS && (
                 <button onClick={handleSkip} className="text-center text-sm text-[#8A877F] hover:text-[#3A3935] transition-colors py-1">
