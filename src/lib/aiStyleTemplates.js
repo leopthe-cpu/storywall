@@ -10,6 +10,7 @@
 // Layout comes from cardLayout.js: real text measurement, one type scale per
 // story, and a small set of card layouts (cover, photo, statement, text).
 
+import { contrastRatio } from '@/lib/colorContrast';
 import {
   BODY_SIZES, CARD, CONTENT_WIDTH, LINE_HEIGHT, MARGIN, SCALE,
   loadStyleFonts, measureBox, splitSentences, wrapText,
@@ -263,11 +264,11 @@ function stack(cardId, tpl, tokens, top, header, body, headerSize, bodySize, gap
   const { h, b } = blockHeights(tpl, header, body, headerSize, bodySize, gap, width, bodyAt);
   if (header) {
     els.push(textElement(`${cardId}-title`, header, top, h, headerSize, tpl.displayFont,
-      'header', tokens.ink.id, tpl.ink, 1000, headerLineHeight(headerSize, bodySize), width));
+      'header', tokens.ink.id, tokens.ink.color, 1000, headerLineHeight(headerSize, bodySize), width));
   }
   if (body) {
     els.push(textElement(`${cardId}-subtitle`, body, top + (h ? h + gap : 0), b, bodyAt, tpl.bodyFont,
-      'body', tokens.ink.id, tpl.ink, 1001, bodyLineHeight(bodyAt, bodySize), width));
+      'body', tokens.ink.id, tokens.ink.color, 1001, bodyLineHeight(bodyAt, bodySize), width));
   }
   return els;
 }
@@ -296,6 +297,34 @@ function centredStack(cardId, tpl, tokens, header, body, headerSize, bodySize, g
   return stack(cardId, tpl, tokens, centredTop(total), header, body, headerSize, bodySize, gap, width, bodyAt);
 }
 
+// ── Colour variation across cards ──
+//
+// Oz, 2026-10-16 (docs/generate-roadmap.md, A3): a story where every card has
+// the same background looks flat. Each style's three colours now take turns:
+//   - base:    Background colour behind Text colour (the style's usual look)
+//   - inverse: the two swapped (Text colour behind Background colour)
+//   - accent:  Accent colour behind whichever of the two reads better on it
+// The cover and photo cards stay on base (the cover's scrim is in the base
+// colour, and pictures sit best on it). Text cards alternate with the card
+// before them, so two text cards in a row never look the same; short
+// statements take the accent. A card that continues the text of the one
+// before keeps its colours, so the two read as one.
+// Only the three existing tokens are used, swapped per card, so editing
+// the Card Theme still recolours the whole story.
+
+const MIN_ACCENT_CONTRAST = 4.5; // WCAG AA for normal-size text
+
+function cardSchemes(tokens) {
+  const { dominant, ink, accent } = tokens;
+  const onAccent = contrastRatio(accent.color, dominant.color) >= contrastRatio(accent.color, ink.color) ? dominant : ink;
+  return {
+    base: { bg: dominant, text: ink },
+    inverse: { bg: ink, text: dominant },
+    // A style whose accent can't carry readable text never uses accent cards.
+    accent: contrastRatio(accent.color, onAccent.color) >= MIN_ACCENT_CONTRAST ? { bg: accent, text: onAccent } : null,
+  };
+}
+
 // Builds card objects from structured AI data + a style template.
 // Each structured card has: { text (header), subtitle (body), needsImage,
 // imagePrompt, imageUrl?, imageType?, aiGenerated?, imageGenerationFailed? }.
@@ -322,13 +351,27 @@ export async function buildAICards(structuredCards, styleTemplate) {
   const textCardSizes = (header, body) => stepUp(tpl, s, (z) =>
     blockHeights(tpl, header, body, z.header, s.body, z.gap, CONTENT_WIDTH, z.body).total <= AVAILABLE * TEXT_FILL);
 
+  const schemes = cardSchemes(tokens);
+  // The colours of the card being built (see cardSchemes), and the tokens
+  // its text uses: `ink` is whichever token is the text colour on this card.
+  let scheme = schemes.base;
+  let prevKind = null;
+  const use = (kind) => {
+    scheme = schemes[kind] || schemes.base;
+    prevKind = kind;
+    return { ...tokens, ink: scheme.text };
+  };
+  // Text cards alternate with the card before them; statements take the accent.
+  const textKind = () => (prevKind === 'base' ? 'inverse' : 'base');
+  const statementKind = () => (schemes.accent && prevKind !== 'accent' ? 'accent' : textKind());
+
   const cards = [];
   const newCard = (src, extra = {}) => {
     const id = `ai-${tpl.id}-${cards.length}-${ts}-${Math.random().toString(36).slice(2)}`;
     return {
       id,
-      background_color: tpl.dominant,
-      background_token: tokens.dominant.id,
+      background_color: scheme.bg.color,
+      background_token: scheme.bg.id,
       elements: [],
       backgroundImageId: undefined,
       photoTreatment: 'inset',
@@ -338,13 +381,14 @@ export async function buildAICards(structuredCards, styleTemplate) {
     };
   };
   // Text that didn't fit continues on a plain text card right after.
-  const pushContinuation = (src, overflow) => {
+  // It keeps the colours of the card it continues.
+  const pushContinuation = (src, overflow, ct) => {
     let rest = overflow;
     while (rest) {
       const card = newCard({}, { imageGenerationFailed: false, imagePrompt: '' });
       const [kept, more] = splitToFit(tpl, '', rest, s.header, s.body, s.gap, AVAILABLE);
       const z = textCardSizes('', kept);
-      card.elements = centredStack(card.id, tpl, tokens, '', kept, z.header, s.body, z.gap, z.body);
+      card.elements = centredStack(card.id, tpl, ct, '', kept, z.header, s.body, z.gap, z.body);
       cards.push(card);
       rest = more;
     }
@@ -368,6 +412,7 @@ export async function buildAICards(structuredCards, styleTemplate) {
     });
 
     if (p.kind === 'cover') {
+      const ct = use('base');
       const card = newCard(src, { photoTreatment: hasImage ? 'full-bleed' : 'inset' });
       const { total } = blockHeights(tpl, p.header, p.body, s.cover, s.body, s.gap);
       if (hasImage) {
@@ -381,12 +426,13 @@ export async function buildAICards(structuredCards, styleTemplate) {
         card.backgroundImageId = img.id;
       }
       const top = hasImage ? CARD - MARGIN - total : MARGIN + (AVAILABLE - total) * 0.55;
-      card.elements.push(...stack(card.id, tpl, tokens, top, p.header, p.body, s.cover, s.body, s.gap));
+      card.elements.push(...stack(card.id, tpl, ct, top, p.header, p.body, s.cover, s.body, s.gap));
       cards.push(card);
       continue;
     }
 
     if (p.kind === 'photo') {
+      const ct = use('base');
       const card = newCard(src);
       // Shrink the picture (never below MIN_PHOTO_HEIGHT) before moving text away.
       const textRoomAt = (photoH) => CARD - MARGIN - (MARGIN + photoH + PHOTO_GAP);
@@ -403,7 +449,7 @@ export async function buildAICards(structuredCards, styleTemplate) {
           card.elements.push(img);
           card.backgroundImageId = img.id;
         }
-        card.elements.push(...stack(card.id, tpl, tokens, MARGIN + PHOTO_HEIGHT + PHOTO_GAP, p.header, p.body,
+        card.elements.push(...stack(card.id, tpl, ct, MARGIN + PHOTO_HEIGHT + PHOTO_GAP, p.header, p.body,
           z.header, s.body, z.gap, CONTENT_WIDTH, z.body));
         cards.push(card);
         continue;
@@ -437,20 +483,22 @@ export async function buildAICards(structuredCards, styleTemplate) {
         card.elements.push(img);
         card.backgroundImageId = img.id;
       }
-      card.elements.push(...stack(card.id, tpl, tokens, photoTop + photoH + PHOTO_GAP, p.header, body, s.header, s.body, s.gap));
+      card.elements.push(...stack(card.id, tpl, ct, photoTop + photoH + PHOTO_GAP, p.header, body, s.header, s.body, s.gap));
       cards.push(card);
-      pushContinuation(src, overflow);
+      pushContinuation(src, overflow, ct);
       continue;
     }
 
     if (p.kind === 'statement') {
+      const ct = use(statementKind());
       const card = newCard(src);
-      card.elements.push(...centredStack(card.id, tpl, tokens, p.header, '', s.statement, s.body, s.gap));
+      card.elements.push(...centredStack(card.id, tpl, ct, p.header, '', s.statement, s.body, s.gap));
       cards.push(card);
       continue;
     }
 
     // Text card.
+    const ct = use(textKind());
     const card = newCard(src);
     let [body, overflow] = [p.body, ''];
     if (blockHeights(tpl, p.header, p.body, s.header, s.body, s.gap).total > AVAILABLE) {
@@ -458,9 +506,9 @@ export async function buildAICards(structuredCards, styleTemplate) {
     }
     // Larger text when the card has room for it (see SIZE_STEPS).
     const z = textCardSizes(p.header, body);
-    card.elements.push(...centredStack(card.id, tpl, tokens, p.header, body, z.header, s.body, z.gap, z.body));
+    card.elements.push(...centredStack(card.id, tpl, ct, p.header, body, z.header, s.body, z.gap, z.body));
     cards.push(card);
-    pushContinuation(src, overflow);
+    pushContinuation(src, overflow, ct);
   }
 
   return { cards, tokens: [tokens.dominant, tokens.ink, tokens.accent] };
