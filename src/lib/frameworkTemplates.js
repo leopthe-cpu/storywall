@@ -27,7 +27,7 @@ export const FRAMEWORK_TEMPLATES = [
       { text: 'Why new users quit in week one' },
       {
         text: 'The situation',
-        subtitle: 'Half of our new sign-ups stopped using the app within seven days. Nobody knew why.',
+        subtitle: 'Half our new sign-ups quit within a week. Nobody knew why.',
         picture: true,
       },
       {
@@ -192,7 +192,7 @@ export const FRAMEWORK_TEMPLATES = [
       { text: 'Testing an idea in one week instead of six months' },
       {
         text: 'Build',
-        subtitle: 'Instead of building the full feature, we made a simple landing page with a sign-up button.',
+        subtitle: 'Instead of the full feature, we made one landing page with a sign-up button.',
         picture: true,
       },
       { text: 'Measure', subtitle: 'We sent it to 2,000 customers. 340 clicked sign up, far more than the 50 we needed to go ahead.' },

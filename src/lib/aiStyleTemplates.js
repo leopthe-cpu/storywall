@@ -204,7 +204,8 @@ const AVAILABLE = CARD - 2 * MARGIN;
 // with the body (never past the statement size), so a story still uses only
 // a handful of sizes and the look stays consistent.
 const SIZE_STEPS = [1.6, 1.4, 1.2];
-const TEXT_FILL = 0.8;
+// 0.85 (was 0.8, Oz 2026-10-17: slightly bigger text).
+const TEXT_FILL = 0.85;
 
 function sizesFor(tpl, body) {
   const d = tpl.displayScale || 1;

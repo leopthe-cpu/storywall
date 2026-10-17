@@ -20,7 +20,10 @@ const BOX_PADDING = 2; // CardThumb/DraggableElement pad text boxes by 2px
 // steps above the body, so a story never has more than a few sizes. Body text
 // doesn't go below 16: a card with more text than fits continues on the next
 // card (whole sentences) instead of making the whole story smaller.
-export const BODY_SIZES = [18, 17, 16];
+// Starts at 19 (was 18; Oz 2026-10-17: text could be slightly bigger). The
+// floor stays 16: a 17 floor pushed templates and dense stories onto extra
+// cards in the card lab.
+export const BODY_SIZES = [19, 18, 17, 16];
 export const SCALE = {
   header: 1.5,
   statement: 1.9,
