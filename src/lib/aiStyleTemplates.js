@@ -28,9 +28,12 @@ export const AI_STYLE_TEMPLATES = [
     bodyFont: { family: 'Source Sans 3', weight: '400' },
     // Visual size of the display face relative to the others at the same px.
     displayScale: 1,
-    dominant: '#13231D',
-    ink: '#EFEBE2',
-    accent: '#E2A84B',
+    // Brighter than the first version (Oz 2026-10-17: the dark green and
+    // the brown/orange read as dead). Every pair clears AA contrast: text
+    // 7.2:1, accent card 5.0:1.
+    dominant: '#0F5C4A',
+    ink: '#FFF3DC',
+    accent: '#FFC53D',
   },
   {
     id: 'poster',
@@ -50,9 +53,11 @@ export const AI_STYLE_TEMPLATES = [
     displayFont: { family: 'Barlow Condensed', weight: '700', uppercase: true },
     bodyFont: { family: 'Barlow', weight: '400' },
     displayScale: 1.12,
-    dominant: '#1C1E22',
-    ink: '#F2F2EF',
-    accent: '#FF7A45',
+    // Deep indigo and tangerine instead of charcoal and a dull orange
+    // (Oz 2026-10-17). Text 14.2:1, accent card 5.5:1.
+    dominant: '#1D1F4E',
+    ink: '#F7F5EF',
+    accent: '#FF6B3D',
   },
 ];
 
