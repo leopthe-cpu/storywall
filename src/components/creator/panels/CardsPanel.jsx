@@ -9,7 +9,8 @@ import { templatesEnabled, SHOW_TEMPLATES_AND_STYLES } from '@/lib/featureFlags'
 import { PICKER_TEMPLATES } from '@/lib/storyTemplates';
 import TemplateRow from '@/components/creator/TemplateRow';
 import LazyMount from '@/components/profile/LazyMount';
-import PixelSpinner from '@/components/ui/PixelSpinner';
+import SectionLoader from '@/components/ui/SectionLoader';
+import { withTimeout } from '@/lib/imageOptimize';
 import { attachJobsToDrafts } from '@/lib/generateJob';
 
 // Drafts tab shows only the most recently-updated drafts rather than every
@@ -19,6 +20,7 @@ import { attachJobsToDrafts } from '@/lib/generateJob';
 // this panel is for (resuming recent work), so capping here costs nothing
 // functionally.
 const RECENT_DRAFTS_LIMIT = 10;
+const LOAD_TIMEOUT_MS = 15000;
 
 // Template rows are lazy-mounted the same way the public profile feed is:
 // today there are only a couple of templates so this is a no-op in
@@ -58,19 +60,25 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
   }, [galleryResetToken]);
   const [drafts, setDrafts] = useState([]);
   const [loadingDrafts, setLoadingDrafts] = useState(false);
+  const [draftsError, setDraftsError] = useState(false);
   const [confirmDeleteDraftId, setConfirmDeleteDraftId] = useState(null);
   const [reorderMode, setReorderMode] = useState(false);
 
   // `quiet`: refresh without the loading spinner (used while a Generate run
   // is still formatting a draft, so its row turns into the story when done).
   const loadDrafts = async ({ quiet = false } = {}) => {
-    if (!quiet) setLoadingDrafts(true);
+    if (!quiet) { setLoadingDrafts(true); setDraftsError(false); }
     try {
-      const user = await getMe();
-      const results = await filterPosts({ author_id: user.id, status: 'draft' }, '-updated_at', RECENT_DRAFTS_LIMIT);
+      // A stalled request shows "Try again" instead of spinning forever.
+      const results = await withTimeout((async () => {
+        const user = await getMe();
+        return filterPosts({ author_id: user.id, status: 'draft' }, '-updated_at', RECENT_DRAFTS_LIMIT);
+      })(), LOAD_TIMEOUT_MS);
       setDrafts(await attachJobsToDrafts(results));
     } catch (e) {
       console.error(e);
+      // A failed quiet refresh keeps the list on screen as it was.
+      if (!quiet) setDraftsError(true);
     } finally {
       if (!quiet) setLoadingDrafts(false);
     }
@@ -232,10 +240,8 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
       {/* DRAFTS tab */}
       {tab === 'Drafts' && (
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3">
-          {loadingDrafts ? (
-            <div className="flex justify-center py-8">
-              <PixelSpinner size={20} tone="light" />
-            </div>
+          {loadingDrafts || draftsError ? (
+            <SectionLoader tone="light" error={!loadingDrafts && draftsError} onRetry={() => loadDrafts()} />
           ) : drafts.length === 0 ? (
             <div className="py-8 text-center">
               <p className="text-white/30 text-xs leading-relaxed">No drafts yet. Stories you save as drafts will appear here.</p>
