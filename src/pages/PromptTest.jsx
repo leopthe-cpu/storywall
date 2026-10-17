@@ -51,7 +51,7 @@ export default function PromptTest() {
     }
   };
 
-  if (authed === null) return <PageLoader background="#FFFFFF" />;
+  if (authed === null) return <PageLoader background="#FFFFFF" grid={false} />;
 
   if (authed === false) {
     return (
