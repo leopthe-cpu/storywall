@@ -2,11 +2,29 @@ import { useMemo, useState, useRef, useEffect } from 'react';
 import CardThumb from '@/components/creator/CardThumb';
 import MiniatureStrip from '@/components/creator/MiniatureStrip';
 import { buildTemplateCards } from '@/lib/storyTemplates';
+import { buildFrameworkTemplate, isFrameworkTemplate } from '@/lib/frameworkTemplates';
 import { ChevronLeft, ChevronRight } from '@/components/icons';
 
 const THUMB_SIZE = 28;
 const GAP = 4;
 const STEP = THUMB_SIZE + GAP;
+
+// The cards a template row previews. Framework templates are laid out by the
+// generated-story engine, which waits for fonts, so they arrive a moment later.
+function useTemplateCards(template) {
+  const framework = isFrameworkTemplate(template);
+  const plain = useMemo(() => (framework ? [] : buildTemplateCards(template, true)), [template.id, framework]);
+  const [laidOut, setLaidOut] = useState([]);
+  useEffect(() => {
+    if (!framework) return undefined;
+    let alive = true;
+    buildFrameworkTemplate(template)
+      .then(({ cards }) => { if (alive) setLaidOut(cards); })
+      .catch((e) => console.error('[TemplateRow] template layout failed:', e));
+    return () => { alive = false; };
+  }, [template.id, framework]);
+  return framework ? laidOut : plain;
+}
 
 // A single template row in the Templates list.
 // The cover thumbnail (left) is always the template's first card.
@@ -15,7 +33,7 @@ const STEP = THUMB_SIZE + GAP;
 // Both actions autosave the current story first.
 export default function TemplateRow({ template, onApply, appliedTemplateId, currentCardIndex }) {
   const isApplied = appliedTemplateId === template.id;
-  const templateCards = useMemo(() => buildTemplateCards(template, true), [template.id]);
+  const templateCards = useTemplateCards(template);
   const coverCard = templateCards[0];
 
   const [offset, setOffset] = useState(0);
@@ -50,7 +68,7 @@ export default function TemplateRow({ template, onApply, appliedTemplateId, curr
     >
       {/* Cover thumbnail — always the first card, fixed */}
       <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 border border-white/10">
-        <CardThumb card={coverCard} displaySize={56} />
+        {coverCard ? <CardThumb card={coverCard} displaySize={56} /> : <div className="w-full h-full bg-white/5" />}
       </div>
 
       {/* Name + miniature strip with position indicator + pagination arrows.
