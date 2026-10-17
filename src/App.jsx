@@ -18,7 +18,7 @@ import ResetPassword from '@/pages/ResetPassword';
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { getMe } from '@/api/storywallApi';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import PixelSpinner from '@/components/ui/PixelSpinner';
+import PageLoader from '@/components/ui/PageLoader';
 import GenerationWatcher from '@/components/GenerationWatcher';
 
 // Card lab: development-only page for checking generated card layouts. The
@@ -31,27 +31,17 @@ function RequireAuth({ element }) {
   const [status, setStatus] = useState('loading');
 
   useEffect(() => {
-    let done = false;
-    const t = setTimeout(() => { if (!done) setStatus('timeout'); }, 10000);
     getMe()
       .then(user => {
-        done = true; clearTimeout(t);
         if (!user) { setStatus('unauthed'); return; }
         if (!user.username) { setStatus('needs_onboarding'); return; }
         setStatus('ok');
       })
-      .catch(() => { done = true; clearTimeout(t); setStatus('unauthed'); });
-    return () => clearTimeout(t);
+      .catch(() => setStatus('unauthed'));
   }, []);
 
-  if (status === 'loading') {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white">
-        <PixelSpinner size={24} />
-      </div>
-    );
-  }
-  if (status === 'timeout') return <LoadingTimeout />;
+  // PageLoader shows its own "Taking a while…" + Retry after 10 s.
+  if (status === 'loading') return <PageLoader background="#FFFFFF" />;
   if (status === 'unauthed') return <Navigate to="/signin" state={{ from: location.pathname }} replace />;
   if (status === 'needs_onboarding') return <Navigate to="/onboarding" replace />;
   return element;

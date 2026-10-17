@@ -6,6 +6,7 @@ import { ImagePanel } from '@/components/signup/SidePanel';
 import { AuthColumn, AuthInput, AuthButton, VerifyCodeForm, FullBleedAuthScreen, authErrorMessage, finishAuth } from '@/components/auth/AuthShared';
 import { LogOut } from 'lucide-react';
 import useDocumentTitle from '@/lib/useDocumentTitle';
+import PageLoader from '@/components/ui/PageLoader';
 
 // /signup — the single entry point for "Claim your wall" (homepage field,
 // username pre-filled via ?username=) and the nav's "Get started" link (no
@@ -64,7 +65,7 @@ export default function SignUp() {
   };
 
   if (isLoadingAuth) {
-    return <div className="fixed inset-0 bg-[#F4F2EC]" />;
+    return <PageLoader />;
   }
 
   if (!isAuthenticated) {
