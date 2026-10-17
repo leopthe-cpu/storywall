@@ -59,7 +59,89 @@ export const AI_STYLE_TEMPLATES = [
     ink: '#F7F5EF',
     accent: '#FF6B3D',
   },
+  // Font variations (Oz 2026-10-17: "more font variations"). The
+  // structuring call still answers with one of the three styles above (its
+  // mood); pickStyleVariant then picks one package of that mood per story,
+  // so the server prompt didn't have to change. Each brings its own colours
+  // (all pairs clear AA contrast) and only uses fonts the app already loads
+  // (src/index.css).
+  {
+    id: 'field-notes-serif',
+    mood: 'field-notes',
+    name: 'Field notes serif',
+    grade: 'warm',
+    displayFont: { family: 'Playfair Display', weight: '700' },
+    bodyFont: { family: 'Inter', weight: '400' },
+    displayScale: 1.02,
+    // Berry, blush cream, soft coral. Text 9.1:1, accent card 5.9:1.
+    dominant: '#7A1F3D',
+    ink: '#FFF1E6',
+    accent: '#FFB4A2',
+  },
+  {
+    id: 'poster-block',
+    mood: 'poster',
+    name: 'Poster block',
+    grade: 'cool',
+    displayFont: { family: 'Archivo Black', weight: '400' },
+    bodyFont: { family: 'Inter', weight: '400' },
+    // Archivo Black is very wide: a little smaller looks the same size.
+    displayScale: 0.92,
+    // Lemon, near-black, hot pink. Text 14.2:1, accent card 6.3:1.
+    dominant: '#FFE14D',
+    ink: '#141414',
+    accent: '#FF5C93',
+  },
+  {
+    id: 'poster-tall',
+    mood: 'poster',
+    name: 'Poster tall',
+    grade: 'cool',
+    // (Syne was tried first: its letters are taller than the layout
+    // measures, so lines overlapped in the card lab.)
+    displayFont: { family: 'Bebas Neue', weight: '400' },
+    bodyFont: { family: 'IBM Plex Serif', weight: '400' },
+    displayScale: 1.15,
+    // Paper, deep plum, violet. Text 14.8:1, accent card 5.2:1.
+    dominant: '#F7F0E6',
+    ink: '#24163A',
+    accent: '#6C3CF0',
+  },
+  {
+    id: 'condensed-grotesk',
+    mood: 'condensed',
+    name: 'Grotesk',
+    grade: 'neutral',
+    displayFont: { family: 'Space Grotesk', weight: '700' },
+    bodyFont: { family: 'Inter', weight: '400' },
+    displayScale: 1,
+    // Cobalt, ice white, mint. Text 9.4:1, accent card 6.0:1.
+    dominant: '#0B3D91',
+    ink: '#F4F7FF',
+    accent: '#38E0B5',
+  },
 ];
+
+// The packages of each mood (see the variations above).
+const STYLE_VARIANTS = AI_STYLE_TEMPLATES.reduce((acc, t) => {
+  const mood = t.mood || t.id;
+  (acc[mood] = acc[mood] || []).push(t.id);
+  return acc;
+}, {});
+
+// Picks the package for a story from the style the structuring call chose.
+// The same seed (the job id, or the notes) always gives the same package,
+// so a story laid out twice (Drafts preview, then opening it) looks the
+// same both times. An id that's already a package (re-running "edits only"
+// on a story) is kept.
+export function pickStyleVariant(styleId, seed) {
+  const mood = LEGACY_TEMPLATE_IDS[styleId] || styleId;
+  const list = STYLE_VARIANTS[mood];
+  if (!list || !AI_STYLE_TEMPLATES.some((t) => t.id === mood && !t.mood)) return styleId;
+  let h = 0;
+  for (const ch of String(seed || '')) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+  return list[h % list.length];
+}
 
 // Stories generated before the redesign name one of the old four templates
 // (the structuring prompt now asks for field-notes, poster or condensed);

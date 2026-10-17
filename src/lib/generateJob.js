@@ -1,6 +1,6 @@
 import { invokeFunction, updatePost } from '@/api/storywallApi';
 import { getSupabase } from '@/api/supabaseClient';
-import { buildAICards } from '@/lib/aiStyleTemplates';
+import { buildAICards, pickStyleVariant } from '@/lib/aiStyleTemplates';
 import { markMissingPictures, placeAttachments } from '@/lib/generatePipeline';
 
 // Generate as a server job, step 4 (docs/performance-plan.md, part A): the
@@ -132,12 +132,13 @@ export async function assembleJob(job) {
     }
   }
   markMissingPictures(cards);
-  const { cards: assembledCards, tokens } = await buildAICards(cards, structured.styleTemplate);
+  const styleTemplate = pickStyleVariant(structured.styleTemplate, job.id);
+  const { cards: assembledCards, tokens } = await buildAICards(cards, styleTemplate);
   return {
     cards: assembledCards,
     tokens,
     framework: structured.framework,
-    styleTemplate: structured.styleTemplate,
+    styleTemplate,
   };
 }
 

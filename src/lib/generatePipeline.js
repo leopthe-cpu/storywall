@@ -1,6 +1,6 @@
 import { getMe, invokeFunction } from '@/api/storywallApi';
 import { registerMedia } from '@/lib/mediaLibrary';
-import { buildAICards } from '@/lib/aiStyleTemplates';
+import { buildAICards, pickStyleVariant } from '@/lib/aiStyleTemplates';
 
 // Backstop: scan non-cover card prompts for face/person-descriptive language.
 const FACE_KEYWORDS = /\b(face|faces|eye|eyes|smiling|smile|looking|looked|portrait|person|people|man|woman|boy|girl|character|expression|gaze|stare)\b/i;
@@ -194,7 +194,7 @@ export async function runGeneratePipeline({ text, attachments, onProgress, editM
   // Step 4: Assemble cards using the style template
   const styleTemplate = editMode === 'edits_only' && existingStyleTemplate
     ? existingStyleTemplate
-    : structured.styleTemplate;
+    : pickStyleVariant(structured.styleTemplate, text);
 
   const { cards: assembledCards, tokens } = await buildAICards(cards, styleTemplate);
 
