@@ -3,12 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { X, RotateCcw, Trash2 } from '@/components/icons';
 import { getMe, filterPosts, updatePost, deletePost, getPostForEditing } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
-import PixelSpinner from '@/components/ui/PixelSpinner';
+import SectionLoader from '@/components/ui/SectionLoader';
+import { withTimeout } from '@/lib/imageOptimize';
+
+const LOAD_TIMEOUT_MS = 15000;
 
 export default function ArchivesModal({ onClose, onRestored }) {
   const navigate = useNavigate();
   const [archives, setArchives] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [busyId, setBusyId] = useState(null);
 
@@ -18,16 +22,17 @@ export default function ArchivesModal({ onClose, onRestored }) {
 
   const loadArchives = async () => {
     setLoading(true);
+    setLoadError(false);
     try {
-      const user = await getMe();
-      const results = await filterPosts(
-        { author_id: user.id, status: 'archived' },
-        '-updated_at',
-        50
-      );
+      // A stalled request shows "Try again" instead of spinning forever.
+      const results = await withTimeout((async () => {
+        const user = await getMe();
+        return filterPosts({ author_id: user.id, status: 'archived' }, '-updated_at', 50);
+      })(), LOAD_TIMEOUT_MS);
       setArchives(results);
     } catch (e) {
       console.error('[ArchivesModal] load failed:', e);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -87,10 +92,8 @@ export default function ArchivesModal({ onClose, onRestored }) {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <PixelSpinner size={20} />
-            </div>
+          {loading || loadError ? (
+            <SectionLoader className="py-12" error={!loading && loadError} onRetry={loadArchives} />
           ) : archives.length === 0 ? (
             <div className="py-12 text-center">
               <p className="text-sm text-gray-400">No archived stories.</p>
