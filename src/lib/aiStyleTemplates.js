@@ -107,9 +107,16 @@ const STATEMENT_MAX_CHARS = 70;
 // A cover title must leave most of its picture visible.
 const COVER_MAX_TEXT_HEIGHT = Math.round((CARD - 2 * MARGIN) * 0.6);
 const AVAILABLE = CARD - 2 * MARGIN;
-// A short body-only card is set larger (see the text card in buildAICards)
-// only if it then fills at most about 60% of the space between the margins.
-const LEAD_MAX_HEIGHT = Math.round(AVAILABLE * 0.6);
+// Per-card text size (Oz, 2026-10-16: "some cards with not much text the
+// text just looks too small for the card"). The story's base size is set by
+// the card with the most text, so cards with less text used to look empty.
+// Each card now takes the largest of a few steps above the base size whose
+// text still fits comfortably: at most TEXT_FILL of the space between the
+// margins on a text card, or the room under a full-size picture. Titles grow
+// with the body (never past the statement size), so a story still uses only
+// a handful of sizes and the look stays consistent.
+const SIZE_STEPS = [1.6, 1.4, 1.2];
+const TEXT_FILL = 0.8;
 
 function sizesFor(tpl, body) {
   const d = tpl.displayScale || 1;
@@ -265,6 +272,22 @@ function stack(cardId, tpl, tokens, top, header, body, headerSize, bodySize, gap
   return els;
 }
 
+// Largest size step at which `fits(sizes)` holds, with the title and the gap
+// scaled with the body; the story's base sizes when no step fits.
+function stepUp(tpl, s, fits) {
+  const d = tpl.displayScale || 1;
+  for (const f of SIZE_STEPS) {
+    const body = Math.round(s.body * f);
+    const sizes = {
+      body,
+      header: Math.min(s.statement, Math.round(body * SCALE.header * d)),
+      gap: Math.round(body * 0.75),
+    };
+    if (fits(sizes)) return sizes;
+  }
+  return { body: s.body, header: s.header, gap: s.gap };
+}
+
 // Places a text-only block (no picture): balanced line widths, centred
 // left-right and top-bottom.
 function centredStack(cardId, tpl, tokens, header, body, headerSize, bodySize, gap, bodyAt = bodySize) {
@@ -295,6 +318,10 @@ export async function buildAICards(structuredCards, styleTemplate) {
   const bodySize = BODY_SIZES.find((size) => storyFits(tpl, plans, size)) ?? BODY_SIZES[BODY_SIZES.length - 1];
   const s = sizesFor(tpl, bodySize);
 
+  // Sizes for a text-only card's block (see SIZE_STEPS).
+  const textCardSizes = (header, body) => stepUp(tpl, s, (z) =>
+    blockHeights(tpl, header, body, z.header, s.body, z.gap, CONTENT_WIDTH, z.body).total <= AVAILABLE * TEXT_FILL);
+
   const cards = [];
   const newCard = (src, extra = {}) => {
     const id = `ai-${tpl.id}-${cards.length}-${ts}-${Math.random().toString(36).slice(2)}`;
@@ -316,7 +343,8 @@ export async function buildAICards(structuredCards, styleTemplate) {
     while (rest) {
       const card = newCard({}, { imageGenerationFailed: false, imagePrompt: '' });
       const [kept, more] = splitToFit(tpl, '', rest, s.header, s.body, s.gap, AVAILABLE);
-      card.elements = centredStack(card.id, tpl, tokens, '', kept, s.header, s.body, s.gap);
+      const z = textCardSizes('', kept);
+      card.elements = centredStack(card.id, tpl, tokens, '', kept, z.header, s.body, z.gap, z.body);
       cards.push(card);
       rest = more;
     }
@@ -363,6 +391,23 @@ export async function buildAICards(structuredCards, styleTemplate) {
       // Shrink the picture (never below MIN_PHOTO_HEIGHT) before moving text away.
       const textRoomAt = (photoH) => CARD - MARGIN - (MARGIN + photoH + PHOTO_GAP);
       const photoHFor = (total) => Math.max(MIN_PHOTO_HEIGHT, Math.min(PHOTO_HEIGHT, CARD - 2 * MARGIN - PHOTO_GAP - total));
+      // Larger text when it all fits under the picture at full size.
+      const z = stepUp(tpl, s, (zz) =>
+        blockHeights(tpl, p.header, p.body, zz.header, s.body, zz.gap, CONTENT_WIDTH, zz.body).total <= textRoomAt(PHOTO_HEIGHT));
+      if (z.body > s.body) {
+        const box = { x: MARGIN, y: MARGIN, w: CONTENT_WIDTH, h: PHOTO_HEIGHT };
+        card.imageBox = box;
+        if (hasImage) {
+          const img = imageEl(box);
+          img.id = `${card.id}-bg`;
+          card.elements.push(img);
+          card.backgroundImageId = img.id;
+        }
+        card.elements.push(...stack(card.id, tpl, tokens, MARGIN + PHOTO_HEIGHT + PHOTO_GAP, p.header, p.body,
+          z.header, s.body, z.gap, CONTENT_WIDTH, z.body));
+        cards.push(card);
+        continue;
+      }
       const { total } = blockHeights(tpl, p.header, p.body, s.header, s.body, s.gap);
       let photoH = photoHFor(total);
       let [body, overflow] = [p.body, ''];
@@ -411,13 +456,9 @@ export async function buildAICards(structuredCards, styleTemplate) {
     if (blockHeights(tpl, p.header, p.body, s.header, s.body, s.gap).total > AVAILABLE) {
       [body, overflow] = splitToFit(tpl, p.header, p.body, s.header, s.body, s.gap, AVAILABLE);
     }
-    // A short body with no header would sit small in a big empty card: set it
-    // at the header size (in the body font) when it still takes at most
-    // LEAD_MAX_HEIGHT that way. Same number as the header size, so the story
-    // doesn't gain a text size.
-    const lead = !p.header && !overflow &&
-      blockHeights(tpl, '', body, s.header, s.body, s.gap, CONTENT_WIDTH, s.header).total <= LEAD_MAX_HEIGHT;
-    card.elements.push(...centredStack(card.id, tpl, tokens, p.header, body, s.header, s.body, s.gap, lead ? s.header : s.body));
+    // Larger text when the card has room for it (see SIZE_STEPS).
+    const z = textCardSizes(p.header, body);
+    card.elements.push(...centredStack(card.id, tpl, tokens, p.header, body, z.header, s.body, z.gap, z.body));
     cards.push(card);
     pushContinuation(src, overflow);
   }

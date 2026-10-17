@@ -101,9 +101,10 @@ function App() {
         <ErrorBoundary>
           <Router>
             <AuthenticatedApp />
+            {/* Inside the router: its toast's Open button navigates. */}
+            <GenerationWatcher />
           </Router>
           <Toaster />
-          <GenerationWatcher />
         </ErrorBoundary>
       </QueryClientProvider>
     </AuthProvider>
