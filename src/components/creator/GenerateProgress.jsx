@@ -1,33 +1,26 @@
-import { motion, AnimatePresence } from 'framer-motion';
-import PixelSpinner from '@/components/ui/PixelSpinner';
+import { AnimatePresence } from 'framer-motion';
+import StoryLoadingScreen, { SHARED_LINES, stepCeiling } from '@/components/creator/StoryLoadingScreen';
 
-// Progress overlay shown while the AI generation pipeline runs.
-// Shows a percentage indicator based on completed_steps / total_steps.
-export default function GenerateProgress({ visible, completedSteps, totalSteps, currentStep }) {
-  const pct = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+// Progress overlay shown while a Generate run goes. The steps come from the
+// job (src/lib/generateJob.js progressOf): writing the cards (1 step), then
+// one step per picture, then assembling (all steps done). The number of
+// pictures is only known once writing finishes, so the steps can't simply
+// be counted from the start; each phase gets a fixed range instead:
+//   writing 0–45%, pictures 50–95%, assembling 97% (the screen closes when
+//   the story is on the cards).
+// Writing takes the longest, hence its slow tau: the number keeps creeping
+// instead of reaching its hold point early and stopping.
+function ceilingOf(completed, total) {
+  if (total > 0 && completed >= total) return { ceiling: 97, tau: 600 };
+  if (completed === 0) return { ceiling: 45, tau: 9000 };
+  return { ceiling: stepCeiling(completed - 1, total - 1, 50, 95), tau: 3000 };
+}
 
+export default function GenerateProgress({ visible, completedSteps, totalSteps }) {
+  const { ceiling, tau } = ceilingOf(completedSteps, totalSteps);
   return (
     <AnimatePresence>
-      {visible && (
-        <motion.div
-          className="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <div className="w-full max-w-xs px-8 flex flex-col items-center gap-6">
-            <PixelSpinner size={24} />
-
-            {/* Percentage */}
-            <div className="text-3xl font-bold text-gray-900 tabular-nums">{pct}%</div>
-
-            {/* Current step label */}
-            <div className="text-sm text-gray-500 text-center min-h-[20px]">
-              {currentStep || 'Working...'}
-            </div>
-          </div>
-        </motion.div>
-      )}
+      {visible && <StoryLoadingScreen ceiling={ceiling} tau={tau} lines={SHARED_LINES} />}
     </AnimatePresence>
   );
 }

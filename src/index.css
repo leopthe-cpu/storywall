@@ -447,7 +447,24 @@ input, textarea, select {
   font-optical-sizing: auto;
 }
 
-/* Skills loading screen: the paper grid drifts downward forever (2s per
+/* Loading-screen percentage: Pixelify Sans, a free pixel font (SIL Open
+   Font License 1.1, licence in public/fonts/pixelify-sans-OFL.txt), so
+   self-hosting is permitted. Only the latin bold file: it's only used for
+   the number. Used instead of the logo font (FK Raster Grotesk): Oz asked
+   for a free pixel font (2026-10-17). */
+@font-face {
+  font-family: 'Pixelify Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/pixelify-sans-latin-700.woff2') format('woff2');
+}
+.font-pixel {
+  font-family: 'Pixelify Sans', ui-monospace, monospace;
+  font-weight: 700;
+}
+
+/* Loading screens: the paper grid drifts downward forever (2s per
    cell; 3s felt too slow, Oz 2026-10-16).
    The layer is one cell (38px) taller than the screen and moves exactly one
    cell per loop, so the restart is invisible. transform (not
