@@ -347,11 +347,11 @@ export default function PublicProfile() {
             Hidden below lg, where that margin is too narrow for it. */}
         <Link
           to="/"
-          aria-label="StoryWall home"
+          aria-label="Storywall home"
           className="hidden lg:block absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
           style={{ left: `calc((100% - ${DESKTOP_BLOCK_WIDTH}px) / 4)` }}
         >
-          <img src="/logo-slash-ink.png" alt="StoryWall" className="h-[18px] w-auto" />
+          <img src="/logo-slash-ink.png" alt="Storywall" className="h-[18px] w-auto" />
         </Link>
         <div className="mx-auto px-4 md:px-8 flex items-center justify-between" style={{ maxWidth: DESKTOP_CONTAINER_WIDTH }}>
           <span className="text-sm font-mono tracking-tight" style={{ color: HEADER_INK }}>

@@ -432,8 +432,8 @@ export default function Onboarding() {
 
       <div className="fixed top-0 left-0 right-0 md:right-1/2 h-[100dvh] bg-[#F4F2EC] overflow-y-auto">
         {/* Logo: back to the home page at any step (progress is kept, see draft helpers) */}
-        <Link to="/" aria-label="Back to the StoryWall home page" className="absolute top-6 left-6 md:top-8 md:left-10 z-10">
-          <img src="/logo-slash-ink.png" alt="StoryWall" className="h-[20px] w-auto" />
+        <Link to="/" aria-label="Back to the Storywall home page" className="absolute top-6 left-6 md:top-8 md:left-10 z-10">
+          <img src="/logo-slash-ink.png" alt="Storywall" className="h-[20px] w-auto" />
         </Link>
         <div className="px-6 pt-[4.5rem] pb-32 md:pt-20 md:pb-0 md:min-h-full md:flex md:flex-col">
           <div className="w-full max-w-sm mx-auto flex flex-col gap-8 md:flex-1">

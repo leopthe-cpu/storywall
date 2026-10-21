@@ -173,7 +173,7 @@ export default function Landing() {
           : { backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
       >
         <header className="max-w-[1180px] mx-auto px-7 flex items-center justify-between">
-          <img src="/logo-slash-ink.png" alt="StoryWall" className="h-[18px] sm:h-[22px] w-auto flex-shrink-0" />
+          <img src="/logo-slash-ink.png" alt="Storywall" className="h-[18px] sm:h-[22px] w-auto flex-shrink-0" />
           <nav className="flex items-center gap-3 sm:gap-[22px] whitespace-nowrap">
             <Link to="/signin" className="font-inter text-[14px] font-semibold text-[#6B6964] no-underline hover:text-[#262624]">Sign in</Link>
             <Link to="/signup" className="font-inter text-[12px] sm:text-[13px] font-semibold text-[#F4F2EC] bg-[#262624] px-3 sm:px-4 py-2 rounded-lg no-underline hover:opacity-90 hover:-translate-y-px transition-all">Claim your wall</Link>

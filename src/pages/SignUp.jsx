@@ -159,7 +159,7 @@ export default function SignUp() {
           {user?.username ? (
             <>This browser is signed in as <span className="font-medium text-[#F4F2EC]">@{user.username}</span>.</>
           ) : (
-            "This browser is already signed in to a StoryWall account."
+            "This browser is already signed in to a Storywall account."
           )}
         </p>
       </div>
