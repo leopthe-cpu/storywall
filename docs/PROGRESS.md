@@ -50,9 +50,6 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   Source: CLAUDE.md "Open items / backlog"
 
 ## Waiting
-- [ ] Create privacy@storywall.io @me #legal
-  The contact address on the Terms and Privacy pages. Cloudflare Email Routing (free) can forward it to Gmail.
-  Source: PR 116
 - [ ] Confirm three facts the Privacy Policy states @me #legal
   Production Supabase region (staging is ca-central-1); OpenRouter prompt logging off; then update src/lib/legal.js if anything differs.
   Source: PR 116
@@ -165,6 +162,10 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   Source: PR 124
 - [x] Production functions updated: startGeneration (theme), deleteAccount (new), structureStory and suggestSkills (no-training AI routing) @claude #release (2026-10-21)
   Deployed with the Supabase CLI from develop, staging first; all active, sign-in required. The frontend that uses the theme and account deletion reaches production with the develop → main release.
+  Source: chat, 2026-10-21
+
+- [x] privacy@storywall.io receives mail @me #legal (2026-10-21)
+  Cloudflare Email Routing forwards it to Oz's inbox; test email arrived.
   Source: chat, 2026-10-21
 
 ## Marketing
