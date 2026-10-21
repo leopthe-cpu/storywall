@@ -186,6 +186,10 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
             >
               Delete my account
             </button>
+            <div className="flex gap-4 pt-2 text-xs text-gray-400">
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600 underline">Terms of Service</a>
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600 underline">Privacy Policy</a>
+            </div>
           </div>
 
           {/* Appearance — gated behind ENABLE_DARK_MODE feature flag */}
