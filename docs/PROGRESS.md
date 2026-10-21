@@ -7,10 +7,6 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
 ## Doing
 - [ ] Test the staging batch (PRs 93–121) and release develop to production @me #release #testing
   On develop, not yet merged to main: shared loaders, framework templates, colour variation, theme picker, more fonts, bigger text, data export, account deletion, age gate, Terms/Privacy and consent, change password, www redirect, faster page loads. Production needs Oz's approval.
-- [ ] After the release: deploy startGeneration, deleteAccount, structureStory and suggestSkills to production @claude #release
-  Edge Functions are deployed by hand. Needs Oz's OK.
-  Source: CLAUDE.md "Stack / hosting"
-  Source: git log origin/main..origin/develop; docs/generate-roadmap.md order step 1
 
 ## To do
 - [ ] Faster AI steps: picture model and size, structuring model @claude #performance #ai
@@ -60,9 +56,6 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
 - [ ] Confirm three facts the Privacy Policy states @me #legal
   Production Supabase region (staging is ca-central-1); OpenRouter prompt logging off; then update src/lib/legal.js if anything differs.
   Source: PR 116
-- [ ] Give the Supabase connector access to the production project again @me #infra
-  It now lists only staging and popmart, so production function deploys after the release can't be done from Claude.
-  Source: chat, 2026-10-21
 - [ ] Shut down Base44 after the fallback period @me #migration
   Keep it untouched for an agreed period, archive the source, cancel, and delete its copy of user data. Planned around 24 Oct, depending on tests.
   Source: docs/migration-plan.md Phase 6; CLAUDE.md on develop; docs/legal-and-privacy-plan.md Step 2
@@ -166,6 +159,13 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   Source: PR 121
 - [x] Compact slider style everywhere (already the default; the one other slider, ImageCropModal, is unused code) @claude #builder (2026-10-21)
   Source: src/components/creator/MinimalSlider.jsx
+
+- [x] Scoped Supabase tokens per environment (staging and production), CLI deploys @me #infra (2026-10-21)
+  Replaces the claude.ai Supabase connector for Storywall work; see CLAUDE.md "Supabase access".
+  Source: PR 124
+- [x] Production functions updated: startGeneration (theme), deleteAccount (new), structureStory and suggestSkills (no-training AI routing) @claude #release (2026-10-21)
+  Deployed with the Supabase CLI from develop, staging first; all active, sign-in required. The frontend that uses the theme and account deletion reaches production with the develop → main release.
+  Source: chat, 2026-10-21
 
 ## Marketing
 - [ ] Plan marketing (nothing documented yet) @me
