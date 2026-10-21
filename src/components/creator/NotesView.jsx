@@ -96,6 +96,18 @@ export default function NotesView({ value, onChange, attachments, onAddAttachmen
         </div>
       )}
 
+      {/* AI notice (docs/legal-and-privacy-plan.md Step 3): what happens to
+          the notes, and that the result needs checking. Shown while the
+          screen is empty, like the hint below, so it never sits over the
+          user's text. */}
+      {(!attachments || attachments.length === 0) && !value && (
+        <p className="absolute bottom-[68px] inset-x-8 text-center text-[11px] leading-snug text-gray-400">
+          Generate uses AI: your notes and photos are sent to our AI providers to build your story.
+          Check the result before you publish.{' '}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">Privacy</a>
+        </p>
+      )}
+
       {/* Press-and-hold hint */}
       {(!attachments || attachments.length === 0) && !value && (
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-gray-300 text-xs pointer-events-none whitespace-nowrap">
