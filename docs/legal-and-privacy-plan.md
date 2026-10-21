@@ -1,6 +1,6 @@
 # Legal and privacy plan (before public launch)
 
-Oz, 2026-10-16: StoryWall needs Terms of Service and a Privacy Policy that cover what we actually do with user data, for users in Canada, the US and Europe, with no blind spots. GDPR compliance is the goal; we take it one step at a time. Status: planned, not started.
+Oz, 2026-10-16: StoryWall needs Terms of Service and a Privacy Policy that cover what we actually do with user data, for users in Canada, the US and Europe, with no blind spots. GDPR compliance is the goal; we take it one step at a time. Status (2026-10-21): Step 1 research done (kept in Oz's Google Drive, not in this public repo); data export and account deletion built (PRs 100–101); minimum age and governing law decided (below).
 
 Note: this plan and the documents it produces are drafts by an AI assistant, not legal advice. A lawyer (Canadian, with EU/US privacy experience) should review the final Terms and Privacy Policy before launch.
 
@@ -47,7 +47,7 @@ Built from the code and the live setup, so the Policy matches reality:
 - **Account deletion** from Settings, which removes the profile, stories, notes, files and the auth record. Published media in public storage must be removed too.
 - **Data export** ("download my data"): profile, stories, notes and files as a zip or JSON.
 - **Sign-up consent:** "I agree to the Terms and Privacy Policy", with the date and version stored.
-- **Age gate:** a minimum age at sign-up (13 for the US/COPPA; up to 16 in some EU countries; to decide).
+- **Age gate:** a minimum age at sign-up. Decided by Oz (2026-10-19): **16**.
 - **Cookie and storage notice:** a consent banner only if we add non-essential tracking (decision 34). Today the app uses only essential storage (the sign-in session); check this.
 - **Marketing e-mail consent**, if we ever send newsletters (CASL, GDPR).
 - **Report content and copyright takedown:** a contact address or form.
@@ -62,7 +62,7 @@ Built from the code and the live setup, so the Policy matches reality:
   - who may use it (age), accounts;
   - user content: the user keeps ownership and gives StoryWall a licence to host and show it;
   - acceptable use, AI features (output may be wrong; the user is responsible for what they publish), premium access;
-  - takedown process, ending accounts, disclaimers, limit of liability, governing law (Ontario/Canada?), changes to the terms, contact.
+  - takedown process, ending accounts, disclaimers, limit of liability, governing law (decided 2026-10-19: Ontario, Canada; Storywall is run by Oz as a sole proprietor), changes to the terms, contact.
 - **Privacy Policy:**
   - what we collect and why (legal basis per use), AI processing, sharing with providers (sub-processor list);
   - international transfers, retention, security, user rights and how to use them;
