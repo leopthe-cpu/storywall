@@ -1,4 +1,4 @@
-import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from './CanvasArea';
+import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/lib/cardGeometry';
 import AudioWidget from './AudioWidget';
 import TrimmedVideo from './TrimmedVideo';
 import { useDraftMedia } from './DraftMediaContext';

@@ -56,7 +56,7 @@ export async function saveCardImages(blobs, title) {
   const files = blobs.map((b, i) => new File([b], names[i], { type: 'image/png' }));
   if (shouldUseShareSheet(files)) {
     try {
-      await navigator.share({ files, title: title || 'StoryWall cards' });
+      await navigator.share({ files, title: title || 'Storywall cards' });
       return 'share';
     } catch (e) {
       // User closed the sheet — not an error, and don't fall through to a

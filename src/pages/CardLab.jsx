@@ -3,9 +3,11 @@ import CardThumb from '@/components/creator/CardThumb';
 import { AI_STYLE_TEMPLATES, buildAICards } from '@/lib/aiStyleTemplates';
 import { CARD, MARGIN } from '@/lib/cardLayout';
 import { CARD_LAB_FIXTURES } from '@/dev/cardLabFixtures';
+import { FRAMEWORK_TEMPLATES, buildFrameworkTemplate } from '@/lib/frameworkTemplates';
 
 // Card lab (development only, see App.jsx): runs the test stories through
-// buildAICards in every style and checks each rendered card. Results are on
+// buildAICards in every style, and the framework templates in their own
+// style, and checks each rendered card. Results are on
 // window.__cardLab for scripted runs (Playwright) and shown on the page.
 //
 // Checks, on the rendered DOM in reference px:
@@ -61,6 +63,11 @@ export default function CardLab() {
           const { cards, tokens } = await buildAICards(story, style);
           out.push({ key: `${fixture}/${style.id}`, fixture, style: style.name, cards, tokens });
         }
+      }
+      // Framework templates (Templates tab), each in its own style.
+      for (const template of FRAMEWORK_TEMPLATES) {
+        const { cards, tokens } = await buildFrameworkTemplate(template);
+        out.push({ key: `template/${template.id}`, fixture: template.name, style: template.style, cards, tokens });
       }
       setRuns(out);
     })();

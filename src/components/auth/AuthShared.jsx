@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { verifySignupCode, resendSignupCode } from '@/api/storywallApi';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 // Shared pieces for StoryWall's own sign-in / sign-up screens (split-screen
 // layout; replaces Base44's hosted login page, which can't be styled).
@@ -29,7 +30,7 @@ export function AuthColumn({ children }) {
     <div className="min-h-screen md:w-1/2 flex flex-col items-center justify-center px-6 py-16">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <Link to="/" aria-label="Back to the StoryWall home page" className="inline-block"><img src="/logo-slash-ink.png" alt="StoryWall" className="h-[22px] w-auto inline-block" /></Link>
+          <Link to="/" aria-label="Back to the Storywall home page" className="inline-block"><img src="/logo-slash-ink.png" alt="Storywall" className="h-[22px] w-auto inline-block" /></Link>
         </div>
         {children}
       </div>
@@ -59,7 +60,7 @@ export function FullBleedAuthScreen({ children, footer }) {
       >
         <div className="w-full max-w-sm">
           <div className="mb-8">
-            <Link to="/" aria-label="Back to the StoryWall home page" className="inline-block"><img src="/logo-slash-light.png" alt="StoryWall" className="h-[22px] w-auto inline-block" /></Link>
+            <Link to="/" aria-label="Back to the Storywall home page" className="inline-block"><img src="/logo-slash-light.png" alt="Storywall" className="h-[22px] w-auto inline-block" /></Link>
           </div>
           {children}
           {footer && <div className="mt-6">{footer}</div>}
@@ -94,7 +95,7 @@ export function AuthButton({ children, disabled, busy, busyLabel }) {
       disabled={disabled || busy}
       className="w-full bg-[#262624] text-[#F4F2EC] py-4 rounded-2xl font-semibold text-base hover:bg-[#262624] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
     >
-      {busy ? busyLabel : children}
+      <BusyLabel busy={busy} label={busyLabel}>{children}</BusyLabel>
     </button>
   );
 }

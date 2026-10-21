@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Image as ImageIcon, Download, X, Paperclip } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import PageLoader from '@/components/ui/PageLoader';
 import { getMe, invokeFunction, uploadPublicFile } from '@/api/storywallApi';
 
 const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4'];
@@ -50,13 +51,7 @@ export default function PromptTest() {
     }
   };
 
-  if (authed === null) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white">
-        <PixelSpinner size={24} />
-      </div>
-    );
-  }
+  if (authed === null) return <PageLoader background="#FFFFFF" grid={false} />;
 
   if (authed === false) {
     return (

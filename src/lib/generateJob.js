@@ -1,6 +1,7 @@
 import { invokeFunction, updatePost } from '@/api/storywallApi';
 import { getSupabase } from '@/api/supabaseClient';
-import { buildAICards } from '@/lib/aiStyleTemplates';
+import { buildAICards, getStyleTemplate, pickStyleVariant } from '@/lib/aiStyleTemplates';
+import { themeColors, withTheme } from '@/lib/colorPalettes';
 import { markMissingPictures, placeAttachments } from '@/lib/generatePipeline';
 
 // Generate as a server job, step 4 (docs/performance-plan.md, part A): the
@@ -28,12 +29,16 @@ export function shouldFallBack(error) {
 
 // Starts a job. A job already running for this user (409) is followed
 // instead of starting a second one.
-export async function startJob({ text, attachments, postId }) {
+// `theme`: the colour theme picked on the notes screen (ThemePicker), kept
+// with the job so a story laid out later (from Drafts) gets it too.
+export async function startJob({ text, attachments, postId, theme }) {
+  const colors = themeColors(theme);
   try {
     const { data } = await invokeFunction('startGeneration', {
       text,
       attachments: (attachments || []).map((a) => ({ url: a.url, type: a.type })),
       ...(postId ? { postId } : {}),
+      ...(colors ? { theme: colors } : {}),
     });
     return { jobId: data.jobId, postId: data.postId };
   } catch (e) {
@@ -111,7 +116,9 @@ export async function waitForJob(jobId, onProgress, isActive = () => true) {
 // Turns a finished job into the editor's cards, the same way the old
 // pipeline did: attached pictures on their cards, AI pictures where made,
 // the retry badge where one failed, then the style template's layout.
-export async function assembleJob(job) {
+// The colours are the theme saved with the job, or `theme` (the one on
+// screen) for a job started before the server kept themes.
+export async function assembleJob(job, theme = null) {
   const structured = job.result;
   if (!structured || !Array.isArray(structured.cards)) throw new Error('Job has no cards');
   const cards = structured.cards.map((c) => ({ ...c }));
@@ -132,22 +139,24 @@ export async function assembleJob(job) {
     }
   }
   markMissingPictures(cards);
-  const { cards: assembledCards, tokens } = await buildAICards(cards, structured.styleTemplate);
+  const styleTemplate = pickStyleVariant(structured.styleTemplate, job.id);
+  const style = withTheme(getStyleTemplate(styleTemplate), job.options?.theme || theme);
+  const { cards: assembledCards, tokens } = await buildAICards(cards, style);
   return {
     cards: assembledCards,
     tokens,
     framework: structured.framework,
-    styleTemplate: structured.styleTemplate,
+    styleTemplate,
   };
 }
 
 // The whole run: start (or join) the job, follow it, lay it out.
 // Returns null when the job version isn't available, so the caller can use
 // the old pipeline instead.
-export async function runGenerateJob({ text, attachments, postId, onProgress, isActive = () => true }) {
+export async function runGenerateJob({ text, attachments, postId, theme, onProgress, isActive = () => true }) {
   let started;
   try {
-    started = await startJob({ text, attachments, postId });
+    started = await startJob({ text, attachments, postId, theme });
   } catch (e) {
     if (shouldFallBack(e)) {
       console.warn('[generate-job] job could not be started, using the browser pipeline:', e?.status, e?.message);
@@ -164,7 +173,7 @@ export async function runGenerateJob({ text, attachments, postId, onProgress, is
   } finally {
     followedJobs.delete(started.jobId);
   }
-  const result = await assembleJob(job);
+  const result = await assembleJob(job, theme);
   // Seen: the finished story is on screen, so no "ready" e-mail is needed.
   // Best effort; a failure here must not lose the story.
   getSupabase().from('generation_jobs').update({ seen_at: new Date().toISOString() }).eq('id', job.id)

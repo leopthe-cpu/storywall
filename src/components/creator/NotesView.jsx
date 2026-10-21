@@ -1,10 +1,11 @@
 import { useRef, useEffect, useState } from 'react';
 import { ImagePlus, Video } from '@/components/icons';
+import ThemePicker from '@/components/creator/ThemePicker';
 
 // Full-screen notes editor for Generate mode.
 // Plain white canvas with a blinking text cursor (native textarea cursor).
 // User can type free-text and press-and-hold anywhere to attach images/video.
-export default function NotesView({ value, onChange, attachments, onAddAttachment, onRemoveAttachment }) {
+export default function NotesView({ value, onChange, attachments, onAddAttachment, onRemoveAttachment, theme, onThemeChange }) {
   const textareaRef = useRef(null);
   const longPressTimer = useRef(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -56,7 +57,7 @@ export default function NotesView({ value, onChange, attachments, onAddAttachmen
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Write your story here..."
-        className="flex-1 w-full p-6 text-base text-gray-900 placeholder-gray-300 resize-none outline-none border-none bg-transparent leading-relaxed"
+        className="flex-1 w-full p-6 pb-20 text-base text-gray-900 placeholder-gray-300 resize-none outline-none border-none bg-transparent leading-relaxed"
         style={{ fontSize: '16px' }}
       />
 
@@ -83,9 +84,33 @@ export default function NotesView({ value, onChange, attachments, onAddAttachmen
         </div>
       )}
 
+      {/* Colour theme (ThemePicker). Presses on it don't start the
+          press-and-hold attach menu. */}
+      {onThemeChange && (
+        <div
+          className="absolute bottom-4 right-4 z-10"
+          onTouchStart={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <ThemePicker value={theme} onChange={onThemeChange} />
+        </div>
+      )}
+
+      {/* AI notice (docs/legal-and-privacy-plan.md Step 3): what happens to
+          the notes, and that the result needs checking. Shown while the
+          screen is empty, like the hint below, so it never sits over the
+          user's text. */}
+      {(!attachments || attachments.length === 0) && !value && (
+        <p className="absolute bottom-[68px] inset-x-8 text-center text-[11px] leading-snug text-gray-400">
+          Generate uses AI: your notes and photos are sent to our AI providers to build your story.
+          Check the result before you publish.{' '}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-gray-600">Privacy</a>
+        </p>
+      )}
+
       {/* Press-and-hold hint */}
       {(!attachments || attachments.length === 0) && !value && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-gray-300 text-xs pointer-events-none">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-gray-300 text-xs pointer-events-none whitespace-nowrap">
           Press & hold anywhere to attach a photo
         </div>
       )}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getMe, getWall, updatePost, deletePost, reorderPosts, getPostForEditing } from '@/api/storywallApi';
 import { Plus, Share2, Pencil, SelectFace3d, X } from '@/components/icons';
@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import StoryCard from '@/components/profile/StoryCard';
 import StoryKebab from '@/components/profile/StoryKebab';
 import DeleteStoryModal from '@/components/profile/DeleteStoryModal';
-import ReorderStories from '@/components/profile/ReorderStories';
 import EditProfileModal from '@/components/profile/EditProfileModal';
 import BurgerMenu from '@/components/profile/BurgerMenu';
 import { useToast } from '@/components/ui/use-toast';
@@ -14,14 +13,19 @@ import ProfileEmptyState from '@/components/profile/ProfileEmptyState';
 import ShareUrlModal from '@/components/profile/ShareUrlModal';
 import CopyToast from '@/components/profile/CopyToast';
 import WriteGenerateToggle from '@/components/creator/WriteGenerateToggle';
-import DownloadCardsButton from '@/components/creator/DownloadCardsButton';
 import { aiCarouselBuilderEnabled } from '@/lib/featureFlags';
 import PrivateProfileState from '@/components/profile/PrivateProfileState';
 import NotFoundProfileState from '@/components/profile/NotFoundProfileState';
 import LazyMount from '@/components/profile/LazyMount';
 import { ProfileHeroCard, ProfileInfo } from '@/components/profile/ProfileHeader';
-import PixelSpinner from '@/components/ui/PixelSpinner';
+import PageLoader from '@/components/ui/PageLoader';
 import useDocumentTitle from '@/lib/useDocumentTitle';
+
+// Owner-only tools, loaded when first opened (performance plan §C): the
+// reorder screen brings a drag-and-drop library (about 200 KB) and the card
+// export its own code, which visitors to a wall never need.
+const ReorderStories = lazy(() => import('@/components/profile/ReorderStories'));
+const DownloadCardsButton = lazy(() => import('@/components/creator/DownloadCardsButton'));
 
 // Desktop story-card width matches the desktop profile-picture column width
 // exactly (both reference this one constant) so the feed's cards read as the
@@ -282,13 +286,7 @@ export default function PublicProfile() {
     />
   ) : null;
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F4F2EC]">
-        <PixelSpinner size={24} />
-      </div>
-    );
-  }
+  if (loading) return <PageLoader />;
 
   if (profileStatus === 'not_found') {
     return <NotFoundProfileState username={username} />;
@@ -353,11 +351,11 @@ export default function PublicProfile() {
             Hidden below lg, where that margin is too narrow for it. */}
         <Link
           to="/"
-          aria-label="StoryWall home"
+          aria-label="Storywall home"
           className="hidden lg:block absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
           style={{ left: `calc((100% - ${DESKTOP_BLOCK_WIDTH}px) / 4)` }}
         >
-          <img src="/logo-slash-ink.png" alt="StoryWall" className="h-[18px] w-auto" />
+          <img src="/logo-slash-ink.png" alt="Storywall" className="h-[18px] w-auto" />
         </Link>
         <div className="mx-auto px-4 md:px-8 flex items-center justify-between" style={{ maxWidth: DESKTOP_CONTAINER_WIDTH }}>
           <span className="text-sm font-mono tracking-tight" style={{ color: HEADER_INK }}>
@@ -513,11 +511,13 @@ export default function PublicProfile() {
 
       {/* REORDER STORIES */}
       {reorderMode && (
-        <ReorderStories
-          posts={sortedPosts}
-          onSave={saveReorder}
-          onCancel={() => setReorderMode(false)}
-        />
+        <Suspense fallback={null}>
+          <ReorderStories
+            posts={sortedPosts}
+            onSave={saveReorder}
+            onCancel={() => setReorderMode(false)}
+          />
+        </Suspense>
       )}
 
       {/* CARD IMAGE EXPORT (admin-only) — starts on open, closes itself
@@ -531,14 +531,16 @@ export default function PublicProfile() {
                 <X size={16} />
               </button>
             </div>
-            <DownloadCardsButton
-              key={downloadPost.id}
-              cards={downloadPost.cards}
-              tokens={downloadPost.color_tokens}
-              title={downloadPost.title}
-              autoStart
-              onDone={() => setDownloadPost(null)}
-            />
+            <Suspense fallback={null}>
+              <DownloadCardsButton
+                key={downloadPost.id}
+                cards={downloadPost.cards}
+                tokens={downloadPost.color_tokens}
+                title={downloadPost.title}
+                autoStart
+                onDone={() => setDownloadPost(null)}
+              />
+            </Suspense>
           </div>
         </div>
       )}

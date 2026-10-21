@@ -97,8 +97,22 @@ export async function signIn(email, password) {
 // template uses {{ .Token }}). Returns { needsCode } — false only if the
 // project ever stops requiring email confirmation, in which case the user
 // is already signed in.
-export async function signUp(email, password) {
-  const data = await auth(getSupabase().auth.signUp({ email, password }));
+// `ageConfirmed`: the sign-up form's "I'm 16 or older" box (minimum age 16,
+// Oz 2026-10-19). `termsVersion`: the version of the Terms and Privacy
+// Policy the person agreed to (LEGAL_VERSION, src/lib/legal.js). Both are
+// kept on the account with the date, as a record of what was confirmed.
+export async function signUp(email, password, { ageConfirmed = false, termsVersion = null } = {}) {
+  const now = new Date().toISOString();
+  const data = await auth(getSupabase().auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        ...(ageConfirmed ? { age_confirmed_16: now } : {}),
+        ...(termsVersion ? { terms_version: termsVersion, terms_accepted_at: now } : {}),
+      },
+    },
+  }));
   // For an address that already has a confirmed account, Supabase sends no
   // email and returns a user with no identities instead of an error.
   if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
@@ -234,6 +248,48 @@ export async function reorderPosts(items) {
   const sb = getSupabase();
   await Promise.all(items.map(({ id, display_order }) =>
     sb.from('posts').update({ display_order }).eq('id', id).then(check)));
+}
+
+// ---------- Data export ("Download my data")
+
+// Everything StoryWall stores about the signed-in user, as one object: the
+// profile, every story (drafts, published, archived) with its private notes,
+// the media library, Generate runs and onboarding drafts. Right of access /
+// portability (GDPR Art. 15 and 20, LGPD Art. 18). Media files are listed
+// by link, not copied in: public files open directly, private draft files
+// are references the app signs on demand.
+// Each read goes through the user's own access rules, so it can only ever
+// return the user's own rows.
+export async function exportMyData() {
+  const user = await requireUser();
+  const sb = getSupabase();
+  const [profile, posts, media, jobs, onboarding] = await Promise.all([
+    sb.from('profiles').select('*').eq('id', user.id).single().then(check),
+    sb.from('posts').select('*').eq('author_id', user.id).order('created_at', { ascending: true }).then(check),
+    sb.from('media').select('*').eq('user_id', user.id).order('created_at', { ascending: true }).then(check),
+    sb.from('generation_jobs').select('id, post_id, status, created_at, finished_at, error')
+      .eq('user_id', user.id).order('created_at', { ascending: true }).then(check),
+    sb.from('onboarding_drafts').select('*').eq('user_id', user.id).then(check),
+  ]);
+  const notes = posts.length
+    ? check(await sb.from('post_notes').select('post_id, raw_notes').in('post_id', posts.map((p) => p.id)))
+    : [];
+  const notesByPost = Object.fromEntries(notes.map((n) => [n.post_id, n.raw_notes]));
+  return {
+    exported_at: new Date().toISOString(),
+    account: { id: user.id, email: user.email, created_at: user.created_at },
+    profile,
+    stories: posts.map((p) => (notesByPost[p.id] ? { ...p, raw_notes: notesByPost[p.id] } : p)),
+    media_library: media,
+    generate_runs: jobs,
+    onboarding_drafts: onboarding,
+  };
+}
+
+// Deletes the signed-in user's account, files and data for good (the
+// deleteAccount function). `confirm` is the username typed back.
+export async function deleteMyAccount(confirm) {
+  await invokeFunction('deleteAccount', { confirm });
 }
 
 // ---------- Onboarding drafts (owner-only)

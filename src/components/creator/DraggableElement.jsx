@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useLayoutEffect } from 'react';
-import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from './CanvasArea';
+import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/lib/cardGeometry';
 import { Play } from '@/components/icons';
 import AudioWidget from './AudioWidget';
 import { useDraftMedia } from './DraftMediaContext';

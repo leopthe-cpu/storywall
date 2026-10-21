@@ -10,7 +10,9 @@ import ProfilePhotoEditor from '@/components/profile/ProfilePhotoEditor';
 import { ProfileHeroCard, ProfileInfo } from '@/components/profile/ProfileHeader';
 import { ImagePanel, PreviewPanel } from '@/components/signup/SidePanel';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import PageLoader from '@/components/ui/PageLoader';
 import useDocumentTitle from '@/lib/useDocumentTitle';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 // Desktop side-panel caption per step. Step 1 shows a photo; steps 2–5 show a
 // live preview of the profile being built.
@@ -276,13 +278,7 @@ export default function Onboarding() {
     if (step > 1 && checkState === 'taken') setStep(1);
   }, [step, checkState]);
 
-  if (!authChecked) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-[#F4F2EC]">
-        <PixelSpinner size={24} />
-      </div>
-    );
-  }
+  if (!authChecked) return <PageLoader />;
 
   const set = (key) => (val) => setForm(f => ({ ...f, [key]: val }));
 
@@ -405,7 +401,7 @@ export default function Onboarding() {
                 disabled={saving || (step === 1 && !canContinueStep1)}
                 className="w-full bg-[#262624] text-[#F4F2EC] py-4 rounded-2xl font-semibold text-base disabled:opacity-50 hover:bg-[#30302E] active:scale-[0.98] transition-all"
               >
-                {saving ? 'Saving...' : step === TOTAL_STEPS ? 'Finish Wall' : 'Continue'}
+                <BusyLabel busy={saving} label="Saving…">{step === TOTAL_STEPS ? 'Finish Wall' : 'Continue'}</BusyLabel>
               </button>
               {isSkippable && step < TOTAL_STEPS && (
                 <button onClick={handleSkip} className="text-center text-sm text-[#8A877F] hover:text-[#3A3935] transition-colors py-1">
@@ -436,8 +432,8 @@ export default function Onboarding() {
 
       <div className="fixed top-0 left-0 right-0 md:right-1/2 h-[100dvh] bg-[#F4F2EC] overflow-y-auto">
         {/* Logo: back to the home page at any step (progress is kept, see draft helpers) */}
-        <Link to="/" aria-label="Back to the StoryWall home page" className="absolute top-6 left-6 md:top-8 md:left-10 z-10">
-          <img src="/logo-slash-ink.png" alt="StoryWall" className="h-[20px] w-auto" />
+        <Link to="/" aria-label="Back to the Storywall home page" className="absolute top-6 left-6 md:top-8 md:left-10 z-10">
+          <img src="/logo-slash-ink.png" alt="Storywall" className="h-[20px] w-auto" />
         </Link>
         <div className="px-6 pt-[4.5rem] pb-32 md:pt-20 md:pb-0 md:min-h-full md:flex md:flex-col">
           <div className="w-full max-w-sm mx-auto flex flex-col gap-8 md:flex-1">

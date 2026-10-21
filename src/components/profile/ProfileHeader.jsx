@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Globe, Link } from '@/components/icons';
 import Tag from '@/components/profile/Tag';
 import ImageSkeleton from '@/components/ui/ImageSkeleton';
+import PixelSpinner from '@/components/ui/PixelSpinner';
 import { isSafeHttpUrl } from '@/lib/safeUrl';
 
 // Profile hero card + info block, shared by the public profile page and the
@@ -20,17 +21,35 @@ export function ProfileHeroCard({ profile, name, aspectRatio = '1/1', style }) {
   const handleImgLoad = () => { loadedSrcRef.current = imgSrc; setLoadTick((t) => t + 1); };
   const handleImgError = () => { loadedSrcRef.current = imgSrc; setLoadTick((t) => t + 1); };
 
+  // Same rule as pictures in the editor: the shimmer covers normal loads,
+  // and only a load still going after 3 s gets the pixel spinner too, so a
+  // slow connection visibly isn't stuck. Resets for each new picture.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    setSlow(false);
+    if (!imgSrc || loadedSrcRef.current === imgSrc) return undefined;
+    const t = setTimeout(() => setSlow(true), 3000);
+    return () => clearTimeout(t);
+  }, [imgSrc]);
+
   return (
     <div className="relative w-full rounded-2xl overflow-hidden" style={{ aspectRatio, ...style }}>
       {imgSrc ? (
         <>
           <img
             src={imgSrc} alt={name} decoding="async"
+            // The biggest thing on a wall: fetch it before other pictures.
+            fetchPriority="high"
             className="absolute inset-0 w-full h-full object-cover"
             onLoad={handleImgLoad}
             onError={handleImgError}
           />
           <ImageSkeleton loaded={imgLoaded} />
+          {slow && !imgLoaded && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <PixelSpinner size={20} />
+            </div>
+          )}
         </>
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-[#262624] to-[#3A3935]" />

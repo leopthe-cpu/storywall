@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
-import { X, LogOut, Archive } from '@/components/icons';
+import { useNavigate } from 'react-router-dom';
+import { X, LogOut, Archive, Download } from '@/components/icons';
 import { getMe, signOut, filterPosts, updateMe } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
 import EditableUsername from '@/components/profile/EditableUsername';
 import ArchivesModal from '@/components/profile/ArchivesModal';
+import BusyLabel from '@/components/ui/BusyLabel';
+import { downloadMyData } from '@/lib/dataExport';
+import DeleteAccountSheet from '@/components/profile/DeleteAccountSheet';
 
 export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -12,6 +16,7 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
   // and ignores taps, so it never flashes "public" or flips the wrong way.
   const [isPrivate, setIsPrivate] = useState(null);
   const [showArchives, setShowArchives] = useState(false);
+  const navigate = useNavigate();
   const [archivedCount, setArchivedCount] = useState(0);
 
   // Fetch the full current user (including email) from auth — the `user` prop
@@ -27,6 +32,22 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
       }
     }).catch(() => {});
   }, []);
+
+  const [showDelete, setShowDelete] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState('');
+  const handleDownloadData = async () => {
+    setExporting(true);
+    setExportError('');
+    try {
+      await downloadMyData();
+    } catch (e) {
+      console.error('[BurgerMenu] data export failed:', e);
+      setExportError("Couldn't prepare your data. Check your connection and try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleTogglePrivacy = async () => {
     if (isPrivate === null) return;
@@ -99,7 +120,19 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
                 currentUserId={user?.id}
                 onSaved={onClose}
               />
-              <InfoRow label="Email" value={emailDisplay} note="Managed by your sign-in provider" />
+              <InfoRow label="Email" value={emailDisplay} note="Used to sign in" />
+              {/* Change password: the code-by-email reset flow, started for
+                  this account's address. The emailed code proves it's the
+                  owner, so no "current password" is asked for. */}
+              <button
+                onClick={() => navigate('/signin/reset', {
+                  state: { email: currentUser?.email || '', from: user?.username ? `/${user.username}` : '/', change: true },
+                })}
+                className="w-full flex items-center justify-between py-1 text-left group"
+              >
+                <p className="text-sm font-medium text-gray-900">Change password</p>
+                <span className="text-xs text-gray-300 group-hover:text-gray-500">›</span>
+              </button>
             </div>
           </div>
 
@@ -144,6 +177,33 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
                 )}
               </button>
             </div>
+            <button
+              onClick={handleDownloadData}
+              disabled={exporting}
+              aria-busy={exporting}
+              className="w-full flex items-center justify-between py-2 group disabled:opacity-60"
+            >
+              <div className="flex items-center gap-2.5 text-left">
+                <Download size={16} className="text-gray-400 group-hover:text-gray-600 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    <BusyLabel busy={exporting} label="Preparing…" tone="dark" size={12}>Download my data</BusyLabel>
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">Your profile and stories as a file</p>
+                </div>
+              </div>
+            </button>
+            {exportError && <p className="text-xs text-red-600 mt-1">{exportError}</p>}
+            <button
+              onClick={() => setShowDelete(true)}
+              className="w-full text-left py-2 text-sm font-medium text-red-600 hover:text-red-700"
+            >
+              Delete my account
+            </button>
+            <div className="flex gap-4 pt-2 text-xs text-gray-400">
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600 underline">Terms of Service</a>
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-gray-600 underline">Privacy Policy</a>
+            </div>
           </div>
 
           {/* Appearance — gated behind ENABLE_DARK_MODE feature flag */}
@@ -180,6 +240,14 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
 
       {showArchives && (
         <ArchivesModal onClose={() => setShowArchives(false)} onRestored={onArchivesChanged} />
+      )}
+
+      {showDelete && (
+        <DeleteAccountSheet
+          username={currentUser?.username || user?.username}
+          onClose={() => setShowDelete(false)}
+          onDownload={handleDownloadData}
+        />
       )}
     </div>
   );

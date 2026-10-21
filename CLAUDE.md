@@ -16,10 +16,10 @@ Core pieces:
 
 ## Stack / hosting
 
-- React + Vite + Tailwind, hosted on Base44 (app id `6a161402f22a3ebcce243595`, app name "SW"). Base44 also provides auth, the database (entities), file storage and serverless functions (`base44/functions/*`).
-- Data model lives in `base44/entities/*.jsonc` — the important one is `Post.jsonc` (a story: `cards[]` → each card has `elements[]`).
-- A Supabase project exists but holds no app data; StoryWall's data is all in Base44.
-- **Migration in progress (Oct 2026):** StoryWall is moving off Base44 to Railway + Supabase + Resend. See `docs/migration-plan.md` and `docs/decisions.md`.
+- React + Vite + Tailwind. **Live on the new stack since Oct 2026:** the app is hosted on Railway (production `storywall.io`, staging `web-staging-c748.up.railway.app`); Supabase provides auth, the Postgres database, file storage (`drafts` private, `public-media` public) and Edge Functions (`supabase/functions/*`); Resend sends email from `send.storywall.io`.
+- Two Supabase projects: staging and production. Database changes are migrations in `supabase/migrations/`, applied by the Supabase GitHub integration (`develop` → staging, `main` → production), with pgTAP tests in `supabase/tests/database/`. Edge Functions are deployed by hand (not by the integration).
+- Data model: tables in `supabase/migrations/20261009190000_initial_schema.sql` and later migrations. A story is a `posts` row whose `cards` jsonb holds `cards[]` → each card has `elements[]`; private notes live in `post_notes`.
+- Base44 (app id `6a161402f22a3ebcce243595`, app name "SW") is the frozen fallback until it is shut down (planned around 24 Oct 2026, depending on tests). `base44/` keeps its code for reference. See `docs/migration-plan.md` and `docs/decisions.md`.
 
 ### GitHub is the only source of truth (since 8 Oct 2026)
 
@@ -29,25 +29,31 @@ Core pieces:
 - Never commit `.env*` or `base44/.app.jsonc` (gitignored). Secrets such as `ZAI_API_KEY` live in Base44's environment, not in code.
 - This repo is public: keep sensitive docs (security reviews, operating guides, internal notes) out of it, even briefly.
 
+### Supabase access (agent sessions)
+
+- Two scoped access tokens are in the environment. Each one only works on its own project; never print them.
+  - `SUPABASE_TOKEN_STAGING` → `storywall-staging` (ref `vlgwcpqndmfhsfcxijpr`): database read-write, Edge Functions read-write.
+  - `SUPABASE_TOKEN_PROD` → `storywall` production (ref `igakvqlzvglvuqflngey`): database read-only, Edge Functions read-write.
+- Neither token can list projects (`GET /v1/projects` returns 403); use the per-project Management API endpoints (`/v1/projects/<ref>/...`).
+- Edge Functions are deployed with the Supabase CLI, setting `SUPABASE_ACCESS_TOKEN` from the right variable on each command, e.g. `SUPABASE_ACCESS_TOKEN="$SUPABASE_TOKEN_STAGING" supabase functions deploy <name> --project-ref vlgwcpqndmfhsfcxijpr`. Never export it for the whole shell, so a later command can't hit the wrong project.
+- Deploy to staging first. **Nothing goes to production without Oz's explicit OK.** Database changes still go through migrations and the GitHub integration, not these tokens.
+
 ## Premium access
 
-- Premium is granted by admins only, via the `PremiumGrant` entity (one row per user, `user_id`). Admins (`role === 'admin'`) are always premium.
-- The check is enforced server-side in `base44/shared/premium.ts` (`hasPremium`), used by `structureStory` and `generateImage`. Any new premium backend function must call it.
-- The client reads `PremiumGrant` only to show/hide the Generate UI (`PublicProfile.jsx`). Never gate premium features on client state alone, and never add access flags to the `User` entity.
-- The old `is_premium` field on `User` is being retired (Sept 2026) — don't use it in new code.
+- Premium is granted by admins only, via the `premium_grants` table (one row per user, `user_id`). Admins (rows in `admins`) are always premium.
+- The check is enforced server-side in `supabase/functions/_shared/premium.ts` (`hasPremium`), used by `structureStory`, `startGeneration`, `generateJobImage` and `generateImage`. Any new premium backend function must call it.
+- The client reads its access through the `my_access` database function (`myAccess()` in `src/api/storywallApi.js`) only to show/hide the Generate UI. Never gate premium features on client state alone, and never add access flags to the profile.
 
 ## Card image export (admin-only, planned premium)
 
 - "Download all cards as images" button under the publish-flow preview (`PostFlowSheet.jsx`), and "Download images" in a published story's ⋯ menu on the profile (`StoryKebab` → sheet in `PublicProfile.jsx`, auto-starts). Both shown only when `user.role === 'admin'`.
 - `src/components/creator/DownloadCardsButton.jsx` re-renders each card through `CardThumb` at 1080×1080 in a hidden layer and rasterises it with `html-to-image`; `src/lib/cardExport.js` saves a single PNG, a zip (desktop) or the share sheet (phones). Both libraries load lazily on click.
 - It refuses (with a message) rather than exporting broken cards when an image hasn't loaded or its host blocks CORS. Not captured: the "Blur" photo overlay (backdrop-filter); videos export their current frame.
-- When it becomes a premium feature, gate it with `PremiumGrant` like Generate — it's client-only, so there's no server check to add.
+- When it becomes a premium feature, gate it with premium access like Generate — it's client-only, so there's no server check to add.
 
-## ⚠️ Critical gotcha: the schema STRIPS undeclared fields
+## Old gotcha (Base44 only): the schema stripped undeclared fields
 
-Base44 silently drops any card/element field that is NOT declared in `base44/entities/Post.jsonc` when a story is saved — even though the schema says `additionalProperties: true`. This caused real bugs (text font sizes resetting after reload, Text FX disappearing, image settings lost).
-
-**Rule:** whenever you add a new field to a card or element, add it to `Post.jsonc` in the same change (via Base44's schema update, which also rewrites the jsonc). Verify with a query that the field round-trips.
+On Base44, any card/element field not declared in `base44/entities/Post.jsonc` was silently dropped on save (text sizes resetting, Text FX disappearing). On Supabase, `posts.cards` is jsonb and keeps every field as saved (checked Oct 2026: `line_height`, `font_size_estimated`, `naturalWidth` round-trip). Only top-level story fields are filtered (`POST_IGNORED` in `src/api/storywallApi.js`), so a new top-level column needs a migration.
 
 ## Rendering model (read before touching the canvas)
 
@@ -89,10 +95,8 @@ Base44 silently drops any card/element field that is NOT declared in `base44/ent
 ## Open items / backlog
 
 - Paste/reconcile the original doc 108 (Text FX) spec.
-- Roll compact slider style out to every slider.
 - Doc 111: manual card split when text overflows at the minimum size.
 - Loading-screen cleanup: drop quick loads to blank (with timeout + Retry), small inline loaders for actions, possible product tour during onboarding.
-- Profile picture: delayed spinner + progressive loading.
 - Image perf: verify stored sizes, thumbnail variants, lighter Drafts list.
 - Decide on unused schema fields `panX/panY/zoomLevel/isPannable`.
 - Decide: keep or remove the multi-textbox "coordinated shrink".
@@ -105,3 +109,11 @@ Base44 silently drops any card/element field that is NOT declared in `base44/ent
 - Verify behaviour, don't assume it — several "fixes" here only worked after testing the real component (e.g. in a headless browser with scripted drags).
 - Leave a comment explaining WHY on non-obvious logic; most recent code does.
 - Be explicit about what's untested.
+
+## Keep the progress file current
+
+Oz follows progress on the Popmart projects dashboard, which reads `docs/PROGRESS.md` (format: Creative.can `docs/PROGRESS_FORMAT.md`). At the end of every work session:
+1. Update the front matter (`updated`, `summary`).
+2. Move items between Doing, To do and Done, and add new items. Product and Marketing items can be `@me` (Oz) or `@claude`.
+3. Put anything that needs Oz's accounts, keys, decisions or content under To do with `@me`.
+4. Only mark an item Done with evidence (merged PR, passing tests, live page).

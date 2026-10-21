@@ -6,6 +6,8 @@ import { ImagePanel } from '@/components/signup/SidePanel';
 import { AuthColumn, AuthInput, AuthButton, VerifyCodeForm, FullBleedAuthScreen, authErrorMessage, finishAuth } from '@/components/auth/AuthShared';
 import { LogOut } from 'lucide-react';
 import useDocumentTitle from '@/lib/useDocumentTitle';
+import PageLoader from '@/components/ui/PageLoader';
+import { LEGAL_VERSION } from '@/lib/legal';
 
 // /signup — the single entry point for "Claim your wall" (homepage field,
 // username pre-filled via ?username=) and the nav's "Get started" link (no
@@ -32,6 +34,15 @@ export default function SignUp() {
   const [stage, setStage] = useState('form'); // 'form' | 'verify'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // Minimum age 16 (Oz, 2026-10-19): the person confirms it before the
+  // account is created. A checkbox rather than a birth date, so we don't
+  // collect a date of birth we have no other use for.
+  const [isOldEnough, setIsOldEnough] = useState(false);
+  // Agreement to the Terms and Privacy Policy, stored with its version and
+  // date (docs/legal-and-privacy-plan.md Step 3). Its own box, so agreeing
+  // is a separate, clear choice from confirming the age.
+  const [agreed, setAgreed] = useState(false);
+  const canSubmit = email.trim() && password && isOldEnough && agreed;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -41,11 +52,11 @@ export default function SignUp() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!email.trim() || !password) return;
+    if (!canSubmit) return;
     setBusy(true);
     setError('');
     try {
-      const { needsCode } = await signUp(email.trim(), password);
+      const { needsCode } = await signUp(email.trim(), password, { ageConfirmed: true, termsVersion: LEGAL_VERSION });
       if (!needsCode) { finishAuth(target); return; }
       setStage('verify');
     } catch (err) {
@@ -64,7 +75,7 @@ export default function SignUp() {
   };
 
   if (isLoadingAuth) {
-    return <div className="fixed inset-0 bg-[#F4F2EC]" />;
+    return <PageLoader />;
   }
 
   if (!isAuthenticated) {
@@ -86,8 +97,31 @@ export default function SignUp() {
             </div>
             <AuthInput label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" autoFocus />
             <AuthInput label="Password" type="password" value={password} onChange={setPassword} placeholder="Create a password" autoComplete="new-password" />
+            <label className="flex items-start gap-3 text-sm text-[#262624] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isOldEnough}
+                onChange={(e) => setIsOldEnough(e.target.checked)}
+                className="mt-0.5 h-5 w-5 shrink-0 rounded-[4px] accent-[#262624] cursor-pointer"
+              />
+              <span>I&apos;m 16 or older.</span>
+            </label>
+            <label className="flex items-start gap-3 text-sm text-[#262624] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5 h-5 w-5 shrink-0 rounded-[4px] accent-[#262624] cursor-pointer"
+              />
+              <span>
+                I agree to the{' '}
+                <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline font-medium">Terms of Service</a>
+                {' '}and{' '}
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline font-medium">Privacy Policy</a>.
+              </span>
+            </label>
             {error && <p className="text-red-500 text-sm">{error}</p>}
-            <AuthButton disabled={!email.trim() || !password} busy={busy} busyLabel="Creating account…">Create account</AuthButton>
+            <AuthButton disabled={!canSubmit} busy={busy} busyLabel="Creating account…">Create account</AuthButton>
             <p className="text-center text-sm text-[#8A877F]">
               Already have an account?{' '}
               <Link to="/signin" className="text-[#262624] font-medium underline">Sign in</Link>
@@ -145,7 +179,7 @@ export default function SignUp() {
           {user?.username ? (
             <>This browser is signed in as <span className="font-medium text-[#F4F2EC]">@{user.username}</span>.</>
           ) : (
-            "This browser is already signed in to a StoryWall account."
+            "This browser is already signed in to a Storywall account."
           )}
         </p>
       </div>

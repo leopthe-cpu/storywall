@@ -3,12 +3,10 @@ import DraggableElement from './DraggableElement';
 import { resolveColor } from '@/lib/colorTokens';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 
-// Reference card size — all element coordinates/sizes are stored relative to this
-export const REFERENCE_CARD_SIZE = 320;
-
-// Inset (px in reference space) of the safe-zone guide border. Text boxes
-// are capped to this boundary so content never overflows past it.
-export const SAFE_ZONE_INSET = 16;
+// The card geometry lives in @/lib/cardGeometry; re-exported here so the
+// editor files that import it from CanvasArea keep working.
+import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/lib/cardGeometry';
+export { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET };
 
 export default function CanvasArea({ card, cardSize, selectedElementId, onSelectElement, onUpdateElement, autoEditId, onAutoEditConsumed, onRetryImageGeneration, tokens }) {
   const canvasRef = useRef(null);

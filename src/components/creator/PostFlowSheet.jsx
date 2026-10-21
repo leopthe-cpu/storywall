@@ -8,6 +8,7 @@ import GridBackdrop from '@/components/ui/GridBackdrop';
 import BackButton from '@/components/ui/BackButton';
 import DownloadCardsButton from '@/components/creator/DownloadCardsButton';
 import { useAuth } from '@/lib/AuthContext';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 const MAX_REFRESHES = 3;
 const MAX_TOTAL_SELECTED = 5;
@@ -350,7 +351,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
           className={`bg-[#262624] text-[#F4F2EC] font-semibold text-sm px-4 py-1.5 rounded-[6px] transition-all ${
             (publishing || missingSkill) ? 'opacity-50' : 'hover:bg-[#30302E] active:scale-95'
           }`}>
-          {publishing ? 'Posting…' : 'Post →'}
+          <BusyLabel busy={publishing} label="Posting…" size={12}>Post →</BusyLabel>
         </button>
       </div>
 

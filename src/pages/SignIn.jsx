@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { ImagePanel } from '@/components/signup/SidePanel';
 import { AuthColumn, AuthInput, AuthButton, VerifyCodeForm, authErrorMessage, finishAuth } from '@/components/auth/AuthShared';
 import useDocumentTitle from '@/lib/useDocumentTitle';
+import PageLoader from '@/components/ui/PageLoader';
 
 // Sign-in page at /signin — StoryWall's own split-screen sign-in (replaces
 // Base44's hosted login page). After login, the user is returned to the
@@ -54,7 +55,7 @@ export default function SignIn() {
   const handleForgot = () => navigate('/signin/reset', { state: { from, email: email.trim() } });
 
   if (isLoadingAuth || isAuthenticated) {
-    return <div className="fixed inset-0 bg-[#F4F2EC]" />;
+    return <PageLoader />;
   }
 
   // The email-code step renders itself as a standalone full-bleed screen,

@@ -7,23 +7,31 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import PageNotFound from './lib/PageNotFound';
 import LoadingTimeout from '@/components/LoadingTimeout';
 import PublicProfile from '@/pages/PublicProfile.jsx';
-import StoryCreator from '@/pages/StoryCreator';
-import PromptTest from '@/pages/PromptTest';
 import Landing from '@/pages/Landing';
 import SignIn from '@/pages/SignIn';
 import Verify from '@/pages/Verify';
-import Onboarding from '@/pages/Onboarding';
 import SignUp from '@/pages/SignUp';
 import ResetPassword from '@/pages/ResetPassword';
+import Terms from '@/pages/Terms';
+import Privacy from '@/pages/Privacy';
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { getMe } from '@/api/storywallApi';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import PixelSpinner from '@/components/ui/PixelSpinner';
+import PageLoader from '@/components/ui/PageLoader';
 import GenerationWatcher from '@/components/GenerationWatcher';
 
 // Card lab: development-only page for checking generated card layouts. The
 // import is behind import.meta.env.DEV, so it isn't part of production builds.
 const CardLab = import.meta.env.DEV ? lazy(() => import('@/pages/CardLab')) : null;
+
+// Pages loaded only when opened (performance plan §C): the builder with its
+// editor, AI and export code is most of the app, and visitors to the landing
+// page or a wall never need it. Each becomes its own file, fetched on first
+// visit; PageLoader shows while it loads (blank for the first 0.4 s).
+const StoryCreator = lazy(() => import('@/pages/StoryCreator'));
+const PromptTest = lazy(() => import('@/pages/PromptTest'));
+const Onboarding = lazy(() => import('@/pages/Onboarding'));
+const page = (element) => <Suspense fallback={<PageLoader />}>{element}</Suspense>;
 
 // Protects routes that require a fully onboarded (username set) user
 function RequireAuth({ element }) {
@@ -31,27 +39,17 @@ function RequireAuth({ element }) {
   const [status, setStatus] = useState('loading');
 
   useEffect(() => {
-    let done = false;
-    const t = setTimeout(() => { if (!done) setStatus('timeout'); }, 10000);
     getMe()
       .then(user => {
-        done = true; clearTimeout(t);
         if (!user) { setStatus('unauthed'); return; }
         if (!user.username) { setStatus('needs_onboarding'); return; }
         setStatus('ok');
       })
-      .catch(() => { done = true; clearTimeout(t); setStatus('unauthed'); });
-    return () => clearTimeout(t);
+      .catch(() => setStatus('unauthed'));
   }, []);
 
-  if (status === 'loading') {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white">
-        <PixelSpinner size={24} />
-      </div>
-    );
-  }
-  if (status === 'timeout') return <LoadingTimeout />;
+  // PageLoader shows its own "Taking a while…" + Retry after 10 s.
+  if (status === 'loading') return <PageLoader />;
   if (status === 'unauthed') return <Navigate to="/signin" state={{ from: location.pathname }} replace />;
   if (status === 'needs_onboarding') return <Navigate to="/onboarding" replace />;
   return element;
@@ -74,15 +72,18 @@ const AuthenticatedApp = () => {
       <Route path="/signin/reset" element={<ResetPassword />} />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/verify" element={<Verify />} />
+      {/* 'terms' and 'privacy' are reserved usernames, so these can't hide a wall. */}
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
 
       {/* Onboarding */}
-      <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/onboarding" element={page(<Onboarding />)} />
 
       {/* Creator — fully onboarded users only */}
-      <Route path="/create" element={<RequireAuth element={<StoryCreator />} />} />
+      <Route path="/create" element={<RequireAuth element={page(<StoryCreator />)} />} />
 
       {/* Prompt Test — admin only (page itself checks role) */}
-      <Route path="/prompt-test" element={<RequireAuth element={<PromptTest />} />} />
+      <Route path="/prompt-test" element={<RequireAuth element={page(<PromptTest />)} />} />
 
       {CardLab && <Route path="/dev/card-lab" element={<Suspense fallback={null}><CardLab /></Suspense>} />}
 

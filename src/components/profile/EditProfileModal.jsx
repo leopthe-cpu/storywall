@@ -3,6 +3,7 @@ import { X } from '@/components/icons';
 import { updateMe } from '@/api/storywallApi';
 import ProfilePhotoEditor from './ProfilePhotoEditor';
 import LinksEditor from './LinksEditor';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 export default function EditProfileModal({ profile, allTags, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -142,7 +143,7 @@ export default function EditProfileModal({ profile, allTags, onClose, onSaved })
             disabled={saving}
             className="w-full bg-black text-white py-4 rounded-2xl font-semibold text-base disabled:opacity-50 hover:bg-gray-900 active:scale-[0.98] transition-all"
           >
-            {saving ? 'Saving…' : 'Save'}
+            <BusyLabel busy={saving} label="Saving…">Save</BusyLabel>
           </button>
         </div>
       </div>

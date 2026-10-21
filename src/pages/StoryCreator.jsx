@@ -9,6 +9,7 @@ import BottomIsland, { ISLAND_CHROME } from '@/components/creator/BottomIsland';
 import PostFlowSheet from '@/components/creator/PostFlowSheet';
 import { DraftMediaProvider } from '@/components/creator/DraftMediaContext';
 import { applyTemplateToStory } from '@/lib/storyTemplates';
+import { frameworkTemplateForStory, isFrameworkTemplate } from '@/lib/frameworkTemplates';
 import { aiCarouselBuilderEnabled } from '@/lib/featureFlags';
 import NotesView from '@/components/creator/NotesView';
 import GenerateProgress from '@/components/creator/GenerateProgress';
@@ -979,8 +980,24 @@ export default function StoryCreator() {
       });
       return;
     }
-    const newCards = applyTemplateToStory(template, cardsRef.current, true);
-    const { cards: migratedCards, tokens: migratedTokens } = migrateToTokens(newCards, colorTokensRef.current);
+    // Framework templates come laid out with their own colour tokens, like a
+    // generated story; the older templates are plain colours, turned into
+    // tokens here.
+    let migratedCards, migratedTokens;
+    if (isFrameworkTemplate(template)) {
+      let laidOut;
+      try {
+        laidOut = await frameworkTemplateForStory(template);
+      } catch (e) {
+        console.error('[StoryCreator] template layout failed:', e);
+        toast({ variant: 'destructive', title: "Couldn't open this template", description: 'Check your connection and try again.' });
+        return;
+      }
+      ({ cards: migratedCards, tokens: migratedTokens } = migrateToTokens(laidOut.cards, laidOut.tokens));
+    } else {
+      const newCards = applyTemplateToStory(template, cardsRef.current, true);
+      ({ cards: migratedCards, tokens: migratedTokens } = migrateToTokens(newCards, colorTokensRef.current));
+    }
     // A template replaces every card, so it starts a NEW story: detach from
     // the draft (or published story) that was open. The story being left was
     // just saved above and stays in Drafts untouched. Without this, the next
@@ -1116,10 +1133,19 @@ export default function StoryCreator() {
     return () => { mountedRef.current = false; };
   }, []);
 
+  // True once a Generate run is a server job, which keeps going (and lands
+  // in Drafts) if the user leaves. "Edits only" and the fallback pipeline
+  // run in this tab, so they don't offer leaving.
+  const [genCanLeave, setGenCanLeave] = useState(false);
+  // Colour theme picked on the notes screen (ThemePicker); null = each
+  // style's own colours.
+  const [genTheme, setGenTheme] = useState(null);
+
   const handleGenerate = async (editMode = 'full') => {
     if (!rawNotes.trim()) return;
     setGeneratePhase('generating');
     setGenProgress({ completedSteps: 0, totalSteps: 1, label: 'Starting…' });
+    setGenCanLeave(false);
     try {
       // A full run goes through the server job (src/lib/generateJob.js), so
       // leaving the page doesn't lose it. It writes into this story's draft:
@@ -1134,7 +1160,10 @@ export default function StoryCreator() {
           text: rawNotes,
           attachments,
           postId: draftIdRef.current,
-          onProgress: (p) => setGenProgress(p),
+          theme: genTheme,
+          // Progress only arrives once the server job exists; from then on
+          // leaving is safe, so the "Sit back" card can say so.
+          onProgress: (p) => { setGenProgress(p); setGenCanLeave(true); },
           // Leaving the builder stops following; the run continues on the
           // server, then the "ready" toast and Drafts take over.
           isActive: () => mountedRef.current,
@@ -1151,6 +1180,7 @@ export default function StoryCreator() {
           editMode,
           existingCards: editMode === 'edits_only' ? cards : [],
           existingStyleTemplate: editMode === 'edits_only' ? generationStyle : undefined,
+          theme: genTheme,
           onProgress: (p) => setGenProgress(p),
         });
       }
@@ -1364,6 +1394,8 @@ export default function StoryCreator() {
           attachments={attachments}
           onAddAttachment={handleAddAttachment}
           onRemoveAttachment={handleRemoveAttachment}
+          theme={genTheme}
+          onThemeChange={setGenTheme}
         />
       ) : (
       <div className="flex-1 flex flex-col md:flex-row min-h-0">
@@ -1471,7 +1503,7 @@ export default function StoryCreator() {
         visible={generatePhase === 'generating'}
         completedSteps={genProgress.completedSteps}
         totalSteps={genProgress.totalSteps}
-        currentStep={genProgress.label}
+        onLeave={genCanLeave ? navigateToProfile : null}
       />
 
       {showRegenerateChoice &&

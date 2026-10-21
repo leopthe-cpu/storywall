@@ -4,6 +4,7 @@ import { getMe, invokeFunction } from '@/api/storywallApi';
 import { saveUsername } from '@/lib/usernameApi';
 import { Pencil, Check, X, AlertCircle } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import BusyLabel from '@/components/ui/BusyLabel';
 
 // Inline-editable username row with real-time availability check.
 // Excludes the current user's own record so they can keep their existing username.
@@ -101,7 +102,7 @@ export default function EditableUsername({ currentUsername, currentUserId, onSav
             disabled={saving || checkState !== 'available'}
             className="flex-1 bg-black text-white py-2 rounded-lg text-xs font-medium disabled:opacity-50"
           >
-            {saving ? 'Saving...' : 'Save'}
+            <BusyLabel busy={saving} label="Saving…" size={12}>Save</BusyLabel>
           </button>
           <button
             onClick={handleCancel}
