@@ -226,6 +226,10 @@ export default function Landing() {
             <SwipeableCards />
           </div>
         </main>
+        <footer className="pb-8 flex justify-center gap-5 text-[13px] text-[#8A877F]">
+          <Link to="/terms" className="hover:text-[#262624]">Terms</Link>
+          <Link to="/privacy" className="hover:text-[#262624]">Privacy</Link>
+        </footer>
       </div>
     </div>
   );

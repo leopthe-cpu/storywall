@@ -15,6 +15,8 @@ import Verify from '@/pages/Verify';
 import Onboarding from '@/pages/Onboarding';
 import SignUp from '@/pages/SignUp';
 import ResetPassword from '@/pages/ResetPassword';
+import Terms from '@/pages/Terms';
+import Privacy from '@/pages/Privacy';
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { getMe } from '@/api/storywallApi';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -64,6 +66,9 @@ const AuthenticatedApp = () => {
       <Route path="/signin/reset" element={<ResetPassword />} />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/verify" element={<Verify />} />
+      {/* 'terms' and 'privacy' are reserved usernames, so these can't hide a wall. */}
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
 
       {/* Onboarding */}
       <Route path="/onboarding" element={<Onboarding />} />
