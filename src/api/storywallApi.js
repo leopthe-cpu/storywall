@@ -97,8 +97,15 @@ export async function signIn(email, password) {
 // template uses {{ .Token }}). Returns { needsCode } — false only if the
 // project ever stops requiring email confirmation, in which case the user
 // is already signed in.
-export async function signUp(email, password) {
-  const data = await auth(getSupabase().auth.signUp({ email, password }));
+// `ageConfirmed`: the sign-up form's "I'm 16 or older" box (minimum age 16,
+// Oz 2026-10-19). Kept on the account with the date, as a record that the
+// person confirmed it.
+export async function signUp(email, password, { ageConfirmed = false } = {}) {
+  const data = await auth(getSupabase().auth.signUp({
+    email,
+    password,
+    options: { data: ageConfirmed ? { age_confirmed_16: new Date().toISOString() } : {} },
+  }));
   // For an address that already has a confirmed account, Supabase sends no
   // email and returns a user with no identities instead of an error.
   if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
