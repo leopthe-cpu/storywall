@@ -33,6 +33,10 @@ export default function SignUp() {
   const [stage, setStage] = useState('form'); // 'form' | 'verify'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // Minimum age 16 (Oz, 2026-10-19): the person confirms it before the
+  // account is created. A checkbox rather than a birth date, so we don't
+  // collect a date of birth we have no other use for.
+  const [isOldEnough, setIsOldEnough] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -42,11 +46,11 @@ export default function SignUp() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    if (!email.trim() || !password) return;
+    if (!email.trim() || !password || !isOldEnough) return;
     setBusy(true);
     setError('');
     try {
-      const { needsCode } = await signUp(email.trim(), password);
+      const { needsCode } = await signUp(email.trim(), password, { ageConfirmed: true });
       if (!needsCode) { finishAuth(target); return; }
       setStage('verify');
     } catch (err) {
@@ -87,8 +91,17 @@ export default function SignUp() {
             </div>
             <AuthInput label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" autoFocus />
             <AuthInput label="Password" type="password" value={password} onChange={setPassword} placeholder="Create a password" autoComplete="new-password" />
+            <label className="flex items-start gap-3 text-sm text-[#262624] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isOldEnough}
+                onChange={(e) => setIsOldEnough(e.target.checked)}
+                className="mt-0.5 h-5 w-5 shrink-0 rounded-[4px] accent-[#262624] cursor-pointer"
+              />
+              <span>I&apos;m 16 or older.</span>
+            </label>
             {error && <p className="text-red-500 text-sm">{error}</p>}
-            <AuthButton disabled={!email.trim() || !password} busy={busy} busyLabel="Creating account…">Create account</AuthButton>
+            <AuthButton disabled={!email.trim() || !password || !isOldEnough} busy={busy} busyLabel="Creating account…">Create account</AuthButton>
             <p className="text-center text-sm text-[#8A877F]">
               Already have an account?{' '}
               <Link to="/signin" className="text-[#262624] font-medium underline">Sign in</Link>
