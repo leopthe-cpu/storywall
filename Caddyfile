@@ -31,6 +31,13 @@
 		-Server
 	}
 
+	# www.storywall.io sends visitors to storywall.io, as Base44 did, so
+	# every link and sign-in lives on one address (sign-in sessions are kept
+	# per address). 308 keeps the method and is cached by browsers. The
+	# path and query are kept, so www.storywall.io/leo lands on /leo.
+	@www host www.storywall.io
+	redir @www https://storywall.io{uri} 308
+
 	# Build files have a content hash in their name, so they can be cached
 	# for good; a missing one is a real 404, not the app page.
 	handle /assets/* {
