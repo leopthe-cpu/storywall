@@ -29,6 +29,15 @@ Core pieces:
 - Never commit `.env*` or `base44/.app.jsonc` (gitignored). Secrets such as `ZAI_API_KEY` live in Base44's environment, not in code.
 - This repo is public: keep sensitive docs (security reviews, operating guides, internal notes) out of it, even briefly.
 
+### Supabase access (agent sessions)
+
+- Two scoped access tokens are in the environment. Each one only works on its own project; never print them.
+  - `SUPABASE_TOKEN_STAGING` → `storywall-staging` (ref `vlgwcpqndmfhsfcxijpr`): database read-write, Edge Functions read-write.
+  - `SUPABASE_TOKEN_PROD` → `storywall` production (ref `igakvqlzvglvuqflngey`): database read-only, Edge Functions read-write.
+- Neither token can list projects (`GET /v1/projects` returns 403); use the per-project Management API endpoints (`/v1/projects/<ref>/...`).
+- Edge Functions are deployed with the Supabase CLI, setting `SUPABASE_ACCESS_TOKEN` from the right variable on each command, e.g. `SUPABASE_ACCESS_TOKEN="$SUPABASE_TOKEN_STAGING" supabase functions deploy <name> --project-ref vlgwcpqndmfhsfcxijpr`. Never export it for the whole shell, so a later command can't hit the wrong project.
+- Deploy to staging first. **Nothing goes to production without Oz's explicit OK.** Database changes still go through migrations and the GitHub integration, not these tokens.
+
 ## Premium access
 
 - Premium is granted by admins only, via the `premium_grants` table (one row per user, `user_id`). Admins (rows in `admins`) are always premium.
