@@ -10,7 +10,7 @@ import AudioRecorder from '@/components/creator/AudioRecorder';
 import TrimPanel from '@/components/creator/panels/TrimPanel';
 import SizeStepper from '@/components/creator/SizeStepper';
 import PixelSpinner from '@/components/ui/PixelSpinner';
-import { REFERENCE_CARD_SIZE } from '@/components/creator/CanvasArea';
+import { REFERENCE_CARD_SIZE } from '@/lib/cardGeometry';
 import { getImageDisplayDims } from '@/lib/imageLayout';
 import { ENABLE_VIDEO_AND_AUDIO } from '@/lib/featureFlags';
 import { useIsMobile } from '@/hooks/use-mobile';
