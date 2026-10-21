@@ -30,7 +30,7 @@ export function AuthColumn({ children }) {
     <div className="min-h-screen md:w-1/2 flex flex-col items-center justify-center px-6 py-16">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <Link to="/" aria-label="Back to the StoryWall home page" className="inline-block"><img src="/logo-slash-ink.png" alt="StoryWall" className="h-[22px] w-auto inline-block" /></Link>
+          <Link to="/" aria-label="Back to the Storywall home page" className="inline-block"><img src="/logo-slash-ink.png" alt="Storywall" className="h-[22px] w-auto inline-block" /></Link>
         </div>
         {children}
       </div>
@@ -60,7 +60,7 @@ export function FullBleedAuthScreen({ children, footer }) {
       >
         <div className="w-full max-w-sm">
           <div className="mb-8">
-            <Link to="/" aria-label="Back to the StoryWall home page" className="inline-block"><img src="/logo-slash-light.png" alt="StoryWall" className="h-[22px] w-auto inline-block" /></Link>
+            <Link to="/" aria-label="Back to the Storywall home page" className="inline-block"><img src="/logo-slash-light.png" alt="Storywall" className="h-[22px] w-auto inline-block" /></Link>
           </div>
           {children}
           {footer && <div className="mt-6">{footer}</div>}
