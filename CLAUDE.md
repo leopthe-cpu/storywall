@@ -86,10 +86,8 @@ On Base44, any card/element field not declared in `base44/entities/Post.jsonc` w
 ## Open items / backlog
 
 - Paste/reconcile the original doc 108 (Text FX) spec.
-- Roll compact slider style out to every slider.
 - Doc 111: manual card split when text overflows at the minimum size.
 - Loading-screen cleanup: drop quick loads to blank (with timeout + Retry), small inline loaders for actions, possible product tour during onboarding.
-- Profile picture: delayed spinner + progressive loading.
 - Image perf: verify stored sizes, thumbnail variants, lighter Drafts list.
 - Decide on unused schema fields `panX/panY/zoomLevel/isPannable`.
 - Decide: keep or remove the multi-textbox "coordinated shrink".

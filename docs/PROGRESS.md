@@ -5,8 +5,8 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
 ---
 
 ## Doing
-- [ ] Test the staging batch (PRs 93–111) and release develop to production @me #release #testing
-  On develop, not yet merged to main: shared loaders, framework templates, colour variation, theme picker, more fonts, bigger text, data export, account deletion. Production needs Oz's approval.
+- [ ] Test the staging batch (PRs 93–121) and release develop to production @me #release #testing
+  On develop, not yet merged to main: shared loaders, framework templates, colour variation, theme picker, more fonts, bigger text, data export, account deletion, age gate, Terms/Privacy and consent, change password, www redirect, faster page loads. Production needs Oz's approval.
 - [ ] After the release: deploy startGeneration, deleteAccount, structureStory and suggestSkills to production @claude #release
   Edge Functions are deployed by hand. Needs Oz's OK.
   Source: CLAUDE.md "Stack / hosting"
@@ -16,9 +16,6 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
 - [ ] Faster AI steps: picture model and size, structuring model @claude #performance #ai
   Needs a small paid test (about $1–2) and Oz's OK first. Sonnet is kept unless a faster model passes the word-for-word check.
   Source: docs/performance-plan.md §B
-- [ ] Split the JavaScript bundle by page @claude #performance
-  So the landing page and walls don't download the builder (main bundle about 1.1 MB).
-  Source: docs/performance-plan.md §C
 - [ ] Smaller picture copies for Drafts and walls @claude #performance
   Check the stored sizes first. Supabase image resizing may need a paid plan.
   Source: docs/performance-plan.md §C; CLAUDE.md backlog "Image perf"
@@ -30,17 +27,8 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
 - [ ] Data inventory: what is collected and where it goes @claude #legal
   Step 1 (research on PIPEDA, Law 25, CASL, CCPA, COPPA, GDPR, AI Act, DSA) is done and kept in Oz's Google Drive, not in this public repo. Step 2 is still to do.
   Source: docs/legal-and-privacy-plan.md Steps 1–2
-- [ ] Draft the Terms of Service and Privacy Policy @claude #legal
-  Pages at storywall.io/terms and /privacy, linked from sign-up, the footer and Settings.
-  Source: docs/legal-and-privacy-plan.md Step 4
-- [ ] Age gate at sign-up: 16 and over @claude #legal #app
-  Decided by Oz on 2026-10-19.
-  Source: docs/legal-and-privacy-plan.md Step 3
-- [ ] Sign-up consent with stored version and date @claude #legal #app
-  Source: docs/legal-and-privacy-plan.md Step 3
-- [ ] Report-content and copyright takedown contact @claude #legal
-  Source: docs/legal-and-privacy-plan.md Step 3
-- [ ] AI disclosure, and check that untagged AI pictures meet the AI Act @claude #legal #ai
+- [ ] Check with the lawyer that untagged AI pictures meet the EU AI Act @me #legal #ai
+  The in-app AI notice on the Generate screen is done (PR 118).
   Source: docs/legal-and-privacy-plan.md Step 3
 - [ ] GDPR follow-up: records of processing, rights requests, DPIA, breach plan @claude #legal #later
   Source: docs/legal-and-privacy-plan.md Step 5
@@ -52,22 +40,10 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   Source: docs/migration-plan.md "After migration" 1; docs/decisions.md 10
 - [ ] Profile, skill and story search @claude #discovery
   Source: docs/migration-plan.md "After migration" 2; docs/decisions.md 11
-- [ ] Change-password screen for signed-in users @claude #auth
-  Then Oz changes the leopteh test password (decision 15).
-  Source: docs/migration-plan.md "After migration" 5
-- [ ] Write "Storywall" instead of "StoryWall" on screen @claude #brand
-  Source: docs/migration-plan.md "After migration" 7; docs/decisions.md 27
-- [ ] Make www.storywall.io redirect to storywall.io @claude #infra
-  Base44 redirected; the new setup shows the site on both.
-  Source: docs/migration-plan.md Phase 6
 - [ ] Phase 7: LibreChat agent for Storywall @claude #infra
   Invite w0rkstufff, a staging-only Supabase token, a "StoryWall dev" agent, and an operating guide given in chat.
   Source: docs/migration-plan.md Phase 7
 - [ ] Doc 111: split a card by hand when text overflows @claude #builder
-  Source: CLAUDE.md "Open items / backlog"
-- [ ] Use the compact slider style for every slider @claude #builder
-  Source: CLAUDE.md "Open items / backlog"
-- [ ] Profile picture: delayed spinner and progressive loading @claude #ux
   Source: CLAUDE.md "Open items / backlog"
 - [ ] Rich text in cards (colour and style per word): half-day spike first, then an estimate @claude #builder #later
   Source: chat with Oz, 2026-10-17
@@ -78,6 +54,15 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   Source: CLAUDE.md "Open items / backlog"
 
 ## Waiting
+- [ ] Create privacy@storywall.io @me #legal
+  The contact address on the Terms and Privacy pages. Cloudflare Email Routing (free) can forward it to Gmail.
+  Source: PR 116
+- [ ] Confirm three facts the Privacy Policy states @me #legal
+  Production Supabase region (staging is ca-central-1); OpenRouter prompt logging off; then update src/lib/legal.js if anything differs.
+  Source: PR 116
+- [ ] Give the Supabase connector access to the production project again @me #infra
+  It now lists only staging and popmart, so production function deploys after the release can't be done from Claude.
+  Source: chat, 2026-10-21
 - [ ] Shut down Base44 after the fallback period @me #migration
   Keep it untouched for an agreed period, archive the source, cancel, and delete its copy of user data. Planned around 24 Oct, depending on tests.
   Source: docs/migration-plan.md Phase 6; CLAUDE.md on develop; docs/legal-and-privacy-plan.md Step 2
@@ -162,6 +147,25 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
 - [x] More font pairings, brighter colours, slightly bigger text @claude #generate (2026-10-17)
   On staging only.
   Source: commits PRs 106–108
+
+- [x] 16+ age gate and Terms/Privacy consent at sign-up, stored with version and date @claude #legal #app (2026-10-21)
+  On staging only.
+  Source: PRs 113, 117
+- [x] Terms of Service and Privacy Policy pages, with report-content contact @claude #legal (2026-10-21)
+  Draft for the lawyer's review. On staging only.
+  Source: PR 116
+- [x] AI notice on the Generate notes screen @claude #legal #ai (2026-10-21)
+  Source: PR 118
+- [x] Change password in Settings @claude #auth (2026-10-21)
+  Source: PR 119
+- [x] www.storywall.io redirects to storywall.io; "Storywall" spelling on screen @claude #infra #brand (2026-10-21)
+  Source: PRs 114, 115
+- [x] JavaScript split by page: main file 330 KB → 240 KB gzipped @claude #performance (2026-10-21)
+  Source: PR 120
+- [x] Profile picture: delayed spinner, loads first @claude #ux (2026-10-21)
+  Source: PR 121
+- [x] Compact slider style everywhere (already the default; the one other slider, ImageCropModal, is unused code) @claude #builder (2026-10-21)
+  Source: src/components/creator/MinimalSlider.jsx
 
 ## Marketing
 - [ ] Plan marketing (nothing documented yet) @me
