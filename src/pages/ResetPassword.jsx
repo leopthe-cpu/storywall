@@ -15,6 +15,10 @@ export default function ResetPassword() {
   useDocumentTitle('Reset Password | storywall');
   const location = useLocation();
   const from = location.state?.from || '/onboarding';
+  // Opened from Settings → Change password (signed in): same steps, worded
+  // as a change rather than a forgotten password, and "back" returns to the
+  // wall instead of the sign-in page.
+  const changing = !!location.state?.change;
 
   const [stage, setStage] = useState('email'); // 'email' | 'code' | 'password'
   const [email, setEmail] = useState(location.state?.email || '');
@@ -86,14 +90,18 @@ export default function ResetPassword() {
         {stage === 'email' ? (
           <form onSubmit={sendCode} className="flex flex-col gap-5">
             <div className="text-center">
-              <h1 className="font-display text-[28px] leading-tight font-medium text-[#262624]">Reset your password</h1>
-              <p className="text-[#6B6964] text-sm mt-1">We'll email you a code to choose a new one.</p>
+              <h1 className="font-display text-[28px] leading-tight font-medium text-[#262624]">{changing ? 'Change your password' : 'Reset your password'}</h1>
+              <p className="text-[#6B6964] text-sm mt-1">{changing ? "We'll email you a code to confirm it's you." : "We'll email you a code to choose a new one."}</p>
             </div>
             <AuthInput label="Email" type="email" value={email} onChange={setEmail} placeholder="you@example.com" autoComplete="email" autoFocus />
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <AuthButton disabled={!email.trim()} busy={busy} busyLabel="Sending…">Send code</AuthButton>
             <div className="text-center text-sm">
-              <Link to="/signin" state={{ from }} className="text-[#6B6964] hover:text-[#262624]">Back to sign in</Link>
+              {changing ? (
+                <Link to={from} className="text-[#6B6964] hover:text-[#262624]">Cancel</Link>
+              ) : (
+                <Link to="/signin" state={{ from }} className="text-[#6B6964] hover:text-[#262624]">Back to sign in</Link>
+              )}
             </div>
           </form>
         ) : stage === 'code' ? (

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { X, LogOut, Archive, Download } from '@/components/icons';
 import { getMe, signOut, filterPosts, updateMe } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
@@ -15,6 +16,7 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
   // and ignores taps, so it never flashes "public" or flips the wrong way.
   const [isPrivate, setIsPrivate] = useState(null);
   const [showArchives, setShowArchives] = useState(false);
+  const navigate = useNavigate();
   const [archivedCount, setArchivedCount] = useState(0);
 
   // Fetch the full current user (including email) from auth — the `user` prop
@@ -118,7 +120,19 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
                 currentUserId={user?.id}
                 onSaved={onClose}
               />
-              <InfoRow label="Email" value={emailDisplay} note="Managed by your sign-in provider" />
+              <InfoRow label="Email" value={emailDisplay} note="Used to sign in" />
+              {/* Change password: the code-by-email reset flow, started for
+                  this account's address. The emailed code proves it's the
+                  owner, so no "current password" is asked for. */}
+              <button
+                onClick={() => navigate('/signin/reset', {
+                  state: { email: currentUser?.email || '', from: user?.username ? `/${user.username}` : '/', change: true },
+                })}
+                className="w-full flex items-center justify-between py-1 text-left group"
+              >
+                <p className="text-sm font-medium text-gray-900">Change password</p>
+                <span className="text-xs text-gray-300 group-hover:text-gray-500">›</span>
+              </button>
             </div>
           </div>
 
