@@ -1,12 +1,15 @@
 ---
 project: Storywall
-updated: 2026-10-18
-summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, and Generate now runs as a server job in production. A batch of loading-screen, template, colour and privacy work (data export, account deletion) is on staging and waits for Oz to release it. Terms, privacy policy and the Base44 shutdown are still to come.
+updated: 2026-10-21
+summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, and Generate now runs as a server job in production. A batch of loading-screen, template, colour, theme-picker and privacy work (data export, account deletion) is on staging and waits for Oz to release it. Minimum age (16) and governing law (Ontario, Canada) are decided; the age gate, Terms, privacy policy and the Base44 shutdown are next.
 ---
 
 ## Doing
-- [ ] Test the staging batch (PRs 93–109) and release develop to production @me #release #testing
-  On develop, not yet merged to main: shared loaders, framework templates, colour variation, theme picker, data export, account deletion. Production needs Oz's approval.
+- [ ] Test the staging batch (PRs 93–111) and release develop to production @me #release #testing
+  On develop, not yet merged to main: shared loaders, framework templates, colour variation, theme picker, more fonts, bigger text, data export, account deletion. Production needs Oz's approval.
+- [ ] After the release: deploy startGeneration, deleteAccount, structureStory and suggestSkills to production @claude #release
+  Edge Functions are deployed by hand. Needs Oz's OK.
+  Source: CLAUDE.md "Stack / hosting"
   Source: git log origin/main..origin/develop; docs/generate-roadmap.md order step 1
 
 ## To do
@@ -24,12 +27,15 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
 - [ ] Generate input as an open canvas @claude #generate #later
   Freeform-style canvas with drag-and-drop pictures and a + button. Marked "later".
   Source: docs/generate-roadmap.md §B
-- [ ] Legal research and data inventory @claude #legal
-  Step 1: PIPEDA, Law 25, CASL, CCPA, COPPA, GDPR, AI Act, DSA. Step 2: what is collected and where it goes. Status: planned, not started.
+- [ ] Data inventory: what is collected and where it goes @claude #legal
+  Step 1 (research on PIPEDA, Law 25, CASL, CCPA, COPPA, GDPR, AI Act, DSA) is done and kept in Oz's Google Drive, not in this public repo. Step 2 is still to do.
   Source: docs/legal-and-privacy-plan.md Steps 1–2
 - [ ] Draft the Terms of Service and Privacy Policy @claude #legal
   Pages at storywall.io/terms and /privacy, linked from sign-up, the footer and Settings.
   Source: docs/legal-and-privacy-plan.md Step 4
+- [ ] Age gate at sign-up: 16 and over @claude #legal #app
+  Decided by Oz on 2026-10-19.
+  Source: docs/legal-and-privacy-plan.md Step 3
 - [ ] Sign-up consent with stored version and date @claude #legal #app
   Source: docs/legal-and-privacy-plan.md Step 3
 - [ ] Report-content and copyright takedown contact @claude #legal
@@ -63,6 +69,8 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   Source: CLAUDE.md "Open items / backlog"
 - [ ] Profile picture: delayed spinner and progressive loading @claude #ux
   Source: CLAUDE.md "Open items / backlog"
+- [ ] Rich text in cards (colour and style per word): half-day spike first, then an estimate @claude #builder #later
+  Source: chat with Oz, 2026-10-17
 - [ ] Reconcile the original doc 108 (Text FX) spec @me #builder
   Oz pastes the spec. Status unclear.
   Source: CLAUDE.md "Open items / backlog"
@@ -76,20 +84,17 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
 - [ ] OK the paid test spend for faster AI models @me #ai #decision
   About $1–2 of test runs. "Ask Oz before running."
   Source: docs/performance-plan.md §B
+- [ ] Register the business name (sole proprietorship, Ontario) @me #legal
+  Check the name against the Canadian Trademarks Database first: "Popmart" is close to the POP MART toy brand. The Terms name the business once registered.
+  Source: chat with Oz, 2026-10-19
 - [ ] Find a lawyer to review the Terms and Privacy Policy @me #legal
   A Canadian lawyer with EU/US privacy experience, before launch.
   Source: docs/legal-and-privacy-plan.md note and "Order"
-- [ ] Decide the minimum age and the governing law @me #legal #decision
-  Age: 13 for COPPA, up to 16 in some EU countries. Law: "Ontario/Canada?"
-  Source: docs/legal-and-privacy-plan.md Steps 3–4
 - [ ] Set up privacy@storywall.io and name a privacy officer @me #legal
   Source: docs/legal-and-privacy-plan.md Step 3
 - [ ] Accept each provider's DPA @me #legal
   Supabase, Railway, Cloudflare, Resend, SendGrid, OpenRouter and the model providers.
   Source: docs/legal-and-privacy-plan.md Steps 2–3
-- [ ] Check the FK Raster Grotesk licence for self-hosted web use @me #brand #legal
-  Needed for the Generate percentage. Whether it was used in PR 104: status unclear.
-  Source: docs/generate-roadmap.md §A
 - [ ] Decide: likes, follows, saves and comments @me #decision
   The tables exist in Base44 only, with no screens or data.
   Source: docs/migration-plan.md "After migration" 6
@@ -147,6 +152,16 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
 - [x] AI text requests only go to providers that don't store or train on data @claude #privacy #ai (2026-10-17)
   On staging only.
   Source: docs/legal-and-privacy-plan.md Step 2; commit PR 99
+
+- [x] Minimum age 16, governing law Ontario, Canada @me #legal #decision (2026-10-19)
+  Storywall is run by Oz as a sole proprietor in Ontario.
+  Source: chat with Oz, 2026-10-19
+- [x] Loading-screen percentage uses Pixelify Sans (free, SIL OFL) instead of FK Raster Grotesk @claude #brand (2026-10-17)
+  Oz asked for a free pixel font, so the FK Raster licence check is no longer needed.
+  Source: commit PR 104
+- [x] More font pairings, brighter colours, slightly bigger text @claude #generate (2026-10-17)
+  On staging only.
+  Source: commits PRs 106–108
 
 ## Marketing
 - [ ] Plan marketing (nothing documented yet) @me
