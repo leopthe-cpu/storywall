@@ -1,4 +1,4 @@
-import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/components/creator/CanvasArea';
+import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/lib/cardGeometry';
 
 // Where a text box actually sits and how wide it is, in reference px on the
 // 320×320 card. This is the single source of truth for BOTH the editor

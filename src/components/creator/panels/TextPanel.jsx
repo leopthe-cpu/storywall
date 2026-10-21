@@ -3,7 +3,7 @@ import { Plus, AlignLeft, AlignCenter, AlignRight } from '@/components/icons';
 import ColorPicker from '@/components/creator/ColorPicker';
 import ThumbMenu from '@/components/creator/ThumbMenu';
 import MinimalSlider from '@/components/creator/MinimalSlider';
-import { REFERENCE_CARD_SIZE } from '@/components/creator/CanvasArea';
+import { REFERENCE_CARD_SIZE } from '@/lib/cardGeometry';
 import { cssFontFamily, getFontRole, isTitleOnlyFont } from '@/lib/fontLibrary';
 import FontPicker from '@/components/creator/panels/FontPicker';
 import SizeStepper from '@/components/creator/SizeStepper';
