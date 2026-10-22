@@ -56,9 +56,6 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   Source: CLAUDE.md "Open items / backlog"
 
 ## Waiting
-- [ ] Confirm three facts the Privacy Policy states @me #legal
-  Production Supabase region (staging is ca-central-1); OpenRouter prompt logging off; then update src/lib/legal.js if anything differs.
-  Source: PR 116
 - [ ] Shut down Base44 after the fallback period @me #migration
   Keep it untouched for an agreed period, archive the source, cancel, and delete its copy of user data. Planned around 24 Oct, depending on tests.
   Source: docs/migration-plan.md Phase 6; CLAUDE.md on develop; docs/legal-and-privacy-plan.md Step 2
@@ -87,6 +84,9 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   Source: CLAUDE.md "Open items / backlog"
 
 ## Done
+- [x] Confirm the facts the Privacy Policy states @me #legal
+  Production Supabase is in ca-central-1 (checked 2026-10-22 through the Management API); OpenRouter input & output logging is off and no trace destination is connected (Oz, 2026-10-22). Nothing in src/lib/legal.js needed to change.
+  Source: PR 116
 - [x] Phase 0: inventory, GitHub as the only source of truth @claude #migration (2026-10-09)
   Source: docs/migration-plan.md Phase 0
 - [x] Phase 0.5: Playwright tests and screenshots of the live Base44 app @claude #testing (2026-10-09)
