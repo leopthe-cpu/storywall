@@ -9,6 +9,12 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   On develop, not yet merged to main: shared loaders, framework templates, colour variation, theme picker, more fonts, bigger text, data export, account deletion, age gate, Terms/Privacy and consent, change password, www redirect, faster page loads. Production needs Oz's approval.
 
 ## To do
+- [ ] Upgrade React Router from v6 to v7 @claude #security #dependencies
+  Clears 2 medium findings in the Popmart security audit (open redirect via a backslash in links, and a server-rendering issue). Low risk today: the only redirect target (`from` after sign-in) is set by the app, never read from a URL, and there is no server rendering. Major version: one PR after Railway builds resume, then a full staging test (sign-in, walls, builder, Generate).
+  Source: Popmart security audit, 2026-10-22
+- [ ] Move to Tailwind CSS v4 @claude #dependencies #later
+  Clears the 5 high and 3 medium audit findings, all in Tailwind v3's build tools (never shipped to browsers). No fix exists within Tailwind v3. Bigger change, so planned for later.
+  Source: Popmart security audit, 2026-10-22
 - [ ] Sign-up protection: Cloudflare Turnstile CAPTCHA on sign-up, sign-in and password reset @claude #security #auth
   Same rule for every project (decision 40). Passwords already need 10 characters here. Ship the code first, then switch CAPTCHA on in staging, test, release, then production.
   Source: docs/decisions.md 40
