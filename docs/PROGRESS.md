@@ -1,6 +1,6 @@
 ---
 project: Storywall
-updated: 2026-10-21
+updated: 2026-10-22
 summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, and Generate now runs as a server job in production. A batch of loading-screen, template, colour, theme-picker and privacy work (data export, account deletion) is on staging and waits for Oz to release it. Minimum age (16) and governing law (Ontario, Canada) are decided; the age gate, Terms, privacy policy and the Base44 shutdown are next.
 ---
 
@@ -9,6 +9,12 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   On develop, not yet merged to main: shared loaders, framework templates, colour variation, theme picker, more fonts, bigger text, data export, account deletion, age gate, Terms/Privacy and consent, change password, www redirect, faster page loads. Production needs Oz's approval.
 
 ## To do
+- [ ] Sign-up protection: Cloudflare Turnstile CAPTCHA on sign-up, sign-in and password reset @claude #security #auth
+  Same rule for every project (decision 40). Passwords already need 10 characters here. Ship the code first, then switch CAPTCHA on in staging, test, release, then production.
+  Source: docs/decisions.md 40
+- [ ] Create a Turnstile widget and put its keys in Railway and Supabase @me #security #auth
+  Site key (public) goes in Railway as a VITE_ variable; secret key goes in each Supabase project's Auth settings. Optional: switch on leaked-password checking in production (Pro plan).
+  Source: docs/decisions.md 40
 - [ ] Faster AI steps: picture model and size, structuring model @claude #performance #ai
   Needs a small paid test (about $1–2) and Oz's OK first. Sonnet is kept unless a faster model passes the word-for-word check.
   Source: docs/performance-plan.md §B
