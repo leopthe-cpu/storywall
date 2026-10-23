@@ -355,10 +355,19 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
   };
   const preventPressMenu = (e) => { if (pressingRef.current) e.preventDefault(); };
 
-  const handlePointerDown = (e) => {
-    if (editing) return;
+  // `fromGrip`: the drag started on the move grip shown while the box is
+  // being typed into (see below), so it moves the box without leaving
+  // editing; anywhere else, a press on a box that is being edited belongs
+  // to the text itself (caret, word selection).
+  const handlePointerDown = (e, fromGrip = false) => {
+    if (editing && !fromGrip) return;
     e.stopPropagation();
 
+    // Captured before onSelect(): a tap only opens typing on a box that was
+    // ALREADY selected (Oz, 2026-10-22). The first tap just selects it, so it
+    // can be dragged right away instead of jumping into typing mode, which
+    // blocked moving it.
+    const wasSelected = isSelected;
     onSelect();
 
     const canvas = canvasBounds.current?.getBoundingClientRect();
@@ -505,9 +514,10 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
       }
       lastAlignKeyRef.current = '';
       // Tap detection: if pointer didn't move beyond the 8px threshold and was
-      // released within 300ms, treat as a tap → enter edit mode for text elements.
-      // This makes single-tap-to-edit work on touch (double-tap is unreliable).
-      if (!dragStart.current.moved && element.type === 'text' && Date.now() - dragStart.current.startTime < 300) {
+      // released within 300ms, treat as a tap. On a text box that was already
+      // selected it enters edit mode (single tap, since double-tap is
+      // unreliable on touch); on an unselected one the tap only selected it.
+      if (!fromGrip && wasSelected && !dragStart.current.moved && element.type === 'text' && Date.now() - dragStart.current.startTime < 300) {
         setEditing(true);
         setTimeout(() => {
           const node = elRef.current?.querySelector('[contenteditable="true"]');
@@ -1347,6 +1357,38 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
           </div>
         )}
       </div>
+      {editing && (
+        // Move grip while typing: dragging inside the text selects words and
+        // moves the caret, so the box gets its own handle to be repositioned
+        // without closing the keyboard. preventDefault on press keeps focus
+        // (and the keyboard) in the text; it sits below the box, or above it
+        // when the box is low on the card.
+        <div
+          data-move-grip
+          role="button"
+          aria-label="Move text box"
+          tabIndex={-1}
+          contentEditable={false}
+          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); handlePointerDown(e, true); }}
+          onMouseDown={(e) => e.preventDefault()}
+          className="absolute left-1/2 flex items-center justify-center"
+          style={{
+            width: 44,
+            height: 44,
+            transform: 'translateX(-50%)',
+            ...(adjY > 60 ? { bottom: '100%' } : { top: '100%' }),
+            cursor: 'move',
+            touchAction: 'none',
+            zIndex: 10,
+          }}
+        >
+          <div className="w-7 h-7 rounded-full bg-white border-2 border-blue-500 shadow flex items-center justify-center pointer-events-none">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 2v20M2 12h20M12 2l-3 3M12 2l3 3M12 22l-3-3M12 22l3-3M2 12l3-3M2 12l3 3M22 12l-3-3M22 12l-3 3" />
+            </svg>
+          </div>
+        </div>
+      )}
       {isSelected && !editing && (
         <>
           {CORNER_HANDLES.map(h => (
