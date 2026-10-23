@@ -102,6 +102,19 @@ On Base44, any card/element field not declared in `base44/entities/Post.jsonc` w
 - Decide: keep or remove the multi-textbox "coordinated shrink".
 - Needs real-device testing: all of the above image/text changes on mobile.
 
+## Library documentation (Context7)
+
+- Before relying on a detail of a library, framework, SDK, CLI or cloud service (API syntax,
+  options, configuration, versions, migrations), look it up with the Context7 connector
+  (`resolve-library-id`, then `query-docs`) instead of answering from memory. Say which source
+  confirmed it.
+- If Context7 has nothing, or only part of the answer (for example another SDK's version of the
+  method), say so and check the official docs directly. Never fill the gap with a guess.
+- Queries go to a third-party service: send library names and the question only, never keys,
+  tokens, personal data or this project's code.
+- It needs the Context7 connector on for the session and `context7.com` allowed in the cloud
+  environment's network settings. If the tools are missing, say so instead of skipping the check.
+
 ## Working conventions (Oz's preferences)
 
 - One distinct fix/feature per commit/deploy, so each can be reverted alone.
