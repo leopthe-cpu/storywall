@@ -1,6 +1,6 @@
 ---
 project: Storywall
-updated: 2026-10-21
+updated: 2026-10-22
 summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, and Generate now runs as a server job in production. A batch of loading-screen, template, colour, theme-picker and privacy work (data export, account deletion) is on staging and waits for Oz to release it. Minimum age (16) and governing law (Ontario, Canada) are decided; the age gate, Terms, privacy policy and the Base44 shutdown are next.
 ---
 
@@ -9,6 +9,18 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   On develop, not yet merged to main: shared loaders, framework templates, colour variation, theme picker, more fonts, bigger text, data export, account deletion, age gate, Terms/Privacy and consent, change password, www redirect, faster page loads. Production needs Oz's approval.
 
 ## To do
+- [ ] Upgrade React Router from v6 to v7 @claude #security #dependencies
+  Clears 2 medium findings in the Popmart security audit (open redirect via a backslash in links, and a server-rendering issue). Low risk today: the only redirect target (`from` after sign-in) is set by the app, never read from a URL, and there is no server rendering. Major version: one PR after Railway builds resume, then a full staging test (sign-in, walls, builder, Generate).
+  Source: Popmart security audit, 2026-10-22
+- [ ] Move to Tailwind CSS v4 @claude #dependencies #later
+  Clears the 5 high and 3 medium audit findings, all in Tailwind v3's build tools (never shipped to browsers). No fix exists within Tailwind v3. Bigger change, so planned for later.
+  Source: Popmart security audit, 2026-10-22
+- [ ] Sign-up protection: Cloudflare Turnstile CAPTCHA on sign-up, sign-in and password reset @claude #security #auth
+  Same rule for every project (decision 40). Passwords already need 10 characters here. Ship the code first, then switch CAPTCHA on in staging, test, release, then production.
+  Source: docs/decisions.md 40
+- [ ] Create a Turnstile widget and put its keys in Railway and Supabase @me #security #auth
+  Site key (public) goes in Railway as a VITE_ variable; secret key goes in each Supabase project's Auth settings. Optional: switch on leaked-password checking in production (Pro plan).
+  Source: docs/decisions.md 40
 - [ ] Faster AI steps: picture model and size, structuring model @claude #performance #ai
   Needs a small paid test (about $1–2) and Oz's OK first. Sonnet is kept unless a faster model passes the word-for-word check.
   Source: docs/performance-plan.md §B
@@ -50,9 +62,6 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   Source: CLAUDE.md "Open items / backlog"
 
 ## Waiting
-- [ ] Confirm three facts the Privacy Policy states @me #legal
-  Production Supabase region (staging is ca-central-1); OpenRouter prompt logging off; then update src/lib/legal.js if anything differs.
-  Source: PR 116
 - [ ] Shut down Base44 after the fallback period @me #migration
   Keep it untouched for an agreed period, archive the source, cancel, and delete its copy of user data. Planned around 24 Oct, depending on tests.
   Source: docs/migration-plan.md Phase 6; CLAUDE.md on develop; docs/legal-and-privacy-plan.md Step 2
@@ -81,6 +90,9 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   Source: CLAUDE.md "Open items / backlog"
 
 ## Done
+- [x] Confirm the facts the Privacy Policy states @me #legal
+  Production Supabase is in ca-central-1 (checked 2026-10-22 through the Management API); OpenRouter input & output logging is off and no trace destination is connected (Oz, 2026-10-22). Nothing in src/lib/legal.js needed to change.
+  Source: PR 116
 - [x] Phase 0: inventory, GitHub as the only source of truth @claude #migration (2026-10-09)
   Source: docs/migration-plan.md Phase 0
 - [x] Phase 0.5: Playwright tests and screenshots of the live Base44 app @claude #testing (2026-10-09)

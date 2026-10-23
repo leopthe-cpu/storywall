@@ -34,15 +34,14 @@ export default function SignUp() {
   const [stage, setStage] = useState('form'); // 'form' | 'verify'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // Minimum age 16 (Oz, 2026-10-19): the person confirms it before the
-  // account is created. A checkbox rather than a birth date, so we don't
-  // collect a date of birth we have no other use for.
-  const [isOldEnough, setIsOldEnough] = useState(false);
-  // Agreement to the Terms and Privacy Policy, stored with its version and
-  // date (docs/legal-and-privacy-plan.md Step 3). Its own box, so agreeing
-  // is a separate, clear choice from confirming the age.
+  // One box confirms both the minimum age (16, Oz 2026-10-19) and agreement
+  // to the Terms and Privacy Policy (docs/legal-and-privacy-plan.md Step 3).
+  // Oz, 2026-10-22: one explicit statement instead of two boxes; both facts
+  // are still stored at sign-up (age_confirmed_16, terms version and date).
+  // A checkbox rather than a birth date, so we don't collect a date of birth
+  // we have no other use for. On the lawyer-review list.
   const [agreed, setAgreed] = useState(false);
-  const canSubmit = email.trim() && password && isOldEnough && agreed;
+  const canSubmit = email.trim() && password && agreed;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -100,21 +99,12 @@ export default function SignUp() {
             <label className="flex items-start gap-3 text-sm text-[#262624] cursor-pointer select-none">
               <input
                 type="checkbox"
-                checked={isOldEnough}
-                onChange={(e) => setIsOldEnough(e.target.checked)}
-                className="mt-0.5 h-5 w-5 shrink-0 rounded-[4px] accent-[#262624] cursor-pointer"
-              />
-              <span>I&apos;m 16 or older.</span>
-            </label>
-            <label className="flex items-start gap-3 text-sm text-[#262624] cursor-pointer select-none">
-              <input
-                type="checkbox"
                 checked={agreed}
                 onChange={(e) => setAgreed(e.target.checked)}
                 className="mt-0.5 h-5 w-5 shrink-0 rounded-[4px] accent-[#262624] cursor-pointer"
               />
               <span>
-                I agree to the{' '}
+                I&apos;m 16 or older and I agree to the{' '}
                 <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline font-medium">Terms of Service</a>
                 {' '}and{' '}
                 <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline font-medium">Privacy Policy</a>.
