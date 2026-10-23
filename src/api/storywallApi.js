@@ -97,7 +97,7 @@ export async function signIn(email, password) {
 // template uses {{ .Token }}). Returns { needsCode } — false only if the
 // project ever stops requiring email confirmation, in which case the user
 // is already signed in.
-// `ageConfirmed`: the sign-up form's "I'm 16 or older" box (minimum age 16,
+// `ageConfirmed`: the sign-up form's consent box, which starts "I'm 16 or older" (minimum age 16,
 // Oz 2026-10-19). `termsVersion`: the version of the Terms and Privacy
 // Policy the person agreed to (LEGAL_VERSION, src/lib/legal.js). Both are
 // kept on the account with the date, as a record of what was confirmed.
