@@ -280,3 +280,15 @@ export async function frameworkTemplateForStory(template) {
     tokens: tokens.map((t) => ({ ...t })),
   };
 }
+
+// Templates offered in the builder's Templates tab for launch (Oz,
+// 2026-10-24): the three that fit career stories best. STAR is the format
+// recruiters already expect; Problem → Solution → Impact is the classic
+// "what I shipped and what it changed"; Origin Story covers founders and
+// career changers. The others stay defined above, so a story built from one
+// keeps working and a template comes back by adding its id here.
+export const SHOWN_TEMPLATE_IDS = [
+  'framework-star',
+  'framework-problem-solution-impact',
+  'framework-origin-story',
+];
