@@ -1,14 +1,24 @@
 ---
 project: Storywall
-updated: 2026-10-22
-summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, and Generate now runs as a server job in production. A batch of loading-screen, template, colour, theme-picker and privacy work (data export, account deletion) is on staging and waits for Oz to release it. Minimum age (16) and governing law (Ontario, Canada) are decided; the age gate, Terms, privacy policy and the Base44 shutdown are next.
+updated: 2026-10-26
+summary: Storywall runs on Railway + Supabase at storywall.io. The Oct 23 release brought the age/Terms consent box, the text-box move fix, the Terms and Privacy pages and faster page loads. Next is the card-format work (4:5 cards, PDF export, a cover on every story, a new design system) for Instagram and LinkedIn carousels.
 ---
 
 ## Doing
-- [ ] Test the staging batch (PRs 93–121) and release develop to production @me #release #testing
-  On develop, not yet merged to main: shared loaders, framework templates, colour variation, theme picker, more fonts, bigger text, data export, account deletion, age gate, Terms/Privacy and consent, change password, www redirect, faster page loads. Production needs Oz's approval.
+- [ ] Card sizes: 4:5 portrait cards as the default, per-story size, PDF export @claude #builder #marketing
+  Plan in 6 steps (size field and geometry, every renderer, templates/Generate, PNG + PDF export, ticket style, Oz's stories at 4:5).
+  Source: docs/decisions.md 45
 
 ## To do
+- [ ] Every story starts with a cover, and a new editorial design system @claude #builder #design
+  Source: docs/decisions.md 44
+- [ ] Send the "ticket" style reference image and editorial carousel examples @me #design
+  Source: docs/decisions.md 44–45
+- [ ] Review Oz's four story drafts on staging, then OK the production import @me #content
+  insatisfeitos, Zebu (timing), Tauria (pivot), Dynatrace logs. Planned to be re-made at 4:5 first.
+  Source: docs/decisions.md 47
+- [ ] Release develop to production (templates PR 139, Context7 note PR 138) @me #release
+  Source: PRs 138–139
 - [ ] Upgrade React Router from v6 to v7 @claude #security #dependencies
   Clears 2 medium findings in the Popmart security audit (open redirect via a backslash in links, and a server-rendering issue). Low risk today: the only redirect target (`from` after sign-in) is set by the app, never read from a URL, and there is no server rendering. Major version: one PR after Railway builds resume, then a full staging test (sign-in, walls, builder, Generate).
   Source: Popmart security audit, 2026-10-22
@@ -90,6 +100,9 @@ summary: Storywall has run on Railway + Supabase at storywall.io since 15 Oct, a
   Source: CLAUDE.md "Open items / backlog"
 
 ## Done
+- [x] Release the staging batch to production @me #release
+  Released 2026-10-21 to 2026-10-23 (PRs 126, 129, 137): loading screens, templates, theme picker, data export, account deletion, age gate and consent box, Terms/Privacy, change password, www redirect, faster loads, text-box move fix. Live on storywall.io (Railway deploy of main, 2026-10-23).
+  Source: PRs 126, 129, 137
 - [x] Confirm the facts the Privacy Policy states @me #legal
   Production Supabase is in ca-central-1 (checked 2026-10-22 through the Management API); OpenRouter input & output logging is off and no trace destination is connected (Oz, 2026-10-22). Nothing in src/lib/legal.js needed to change.
   Source: PR 116
