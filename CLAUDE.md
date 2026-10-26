@@ -57,7 +57,8 @@ On Base44, any card/element field not declared in `base44/entities/Post.jsonc` w
 
 ## Rendering model (read before touching the canvas)
 
-- All element coordinates/sizes are in reference px on a 320×320 card (`REFERENCE_CARD_SIZE` in `src/components/creator/CanvasArea.jsx`). `x`/`y` are % of the card; everything is multiplied by `scale = cardSize / 320` when drawn.
+- All element coordinates/sizes are in reference px on a card 320 wide (`REFERENCE_CARD_SIZE` in `src/lib/cardGeometry.js`). `x`/`y` are % of the card; everything is multiplied by `scale = cardSize / 320` when drawn.
+- **Card sizes (decision 45, in progress):** a story has a `card_size` (`posts.card_size`, `'1:1'` or `'4:5'`; `CARD_SIZES` / `getCardSize()` in `src/lib/cardGeometry.js`). Width is always 320 reference px; 4:5 cards are 400 high. `x` is a % of the width, `y` a % of the height, so 1:1 stories are unchanged. Renderers don't use it yet (step 2).
 - The same card is rendered in several places. They MUST stay in sync — the #1 recurring bug class has been "editor looks different from published":
   - `src/components/creator/DraggableElement.jsx` — interactive editor canvas
   - `src/components/creator/CardThumb.jsx` — gallery thumbnails, publish preview AND the live published card (one outer `transform: scale()`)
