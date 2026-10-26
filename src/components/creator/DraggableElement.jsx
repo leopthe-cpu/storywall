@@ -102,20 +102,22 @@ function cornerStyle(id) {
 // you can still grab and resize a picture that's larger than the frame. Edge
 // (crop) handles sit at the middle of the part of their edge that's actually
 // on the card.
-function imageHandlePositions({ left, top, width, height, sf }) {
-  const C = REFERENCE_CARD_SIZE;
+function imageHandlePositions({ left, top, width, height, sf, refHeight }) {
+  const CW = REFERENCE_CARD_SIZE, CH = refHeight;
   const m = 10 / sf; // keep handle centres ~10 screen px inside the card
-  const clampToCard = (v) => Math.min(C - m, Math.max(m, v));
-  const visibleMid = (a, b) => (Math.max(a, 0) + Math.min(b, C)) / 2;
+  const clampX = (v) => Math.min(CW - m, Math.max(m, v));
+  const clampY = (v) => Math.min(CH - m, Math.max(m, v));
+  const visibleMidX = (a, b) => (Math.max(a, 0) + Math.min(b, CW)) / 2;
+  const visibleMidY = (a, b) => (Math.max(a, 0) + Math.min(b, CH)) / 2;
   const L = left, T = top, R = left + width, B = top + height;
   const points = {
     nw: [L, T], ne: [R, T], sw: [L, B], se: [R, B],
-    n: [visibleMid(L, R), T], s: [visibleMid(L, R), B],
-    w: [L, visibleMid(T, B)], e: [R, visibleMid(T, B)],
+    n: [visibleMidX(L, R), T], s: [visibleMidX(L, R), B],
+    w: [L, visibleMidY(T, B)], e: [R, visibleMidY(T, B)],
   };
   const out = {};
   for (const [id, [x, y]] of Object.entries(points)) {
-    out[id] = { left: (clampToCard(x) - L) * sf, top: (clampToCard(y) - T) * sf, transform: 'translate(-50%, -50%)' };
+    out[id] = { left: (clampX(x) - L) * sf, top: (clampY(y) - T) * sf, transform: 'translate(-50%, -50%)' };
   }
   return out;
 }
@@ -151,7 +153,7 @@ function computeEstimatedFontSize(content, displayWidth, availableHeight) {
   return Math.max(8, Math.min(128, estimated));
 }
 
-export default function DraggableElement({ element, scale = 1, isSelected, onSelect, onUpdate, canvasBounds, cardSize, autoEdit, onAutoEditConsumed, cardBg, onDragStateChange, onCenterGuideChange, onAlignGuideChange, onHoldChange, hiddenByHold = false, availableHeight, tokens, isHovered, onHover }) {
+export default function DraggableElement({ element, scale = 1, isSelected, onSelect, onUpdate, canvasBounds, cardSize, refHeight = REFERENCE_CARD_SIZE, autoEdit, onAutoEditConsumed, cardBg, onDragStateChange, onCenterGuideChange, onAlignGuideChange, onHoldChange, hiddenByHold = false, availableHeight, tokens, isHovered, onHover }) {
   const elRef = useRef(null);
   const contentRef = useRef(null);
   // Lazy-init: when this element mounts already flagged for auto-edit (a
@@ -467,17 +469,20 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
       // didn't already take (card center wins). A snap that would push the
       // element past its drag limits is ignored.
       const targets = dragStart.current.alignTargets || { x: [], y: [] };
-      const tol = (ALIGN_SNAP_REF / REFERENCE_CARD_SIZE) * 100;
+      // Tolerance in % of the card along each axis (x is % of the width,
+      // y % of the height, which differ on a non-square card).
+      const tolX = (ALIGN_SNAP_REF / REFERENCE_CARD_SIZE) * 100;
+      const tolY = (ALIGN_SNAP_REF / refHeight) * 100;
       let alignV = [], alignH = [];
       if (!snapV && targets.x.length) {
-        const d = findAlignSnap([newX, newX + widthPct / 2, newX + widthPct], targets.x, tol);
+        const d = findAlignSnap([newX, newX + widthPct / 2, newX + widthPct], targets.x, tolX);
         if (d !== null && newX + d >= minX && newX + d <= 90) {
           newX += d;
           alignV = alignLines([newX, newX + widthPct / 2, newX + widthPct], targets.x);
         }
       }
       if (!snapH && targets.y.length) {
-        const d = findAlignSnap([newY, newY + heightPct / 2, newY + heightPct], targets.y, tol);
+        const d = findAlignSnap([newY, newY + heightPct / 2, newY + heightPct], targets.y, tolY);
         if (d !== null && newY + d >= minY && newY + d <= 90) {
           newY += d;
           alignH = alignLines([newY, newY + heightPct / 2, newY + heightPct], targets.y);
@@ -581,7 +586,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
     // picture down-right, away from your finger. Tracked in reference px on
     // the visible (post-crop) box, which is what x/y position.
     const origLeftRef = ((element.x ?? 0) / 100) * REFERENCE_CARD_SIZE;
-    const origTopRef = ((element.y ?? 0) / 100) * REFERENCE_CARD_SIZE;
+    const origTopRef = ((element.y ?? 0) / 100) * refHeight;
     const anchorRightRef = origLeftRef + (origW - origClipLeft - origClipRight);
     const anchorBottomRef = origTopRef + (origH - origClipTop - origClipBottom);
 
@@ -616,7 +621,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
       const newVisW = updates.displayWidth - (updates.clipLeft || 0) - (updates.clipRight || 0);
       const newVisH = updates.displayHeight - (updates.clipTop || 0) - (updates.clipBottom || 0);
       if (isLeft) updates.x = Math.round(((anchorRightRef - newVisW) / REFERENCE_CARD_SIZE) * 10000) / 100;
-      if (isTop) updates.y = Math.round(((anchorBottomRef - newVisH) / REFERENCE_CARD_SIZE) * 10000) / 100;
+      if (isTop) updates.y = Math.round(((anchorBottomRef - newVisH) / refHeight) * 10000) / 100;
       onUpdate(updates);
     };
 
@@ -660,7 +665,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
       // 'n' moves the top edge: increase clipTop, shift y down so the bottom stays fixed
       if (handleId === 'n') {
         clipTop = Math.max(0, Math.min(dH - orig.clipBottom - 20, orig.clipTop + dyRef));
-        newY = orig.y + (clipTop - orig.clipTop) / REFERENCE_CARD_SIZE * 100;
+        newY = orig.y + (clipTop - orig.clipTop) / refHeight * 100;
       }
       // 's' moves the bottom edge: top stays fixed (already correct)
       if (handleId === 's') {
@@ -706,9 +711,10 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
   // Position adjustment (moving the box to stay within bounds when it grows)
   // is handled in handleInput and the render, so the box can grow symmetrically
   // on all sides rather than being limited by its current position.
-  const safeZoneSize = REFERENCE_CARD_SIZE - 2 * SAFE_ZONE_INSET;
-  const maxTextWidth = safeZoneSize;
-  const maxTextHeight = safeZoneSize;
+  const safeZoneWidth = REFERENCE_CARD_SIZE - 2 * SAFE_ZONE_INSET;
+  const safeZoneHeight = refHeight - 2 * SAFE_ZONE_INSET;
+  const maxTextWidth = safeZoneWidth;
+  const maxTextHeight = safeZoneHeight;
 
   const handleInput = (e) => {
     const node = e.target;
@@ -729,10 +735,10 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
     // card. This only ever runs while typing (onInput) — once the user stops
     // or taps away, size and position are left exactly as they are.
     const padPx = Math.round(2 * scale);
-    const boxTopRef = Math.max(SAFE_ZONE_INSET, ((element.y ?? 20) / 100) * REFERENCE_CARD_SIZE);
+    const boxTopRef = Math.max(SAFE_ZONE_INSET, ((element.y ?? 20) / 100) * refHeight);
     const roomRef = currentHeight > 0
-      ? Math.min(currentHeight, safeZoneSize)
-      : Math.max(20, (REFERENCE_CARD_SIZE - SAFE_ZONE_INSET) - boxTopRef);
+      ? Math.min(currentHeight, safeZoneHeight)
+      : Math.max(20, (refHeight - SAFE_ZONE_INSET) - boxTopRef);
     const roomPx = roomRef * scale - padPx * 2;
     if (node.scrollHeight > roomPx + 1) {
       const MIN_TYPING_FONT = 8;
@@ -806,7 +812,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
 
     // Opposite (fixed) corner and dragged corner start, in reference px
     const origXpx = ((element.x ?? 16) / 100) * REFERENCE_CARD_SIZE;
-    const origYpx = ((element.y ?? 20) / 100) * REFERENCE_CARD_SIZE;
+    const origYpx = ((element.y ?? 20) / 100) * refHeight;
     const fixed = {
       nw: { x: origXpx + origW, y: origYpx + effectiveH },
       ne: { x: origXpx, y: origYpx + effectiveH },
@@ -826,7 +832,8 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
     const handleEl = e.currentTarget;
     try { handleEl.setPointerCapture(e.pointerId); } catch {}
 
-    const cardMax = REFERENCE_CARD_SIZE - SAFE_ZONE_INSET;
+    const cardMaxX = REFERENCE_CARD_SIZE - SAFE_ZONE_INSET;
+    const cardMaxY = refHeight - SAFE_ZONE_INSET;
 
     const onMove = (ev) => {
       const fx = (ev.clientX - canvas.left) / sf;
@@ -837,8 +844,8 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
       let newH = newW / aspect;
 
       // Clamp to card safe zone
-      newW = Math.min(newW, cardMax);
-      newH = Math.min(newH, cardMax);
+      newW = Math.min(newW, cardMaxX);
+      newH = Math.min(newH, cardMaxY);
 
       // Compute new position to keep the fixed corner in place
       let newXpx, newYpx;
@@ -849,13 +856,13 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
 
       // Clamp position to safe zone
       newXpx = Math.max(SAFE_ZONE_INSET, Math.min(REFERENCE_CARD_SIZE - SAFE_ZONE_INSET, newXpx));
-      newYpx = Math.max(SAFE_ZONE_INSET, Math.min(REFERENCE_CARD_SIZE - SAFE_ZONE_INSET, newYpx));
+      newYpx = Math.max(SAFE_ZONE_INSET, Math.min(refHeight - SAFE_ZONE_INSET, newYpx));
 
       onUpdate({
         displayWidth: Math.round(newW),
         displayHeight: Math.round(newH),
         x: Math.round(newXpx / REFERENCE_CARD_SIZE * 1000) / 10,
-        y: Math.round(newYpx / REFERENCE_CARD_SIZE * 1000) / 10,
+        y: Math.round(newYpx / refHeight * 1000) / 10,
       });
     };
 
@@ -890,13 +897,14 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
     }
 
     const origXpx = ((element.x ?? 16) / 100) * REFERENCE_CARD_SIZE;
-    const origYpx = ((element.y ?? 20) / 100) * REFERENCE_CARD_SIZE;
+    const origYpx = ((element.y ?? 20) / 100) * refHeight;
     const startX = e.clientX;
     const startY = e.clientY;
     const handleEl = e.currentTarget;
     try { handleEl.setPointerCapture(e.pointerId); } catch {}
 
-    const cardMax = REFERENCE_CARD_SIZE - SAFE_ZONE_INSET;
+    const cardMaxX = REFERENCE_CARD_SIZE - SAFE_ZONE_INSET;
+    const cardMaxY = refHeight - SAFE_ZONE_INSET;
 
     const onMove = (ev) => {
       const dxRef = (ev.clientX - startX) / sf;
@@ -911,7 +919,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
           newXpx = rightEdge - newW;
           if (newXpx < SAFE_ZONE_INSET) { newXpx = SAFE_ZONE_INSET; newW = rightEdge - SAFE_ZONE_INSET; }
         } else {
-          if (origXpx + newW > cardMax) newW = cardMax - origXpx;
+          if (origXpx + newW > cardMaxX) newW = cardMaxX - origXpx;
         }
         onUpdate({
           displayWidth: Math.round(newW),
@@ -926,11 +934,11 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
           newYpx = bottomEdge - newH;
           if (newYpx < SAFE_ZONE_INSET) { newYpx = SAFE_ZONE_INSET; newH = bottomEdge - SAFE_ZONE_INSET; }
         } else {
-          if (origYpx + newH > cardMax) newH = cardMax - origYpx;
+          if (origYpx + newH > cardMaxY) newH = cardMaxY - origYpx;
         }
         onUpdate({
           displayHeight: Math.round(newH),
-          y: Math.round(newYpx / REFERENCE_CARD_SIZE * 1000) / 10,
+          y: Math.round(newYpx / refHeight * 1000) / 10,
         });
       }
     };
@@ -957,8 +965,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
     const padPx = Math.round(2 * sf);
     const scrollHeight = node.scrollHeight;
     const newH = Math.round((scrollHeight + padPx * 2) / sf);
-    const safeZone = REFERENCE_CARD_SIZE - 2 * SAFE_ZONE_INSET;
-    onUpdate({ displayHeight: Math.max(0, Math.min(safeZone, newH)) });
+    onUpdate({ displayHeight: Math.max(0, Math.min(safeZoneHeight, newH)) });
   };
 
   const handleBlur = (e) => {
@@ -1078,16 +1085,17 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
     // A picture covering the whole card (e.g. "Fit to card") is a
     // background, not something to align other elements with.
     const imgLeft = ((element.x ?? 0) / 100) * REFERENCE_CARD_SIZE;
-    const imgTop = ((element.y ?? 0) / 100) * REFERENCE_CARD_SIZE;
+    const imgTop = ((element.y ?? 0) / 100) * refHeight;
     const coversCard = imgLeft <= 0.5 && imgTop <= 0.5
-      && imgLeft + visibleW >= REFERENCE_CARD_SIZE - 0.5 && imgTop + visibleH >= REFERENCE_CARD_SIZE - 0.5;
+      && imgLeft + visibleW >= REFERENCE_CARD_SIZE - 0.5 && imgTop + visibleH >= refHeight - 0.5;
 
     const handlePos = imageHandlePositions({
-      left: ((element.x ?? 0) / 100) * REFERENCE_CARD_SIZE,
-      top: ((element.y ?? 0) / 100) * REFERENCE_CARD_SIZE,
+      left: imgLeft,
+      top: imgTop,
       width: visibleW,
       height: visibleH,
       sf,
+      refHeight,
     });
 
     return (
@@ -1240,7 +1248,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
   const baseFontSize = element.font_size ? parseInt(element.font_size) : 14;
   // Safe-zone clamping of size and position — shared with CardThumb so the
   // published card places the box exactly where the editor shows it.
-  const { xPct: adjX, yPct: adjY, width: visWidth, height: visHeight } = getTextBoxLayout(element);
+  const { xPct: adjX, yPct: adjY, width: visWidth, height: visHeight } = getTextBoxLayout(element, refHeight);
 
   const textDeco = [
     element.font_underline ? 'underline' : '',
@@ -1252,7 +1260,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
   const textFontSize = baseFontSize * scale;
   const textWidthPx = visWidth * scale;
   const textHeightPx = visHeight > 0 ? visHeight * scale : undefined;
-  const maxTextHeightPx = safeZoneSize * scale;
+  const maxTextHeightPx = safeZoneHeight * scale;
   const padPx = Math.round(2 * scale);
 
   return (

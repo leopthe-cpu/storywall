@@ -2,15 +2,20 @@ import { useRef, useState, useLayoutEffect } from 'react';
 import DraggableElement from './DraggableElement';
 import { resolveColor } from '@/lib/colorTokens';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import { useCardFormat } from './CardFormatContext';
 
 // The card geometry lives in @/lib/cardGeometry; re-exported here so the
 // editor files that import it from CanvasArea keep working.
-import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/lib/cardGeometry';
+import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET, getCardSize } from '@/lib/cardGeometry';
 export { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET };
 
+// cardSize is the canvas WIDTH in screen px. The story's card size
+// (CardFormatContext, posts.card_size) sets the height.
 export default function CanvasArea({ card, cardSize, selectedElementId, onSelectElement, onUpdateElement, autoEditId, onAutoEditConsumed, onRetryImageGeneration, tokens }) {
   const canvasRef = useRef(null);
   const scale = cardSize / REFERENCE_CARD_SIZE;
+  const refHeight = getCardSize(useCardFormat()).height;
+  const cardHeight = Math.round(cardSize * refHeight / REFERENCE_CARD_SIZE);
   const [isDragging, setIsDragging] = useState(false);
   const [hoveredElementId, setHoveredElementId] = useState(null);
   const [centerGuides, setCenterGuides] = useState({ v: false, h: false });
@@ -30,10 +35,10 @@ export default function CanvasArea({ card, cardSize, selectedElementId, onSelect
 
   const textAvailableHeights = {};
   textElements.forEach((el, i) => {
-    const yPx = ((el.y ?? 20) / 100) * REFERENCE_CARD_SIZE;
+    const yPx = ((el.y ?? 20) / 100) * refHeight;
     const nextYPx = i < textElements.length - 1
-      ? ((textElements[i + 1].y ?? 80) / 100) * REFERENCE_CARD_SIZE
-      : REFERENCE_CARD_SIZE - SAFE_ZONE_INSET;
+      ? ((textElements[i + 1].y ?? 80) / 100) * refHeight
+      : refHeight - SAFE_ZONE_INSET;
     textAvailableHeights[el.id] = Math.max(20, nextYPx - yPx - 4);
   });
 
@@ -51,7 +56,7 @@ export default function CanvasArea({ card, cardSize, selectedElementId, onSelect
     if (textElements.some(el => el.font_size_locked)) return;
     const nodes = canvasRef.current.querySelectorAll('[data-text-element-id]');
     if (nodes.length < 2) return;
-    const safeZonePx = (REFERENCE_CARD_SIZE - 2 * SAFE_ZONE_INSET) * scale;
+    const safeZonePx = (refHeight - 2 * SAFE_ZONE_INSET) * scale;
     let totalHeight = 0;
     nodes.forEach(node => { totalHeight += node.offsetHeight; });
     if (totalHeight > safeZonePx + 2) {
@@ -66,7 +71,7 @@ export default function CanvasArea({ card, cardSize, selectedElementId, onSelect
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [textSig, scale]);
+  }, [textSig, scale, refHeight]);
 
   // Tapping anywhere on the card that isn't an element deselects. It used to
   // check only for the canvas node itself, but the full-size content layer
@@ -84,7 +89,7 @@ export default function CanvasArea({ card, cardSize, selectedElementId, onSelect
       className="canvas-bg relative rounded-2xl cursor-default flex-shrink-0"
       style={{
         width: cardSize,
-        height: cardSize,
+        height: cardHeight,
         backgroundColor: card ? resolveColor(card.background_token, tokens, card.background_color || '#FFFFFF') : '#FFFFFF',
         touchAction: 'none',
         overscrollBehavior: 'none',
@@ -113,6 +118,7 @@ export default function CanvasArea({ card, cardSize, selectedElementId, onSelect
             onUpdate={(updates) => onUpdateElement(el.id, updates)}
             canvasBounds={canvasRef}
             cardSize={cardSize}
+            refHeight={refHeight}
             autoEdit={el.id === autoEditId}
             onAutoEditConsumed={onAutoEditConsumed}
             cardBg={resolveColor(card.background_token, tokens, card.background_color || '#FFFFFF')}

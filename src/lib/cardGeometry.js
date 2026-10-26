@@ -30,3 +30,10 @@ export const LEGACY_CARD_SIZE = '1:1';
 export function getCardSize(cardSize) {
   return CARD_SIZES[cardSize] || CARD_SIZES[LEGACY_CARD_SIZE];
 }
+
+// CSS aspect-ratio of a story's cards ('320 / 400' for 4:5), for boxes that
+// hold a card before it's drawn (wall placeholders, thumbnails).
+export function cardAspectRatio(cardSize) {
+  const { width, height } = getCardSize(cardSize);
+  return `${width} / ${height}`;
+}

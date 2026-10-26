@@ -3,6 +3,8 @@ import { Plus, ChevronLeft, ChevronRight } from '@/components/icons';
 import { motion } from 'framer-motion';
 import { getMe, filterPosts, deletePost } from '@/api/storywallApi';
 import CardThumb from '@/components/creator/CardThumb';
+import { useCardFormat } from '@/components/creator/CardFormatContext';
+import { cardAspectRatio } from '@/lib/cardGeometry';
 import ThumbMenu, { ReorderBar } from '@/components/creator/ThumbMenu';
 import DraftEntry from '@/components/creator/DraftEntry';
 import { templatesEnabled, SHOW_TEMPLATES_AND_STYLES } from '@/lib/featureFlags';
@@ -46,6 +48,8 @@ const STYLE_PLACEHOLDERS = [
 ];
 
 export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReorder, onAddCard, onDeleteCard, onDuplicateCard, onApplyDraft, activeDraftId, onApplyTemplate, tokens, initialTab, galleryResetToken, appliedTemplateId, appliedDraftId }) {
+  // Card thumbnails have the open story's card shape (CardFormatContext).
+  const thumbAspect = cardAspectRatio(useCardFormat());
   const [tab, setTab] = useState(initialTab || 'Gallery');
 
   const handleTabChange = (newTab) => {
@@ -147,7 +151,8 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
             <div className="flex-shrink-0 flex flex-col items-center gap-1.5">
               <button
                 onClick={onAddCard}
-                className="w-16 aspect-square rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center hover:border-white/50 transition-colors"
+                className="w-16 rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center hover:border-white/50 transition-colors"
+                style={{ aspectRatio: thumbAspect }}
               >
                 <Plus size={20} className="text-white/40" />
               </button>
@@ -159,9 +164,10 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
               <motion.div key={card.id} layout className="flex-shrink-0 flex flex-col items-center gap-1.5">
                 <div
                   onClick={reorderMode ? undefined : () => onNavigate(i)}
-                  className={`w-16 aspect-square rounded-lg overflow-hidden border-2 cursor-pointer transition-all relative ${
+                  className={`w-16 rounded-lg overflow-hidden border-2 cursor-pointer transition-all relative ${
                     i === currentCardIndex ? 'border-emerald-400' : 'border-white/20 hover:border-white/50'
                   }`}
+                  style={{ aspectRatio: thumbAspect }}
                 >
                   <CardThumb card={card} displaySize={64} tokens={tokens} />
                   <span className="absolute bottom-0.5 right-1 text-[9px] text-white/60 drop-shadow">{i + 1}</span>

@@ -3,6 +3,7 @@ import { X, RotateCw, Plus } from '@/components/icons';
 import { getMe, getPost, createPost, updatePost, deletePost, invokeFunction } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
 import CardCarousel from '@/components/creator/CardCarousel';
+import { useCardFormat } from '@/components/creator/CardFormatContext';
 import SkillsLoadingScreen from '@/components/creator/SkillsLoadingScreen';
 import GridBackdrop from '@/components/ui/GridBackdrop';
 import BackButton from '@/components/ui/BackButton';
@@ -60,6 +61,9 @@ async function fetchSuggestedSkills(text, tagCount, alreadySelectedTags) {
 }
 
 export default function PostFlowSheet({ cards, editingPostId, draftId, initialTitle, initialTags, onClose, onPublished, onPublishStart, tokens }) {
+  // The story's card size, saved with it (a new published row is created
+  // when publishing a draft, so it must carry the size over).
+  const cardFormat = useCardFormat();
   const [title, setTitle] = useState(initialTitle || '');
   // Card image export is admin-only for now (planned premium feature).
   const { user } = useAuth();
@@ -280,7 +284,8 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
           cards: publishedCards,
           color_tokens: tokens,
           status: 'published',
-          cover_image: publishedCover
+          cover_image: publishedCover,
+          card_size: cardFormat
         });
       } else {
         // The database sets the author to the signed-in user.
@@ -290,7 +295,8 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
           cards: publishedCards,
           color_tokens: tokens,
           status: 'published',
-          cover_image: publishedCover
+          cover_image: publishedCover,
+          card_size: cardFormat
         });
       }
       if (draftId && draftId !== editingPostId) {

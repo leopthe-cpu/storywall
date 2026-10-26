@@ -8,6 +8,8 @@ import CanvasArea, { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/components/c
 import BottomIsland, { ISLAND_CHROME } from '@/components/creator/BottomIsland';
 import PostFlowSheet from '@/components/creator/PostFlowSheet';
 import { DraftMediaProvider } from '@/components/creator/DraftMediaContext';
+import { CardFormatProvider } from '@/components/creator/CardFormatContext';
+import { getCardSize, LEGACY_CARD_SIZE } from '@/lib/cardGeometry';
 import { applyTemplateToStory } from '@/lib/storyTemplates';
 import { frameworkTemplateForStory, isFrameworkTemplate } from '@/lib/frameworkTemplates';
 import { aiCarouselBuilderEnabled } from '@/lib/featureFlags';
@@ -195,6 +197,13 @@ export default function StoryCreator() {
   const [showRegenerateChoice, setShowRegenerateChoice] = useState(false);
   const [aiGenerated, setAiGenerated] = useState(!!editStory?.ai_generated);
   const [generationStyle, setGenerationStyle] = useState(editStory?.generation_style || null);
+  // The story's card size (posts.card_size, decision 45): '1:1' or '4:5'.
+  // Provided to every renderer below through CardFormatProvider. Stories
+  // saved before card sizes existed have none and stay square.
+  const [cardFormat, setCardFormat] = useState(() => getCardSize(editStory?.card_size).id);
+  // Card height ÷ width (1 for 1:1, 1.25 for 4:5): the on-screen card is
+  // sized by its width, so the vertical room it needs scales with this.
+  const cardAspect = getCardSize(cardFormat).height / REFERENCE_CARD_SIZE;
 
   const screenH = typeof window !== 'undefined' ? window.innerHeight : 800;
   const screenW = typeof window !== 'undefined' ? window.innerWidth : 390;
@@ -218,10 +227,10 @@ export default function StoryCreator() {
 
   // Island constraints — no nav row anymore, just chrome
   const islandMinH = ISLAND_CHROME + 40;
-  const islandMaxH = screenH - TOP_BAR_HEIGHT - Math.round(screenW * CARD_MIN_RATIO) - 24;
+  const islandMaxH = screenH - TOP_BAR_HEIGHT - Math.round(screenW * CARD_MIN_RATIO * cardAspect) - 24;
 
   // Default: card at ~56% width → island fills remaining
-  const defaultCardSize = Math.round(screenW * 0.73);
+  const defaultCardSize = Math.round(screenW * 0.73 * cardAspect);
   const defaultIslandH = clamp(screenH - TOP_BAR_HEIGHT - defaultCardSize - 16, islandMinH, islandMaxH);
 
   const [islandHeight, setIslandHeight] = useState(defaultIslandH);
@@ -239,11 +248,15 @@ export default function StoryCreator() {
   // card's size. DESKTOP_CARD_MAX is the size in Oz's reference layout (15.6"
   // laptop, ~1560x780 window): the biggest it should ever get, so it stops
   // growing on larger screens. Mobile sizing is untouched.
+  // cardSize is the card's WIDTH. On a taller card (4:5) the height-based
+  // limits are divided by cardAspect, so the card's HEIGHT stays within the
+  // same range as a square card's; 1:1 sizing is unchanged.
   const cardSize = isDesktop
-    ? clamp(Math.round(Math.min(screenH * 0.56, (screenW - DESKTOP_PANEL_WIDTH) * 0.6)), DESKTOP_CARD_MIN, DESKTOP_CARD_MAX)
+    ? clamp(Math.round(Math.min(screenH * 0.56 / cardAspect, (screenW - DESKTOP_PANEL_WIDTH) * 0.6)), Math.round(DESKTOP_CARD_MIN / cardAspect), Math.round(DESKTOP_CARD_MAX / cardAspect))
     // Phone layout: unchanged for phones; on wider portrait screens (small
     // tablets) it's capped at the same maximum as desktop.
-    : Math.min(DESKTOP_CARD_MAX, clamp(availableForCard, Math.round(screenW * CARD_MIN_RATIO), Math.round(screenW * CARD_MAX_RATIO)));
+    : Math.min(DESKTOP_CARD_MAX, clamp(Math.round(availableForCard / cardAspect), Math.round(screenW * CARD_MIN_RATIO), Math.round(screenW * CARD_MAX_RATIO)));
+  const cardHeight = Math.round(cardSize * cardAspect);
   // Desktop optical balance: centre the card + add-card button as one group
   // (the button hangs ADD_CARD_REACH px off the card's right side), and sit
   // it a little above the middle of the WINDOW rather than of the area under
@@ -645,6 +658,8 @@ export default function StoryCreator() {
   aiGeneratedRef.current = aiGenerated;
   const generationStyleRef = useRef(generationStyle);
   generationStyleRef.current = generationStyle;
+  const cardFormatRef = useRef(cardFormat);
+  cardFormatRef.current = cardFormat;
   const colorTokensRef = useRef(colorTokens);
   colorTokensRef.current = colorTokens;
   // baselineContent model: dirty is computed fresh as a deep comparison of
@@ -786,6 +801,7 @@ export default function StoryCreator() {
     const snapRawNotes = rawNotesRef.current;
     const snapAiGenerated = aiGeneratedRef.current;
     const snapGenerationStyle = generationStyleRef.current;
+    const snapCardFormat = cardFormatRef.current;
     const p = (async () => {
       try {
         // A media element still shows its optimistic local preview (a blob:
@@ -806,6 +822,7 @@ export default function StoryCreator() {
             ...(snapRawNotes ? { raw_notes: snapRawNotes } : {}),
             ...(snapAiGenerated ? { ai_generated: true } : {}),
             ...(snapGenerationStyle ? { generation_style: snapGenerationStyle } : {}),
+            card_size: snapCardFormat,
           });
           // Only reset the baseline if the content hasn't changed (canonically)
           // while the save was in flight. Uses canonical comparison instead of
@@ -830,6 +847,7 @@ export default function StoryCreator() {
             ...(snapRawNotes ? { raw_notes: snapRawNotes } : {}),
             ...(snapAiGenerated ? { ai_generated: true } : {}),
             ...(snapGenerationStyle ? { generation_style: snapGenerationStyle } : {}),
+            card_size: snapCardFormat,
           });
           if (storyEpochRef.current === epoch) {
             setDraftId(created.id);
@@ -1012,6 +1030,9 @@ export default function StoryCreator() {
     setEditingPostId(null);
     setInitialTitle('');
     setInitialTags([]);
+    // Templates are laid out on square cards for now (4:5 layouts come with
+    // decision 45 step 3), so the new story is square.
+    setCardFormat(LEGACY_CARD_SIZE);
     setCards(migratedCards);
     setColorTokens(migratedTokens);
     setCurrentCardIndex(Math.min(cardIndex, migratedCards.length - 1));
@@ -1072,6 +1093,7 @@ export default function StoryCreator() {
       setSelectedElementId(null);
       setDraftId(draft.id);
       draftIdRef.current = draft.id;
+      setCardFormat(getCardSize(draft.card_size).id);
       setEditingPostId(draft.id);
       setInitialTitle(draft.title || '');
       setInitialTags(draft.tags || []);
@@ -1351,6 +1373,7 @@ export default function StoryCreator() {
 
   return (
   <DraftMediaProvider>
+  <CardFormatProvider value={cardFormat}>
   <div className="flex flex-col overflow-hidden select-none" style={{ height: '100dvh', backgroundColor: '#111' }}>
 
       {/* TOP BAR: profile | undo/redo | counter | post.
@@ -1409,7 +1432,7 @@ export default function StoryCreator() {
         onPointerDown={(e) => { if (e.target === e.currentTarget) setSelectedElementId(null); }}
       >
         {!showPostFlow &&
-        <div className="relative" style={{ width: cardSize, height: cardSize, transform: desktopCardShift }}>
+        <div className="relative" style={{ width: cardSize, height: cardHeight, transform: desktopCardShift }}>
           <CanvasArea
             card={currentCard}
             cardSize={cardSize}
@@ -1516,6 +1539,7 @@ export default function StoryCreator() {
       }
 
     </div>
+    </CardFormatProvider>
     </DraftMediaProvider>);
 
 }

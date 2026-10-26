@@ -2,10 +2,9 @@
 // planned premium feature). Rendering lives in DownloadCardsButton.jsx;
 // this file only packages and saves the resulting blobs.
 
-// Square output size for exported cards. 1080px matches common social
-// post sizes (Instagram/LinkedIn square) and gives the website hero sharp
-// cards on high-density screens.
-export const EXPORT_SIZE = 1080;
+// Output sizes for exported cards are per card size (exportWidth /
+// exportHeight in CARD_SIZES, src/lib/cardGeometry.js): 1080×1080 for 1:1,
+// 1080×1350 for 4:5, matching Instagram/LinkedIn post sizes.
 
 export function slugify(text) {
   const slug = String(text || '')

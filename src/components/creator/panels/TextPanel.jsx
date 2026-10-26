@@ -3,7 +3,8 @@ import { Plus, AlignLeft, AlignCenter, AlignRight } from '@/components/icons';
 import ColorPicker from '@/components/creator/ColorPicker';
 import ThumbMenu from '@/components/creator/ThumbMenu';
 import MinimalSlider from '@/components/creator/MinimalSlider';
-import { REFERENCE_CARD_SIZE } from '@/lib/cardGeometry';
+import { REFERENCE_CARD_SIZE, getCardSize } from '@/lib/cardGeometry';
+import { useCardFormat } from '@/components/creator/CardFormatContext';
 import { cssFontFamily, getFontRole, isTitleOnlyFont } from '@/lib/fontLibrary';
 import FontPicker from '@/components/creator/panels/FontPicker';
 import SizeStepper from '@/components/creator/SizeStepper';
@@ -18,9 +19,10 @@ import { textLineHeight } from '@/lib/cardLayout';
 // plus the part of it (as 0..1 fractions of the source image) that's behind
 // the box — accounting for crop insets, zoom and object-fit cover — so its
 // colour can be sampled. Topmost photo wins. Rotation/flip are ignored.
-function photoBehindText(elements, xPct, yPct) {
-  const R = REFERENCE_CARD_SIZE / 100;
-  const tx0 = xPct * R, ty0 = yPct * R;
+// x is a % of the card's width (RX), y a % of its height (RY).
+function photoBehindText(elements, xPct, yPct, refHeight) {
+  const RX = REFERENCE_CARD_SIZE / 100, RY = refHeight / 100;
+  const tx0 = xPct * RX, ty0 = yPct * RY;
   const tx1 = Math.min(REFERENCE_CARD_SIZE, tx0 + REFERENCE_CARD_SIZE * 0.8), ty1 = ty0 + 26;
   const cx = (tx0 + tx1) / 2, cy = (ty0 + ty1) / 2;
   const photos = elements.filter((e) => e.type === 'image' && e.image_url)
@@ -28,7 +30,7 @@ function photoBehindText(elements, xPct, yPct) {
   for (const el of photos) {
     const dw = el.displayWidth ?? 192, dh = el.displayHeight ?? dw;
     const cl = el.clipLeft || 0, cr = el.clipRight || 0, ct = el.clipTop || 0, cb = el.clipBottom || 0;
-    const L = (el.x ?? 0) * R, T = (el.y ?? 0) * R;
+    const L = (el.x ?? 0) * RX, T = (el.y ?? 0) * RY;
     const W = dw - cl - cr, H = dh - ct - cb;
     if (cx < L || cx > L + W || cy < T || cy > T + H) continue;
     const zoom = (el.zoom ?? 100) / 100;
@@ -119,6 +121,9 @@ export default function TextPanel({
   onUpdateElementById,
 }) {
   const { resolveMediaUrl } = useDraftMedia();
+  // Text thumbnails have the story's card shape: TILE wide, taller on 4:5.
+  const refHeight = getCardSize(useCardFormat()).height;
+  const tileHeight = Math.round(TILE * refHeight / REFERENCE_CARD_SIZE);
   const tokensRef = useRef(tokens);
   tokensRef.current = tokens;
   const [tab, setTab] = useState('gallery');
@@ -235,7 +240,7 @@ export default function TextPanel({
     const color = pickReadableTextColor(cardBg);
     const { token, tokens: newTokens } = findOrCreateToken(color, tokens);
     if (newTokens.length > tokens.length) onSetTokens?.(newTokens);
-    const behind = photoBehindText(els, xPct, yPct);
+    const behind = photoBehindText(els, xPct, yPct, refHeight);
     const newId = onAddElement({
       type: 'text',
       content: '',
@@ -368,7 +373,7 @@ export default function TextPanel({
                 <button
                   onClick={addText}
                   className="rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center hover:border-white/50 transition-colors"
-                  style={{ width: TILE, height: TILE }}
+                  style={{ width: TILE, height: tileHeight }}
                 >
                   <Plus size={16} className="text-white/40" />
                 </button>
@@ -390,7 +395,7 @@ export default function TextPanel({
                     className={`rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
                       isSelected ? 'border-emerald-400' : onCurrentCard ? 'border-emerald-400/40' : 'border-white/20 hover:border-white/50'
                     }`}
-                    style={{ width: TILE, height: TILE }}
+                    style={{ width: TILE, height: tileHeight }}
                   >
                     <TextThumb element={el} cardBg={elCardBg} tokens={tokens} />
                   </div>

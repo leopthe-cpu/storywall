@@ -4,6 +4,8 @@ import MiniatureStrip from '@/components/creator/MiniatureStrip';
 import { buildTemplateCards } from '@/lib/storyTemplates';
 import { buildFrameworkTemplate, isFrameworkTemplate } from '@/lib/frameworkTemplates';
 import { ChevronLeft, ChevronRight } from '@/components/icons';
+import { CardFormatProvider } from '@/components/creator/CardFormatContext';
+import { LEGACY_CARD_SIZE } from '@/lib/cardGeometry';
 
 const THUMB_SIZE = 28;
 const GAP = 4;
@@ -31,7 +33,17 @@ function useTemplateCards(template) {
 // Tapping the row opens the template into the builder at card 1.
 // Tapping a miniature opens the template at that specific card.
 // Both actions autosave the current story first.
-export default function TemplateRow({ template, onApply, appliedTemplateId, currentCardIndex }) {
+// Templates are laid out on square cards (decision 45 step 3 adds 4:5), so
+// they're always previewed square, whatever the size of the open story.
+export default function TemplateRow(props) {
+  return (
+    <CardFormatProvider value={LEGACY_CARD_SIZE}>
+      <TemplateRowBody {...props} />
+    </CardFormatProvider>
+  );
+}
+
+function TemplateRowBody({ template, onApply, appliedTemplateId, currentCardIndex }) {
   const isApplied = appliedTemplateId === template.id;
   const templateCards = useTemplateCards(template);
   const coverCard = templateCards[0];

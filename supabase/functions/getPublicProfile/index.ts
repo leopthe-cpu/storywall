@@ -13,7 +13,7 @@ import { isAllowedUsername, normalizeUsername } from '../_shared/username.ts';
 const PROFILE_FIELDS =
   'id, username, full_name, display_name, headline, bio, location, skills, links, profile_image, is_private';
 const POST_FIELDS =
-  'id, author_id, title, status, cards, color_tokens, cover_image, tags, display_order, ai_generated, generation_style, created_at, updated_at';
+  'id, author_id, title, status, cards, color_tokens, cover_image, tags, display_order, ai_generated, generation_style, card_size, created_at, updated_at';
 
 export default {
   fetch: withSupabase({ auth: ['user', 'publishable'] }, async (req, ctx) => {
