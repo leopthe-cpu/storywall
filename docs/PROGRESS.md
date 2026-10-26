@@ -15,7 +15,7 @@ summary: Storywall runs on Railway + Supabase at storywall.io. The Oct 23 releas
 - [ ] Send the "ticket" style reference image and editorial carousel examples @me #design
   Source: docs/decisions.md 44–45
 - [ ] Review Oz's four story drafts on staging, then OK the production import @me #content
-  insatisfeitos, Zebu (timing), Tauria (pivot), Dynatrace logs. Planned to be re-made at 4:5 first.
+  Planned to be re-made at 4:5 first.
   Source: docs/decisions.md 47
 - [ ] Release develop to production (templates PR 139, Context7 note PR 138) @me #release
   Source: PRs 138–139
