@@ -9,7 +9,9 @@ import { MoreVertical, Copy, GripVertical, Trash2, Plus } from '@/components/ico
 // story: { cards, currentIndices, onPick(cardIndex) }. `currentIndices`
 // (card indices this item is already placed on) get a filled/green tile so
 // it's clear at a glance where a copy already lives.
-export default function ThumbMenu({ onDuplicate, onReorder, onDelete, deleteDisabled, deleteTitle, addToCard }) {
+// `onChangeFormat` (CardsPanel only) adds a "Change format" row: switch the
+// card's size (decision 48).
+export default function ThumbMenu({ onDuplicate, onReorder, onDelete, deleteDisabled, deleteTitle, addToCard, onChangeFormat }) {
   const [open, setOpen] = useState(false);
   const [pickingCard, setPickingCard] = useState(false);
   const ref = useRef(null);
@@ -67,6 +69,14 @@ export default function ThumbMenu({ onDuplicate, onReorder, onDelete, deleteDisa
                   className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/70 hover:bg-white/5 transition-colors"
                 >
                   <Copy size={12} /> Duplicate
+                </button>
+              )}
+              {onChangeFormat && (
+                <button
+                  onClick={() => { setOpen(false); onChangeFormat(); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/70 hover:bg-white/5 transition-colors"
+                >
+                  <span aria-hidden="true" className="inline-block w-[9px] h-[12px] rounded-[2px] border-[1.5px] border-current" /> Change format
                 </button>
               )}
               {onReorder && (
