@@ -5,7 +5,7 @@ import { buildTemplateCards } from '@/lib/storyTemplates';
 import { buildFrameworkTemplate, isFrameworkTemplate } from '@/lib/frameworkTemplates';
 import { ChevronLeft, ChevronRight } from '@/components/icons';
 import { CardFormatProvider } from '@/components/creator/CardFormatContext';
-import { LEGACY_CARD_SIZE } from '@/lib/cardGeometry';
+import { LEGACY_CARD_SIZE, cardAspectRatio } from '@/lib/cardGeometry';
 
 const THUMB_SIZE = 28;
 const GAP = 4;
@@ -13,18 +13,18 @@ const STEP = THUMB_SIZE + GAP;
 
 // The cards a template row previews. Framework templates are laid out by the
 // generated-story engine, which waits for fonts, so they arrive a moment later.
-function useTemplateCards(template) {
+function useTemplateCards(template, cardSize) {
   const framework = isFrameworkTemplate(template);
   const plain = useMemo(() => (framework ? [] : buildTemplateCards(template, true)), [template.id, framework]);
   const [laidOut, setLaidOut] = useState([]);
   useEffect(() => {
     if (!framework) return undefined;
     let alive = true;
-    buildFrameworkTemplate(template)
+    buildFrameworkTemplate(template, cardSize)
       .then(({ cards }) => { if (alive) setLaidOut(cards); })
       .catch((e) => console.error('[TemplateRow] template layout failed:', e));
     return () => { alive = false; };
-  }, [template.id, framework]);
+  }, [template.id, framework, cardSize]);
   return framework ? laidOut : plain;
 }
 
@@ -33,19 +33,21 @@ function useTemplateCards(template) {
 // Tapping the row opens the template into the builder at card 1.
 // Tapping a miniature opens the template at that specific card.
 // Both actions autosave the current story first.
-// Templates are laid out on square cards (decision 45 step 3 adds 4:5), so
-// they're always previewed square, whatever the size of the open story.
-export default function TemplateRow(props) {
+// A template is previewed at the size the story made from it will have
+// (`cardSize`, see StoryCreator's templateCardSize). The older plain
+// templates (storyTemplates.js) are only laid out on square cards.
+export default function TemplateRow({ cardSize, ...props }) {
+  const size = isFrameworkTemplate(props.template) ? cardSize : LEGACY_CARD_SIZE;
   return (
-    <CardFormatProvider value={LEGACY_CARD_SIZE}>
-      <TemplateRowBody {...props} />
+    <CardFormatProvider value={size}>
+      <TemplateRowBody {...props} cardSize={size} />
     </CardFormatProvider>
   );
 }
 
-function TemplateRowBody({ template, onApply, appliedTemplateId, currentCardIndex }) {
+function TemplateRowBody({ template, onApply, appliedTemplateId, currentCardIndex, cardSize }) {
   const isApplied = appliedTemplateId === template.id;
-  const templateCards = useTemplateCards(template);
+  const templateCards = useTemplateCards(template, cardSize);
   const coverCard = templateCards[0];
 
   const [offset, setOffset] = useState(0);
@@ -79,7 +81,7 @@ function TemplateRowBody({ template, onApply, appliedTemplateId, currentCardInde
       }`}
     >
       {/* Cover thumbnail — always the first card, fixed */}
-      <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 border border-white/10">
+      <div className="w-14 rounded-lg overflow-hidden flex-shrink-0 border border-white/10" style={{ aspectRatio: cardAspectRatio(cardSize) }}>
         {coverCard ? <CardThumb card={coverCard} displaySize={56} /> : <div className="w-full h-full bg-white/5" />}
       </div>
 

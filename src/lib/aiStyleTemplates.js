@@ -11,11 +11,16 @@
 // story, and a small set of card layouts (cover, photo, statement, text).
 
 import { contrastRatio } from '@/lib/colorContrast';
+import { getCardSize } from '@/lib/cardGeometry';
 import {
   BODY_SIZES, CARD, CONTENT_WIDTH, LINE_HEIGHT, MARGIN, SCALE,
   loadStyleFonts, measureBox, splitSentences, wrapText,
 } from '@/lib/cardLayout';
 
+// Width of every card in reference px. The height depends on the story's
+// card size (decision 45: 320 for 1:1, 400 for 4:5) and is passed around as
+// `g` (cardGeometryFor below); x and widths are in % / px of the width, y in
+// % of the height.
 const REFERENCE_CARD_SIZE = CARD;
 const BOX_PADDING = 2;
 
@@ -192,9 +197,14 @@ const MIN_PHOTO_HEIGHT = 112;
 const PHOTO_GAP = 16;
 // Statements are short lines set large; longer text is a normal text card.
 const STATEMENT_MAX_CHARS = 70;
-// A cover title must leave most of its picture visible.
-const COVER_MAX_TEXT_HEIGHT = Math.round((CARD - 2 * MARGIN) * 0.6);
-const AVAILABLE = CARD - 2 * MARGIN;
+// The vertical room of a card: its height, the space between the top and
+// bottom margins, and how tall a cover title may get (it must leave most of
+// its picture visible).
+function cardGeometryFor(cardSize) {
+  const height = getCardSize(cardSize).height;
+  const available = height - 2 * MARGIN;
+  return { height, available, coverMaxText: Math.round(available * 0.6) };
+}
 // Per-card text size (Oz, 2026-10-16: "some cards with not much text the
 // text just looks too small for the card"). The story's base size is set by
 // the card with the most text, so cards with less text used to look empty.
@@ -265,8 +275,8 @@ function balancedWidth(tpl, header, body, headerSize, bodySize, gap, bodyAt = bo
 
 // Top of a text-only block: centred vertically between the margins, so the
 // space above and below is the same.
-function centredTop(total) {
-  return MARGIN + (AVAILABLE - total) / 2;
+function centredTop(g, total) {
+  return MARGIN + (g.available - total) / 2;
 }
 
 // What kind of card each structured card becomes.
@@ -287,16 +297,16 @@ function planCards(structuredCards) {
 }
 
 // Does every text-only card fit at this body size, without splitting?
-function storyFits(tpl, plans, body) {
+function storyFits(tpl, plans, body, g) {
   const s = sizesFor(tpl, body);
   return plans.every((p) => {
     if (p.kind === 'photo') return true; // photos adapt or split, see layoutPhoto
-    if (p.kind === 'statement') return blockHeights(tpl, p.header, '', s.statement, s.body, s.gap).total <= AVAILABLE;
+    if (p.kind === 'statement') return blockHeights(tpl, p.header, '', s.statement, s.body, s.gap).total <= g.available;
     if (p.kind === 'cover') {
-      const max = p.src.imageUrl ? COVER_MAX_TEXT_HEIGHT : AVAILABLE;
+      const max = p.src.imageUrl ? g.coverMaxText : g.available;
       return blockHeights(tpl, p.header, p.body, s.cover, s.body, s.gap).total <= max;
     }
-    return blockHeights(tpl, p.header, p.body, s.header, s.body, s.gap).total <= AVAILABLE;
+    return blockHeights(tpl, p.header, p.body, s.header, s.body, s.gap).total <= g.available;
   });
 }
 
@@ -314,7 +324,7 @@ function splitToFit(tpl, header, body, headerSize, bodySize, gap, maxHeight) {
   return [sentences.slice(0, keep).join('').trim(), sentences.slice(keep).join('').trim()];
 }
 
-function textElement(id, content, top, height, size, font, role, colorToken, color, z, lineHeight, width = CONTENT_WIDTH) {
+function textElement(g, id, content, top, height, size, font, role, colorToken, color, z, lineHeight, width = CONTENT_WIDTH) {
   // Narrower boxes (balancedWidth) are centred between the margins.
   const left = MARGIN + (CONTENT_WIDTH - width) / 2;
   return {
@@ -322,7 +332,7 @@ function textElement(id, content, top, height, size, font, role, colorToken, col
     type: 'text',
     content,
     x: ((left - BOX_PADDING) / REFERENCE_CARD_SIZE) * 100,
-    y: (top / REFERENCE_CARD_SIZE) * 100,
+    y: (top / g.height) * 100,
     displayWidth: width + 2 * BOX_PADDING,
     displayHeight: Math.ceil(height),
     font_family: font.family,
@@ -347,15 +357,15 @@ function textElement(id, content, top, height, size, font, role, colorToken, col
 // Stacks header and body from `top`, returns the text elements.
 // `width` is the text box width (default: the full content width); `bodyAt`
 // the size the body is set at (default: the story's body size).
-function stack(cardId, tpl, tokens, top, header, body, headerSize, bodySize, gap, width = CONTENT_WIDTH, bodyAt = bodySize) {
+function stack(g, cardId, tpl, tokens, top, header, body, headerSize, bodySize, gap, width = CONTENT_WIDTH, bodyAt = bodySize) {
   const els = [];
   const { h, b } = blockHeights(tpl, header, body, headerSize, bodySize, gap, width, bodyAt);
   if (header) {
-    els.push(textElement(`${cardId}-title`, header, top, h, headerSize, tpl.displayFont,
+    els.push(textElement(g, `${cardId}-title`, header, top, h, headerSize, tpl.displayFont,
       'header', tokens.ink.id, tokens.ink.color, 1000, headerLineHeight(headerSize, bodySize), width));
   }
   if (body) {
-    els.push(textElement(`${cardId}-subtitle`, body, top + (h ? h + gap : 0), b, bodyAt, tpl.bodyFont,
+    els.push(textElement(g, `${cardId}-subtitle`, body, top + (h ? h + gap : 0), b, bodyAt, tpl.bodyFont,
       'body', tokens.ink.id, tokens.ink.color, 1001, bodyLineHeight(bodyAt, bodySize), width));
   }
   return els;
@@ -379,10 +389,10 @@ function stepUp(tpl, s, fits) {
 
 // Places a text-only block (no picture): balanced line widths, centred
 // left-right and top-bottom.
-function centredStack(cardId, tpl, tokens, header, body, headerSize, bodySize, gap, bodyAt = bodySize) {
+function centredStack(g, cardId, tpl, tokens, header, body, headerSize, bodySize, gap, bodyAt = bodySize) {
   const width = balancedWidth(tpl, header, body, headerSize, bodySize, gap, bodyAt);
   const { total } = blockHeights(tpl, header, body, headerSize, bodySize, gap, width, bodyAt);
-  return stack(cardId, tpl, tokens, centredTop(total), header, body, headerSize, bodySize, gap, width, bodyAt);
+  return stack(g, cardId, tpl, tokens, centredTop(g, total), header, body, headerSize, bodySize, gap, width, bodyAt);
 }
 
 // ── Colour variation across cards ──
@@ -419,8 +429,12 @@ function cardSchemes(tokens) {
 // Returns { cards, tokens } compatible with the card canvas. Text is never
 // edited here; a card whose body doesn't fit continues on a new card, split
 // between sentences.
-export async function buildAICards(structuredCards, styleTemplate) {
+// `cardSize` is the story's card size ('1:1' default, '4:5'): the same
+// rules on a taller card leave more room, so text is split less often.
+export async function buildAICards(structuredCards, styleTemplate, { cardSize } = {}) {
   const tpl = typeof styleTemplate === 'string' ? getStyleTemplate(styleTemplate) : (styleTemplate || getStyleTemplate());
+  const g = cardGeometryFor(cardSize);
+  const AVAILABLE = g.available;
   await loadStyleFonts(tpl);
   const ts = Date.now();
 
@@ -432,7 +446,7 @@ export async function buildAICards(structuredCards, styleTemplate) {
   };
 
   const plans = planCards(structuredCards);
-  const bodySize = BODY_SIZES.find((size) => storyFits(tpl, plans, size)) ?? BODY_SIZES[BODY_SIZES.length - 1];
+  const bodySize = BODY_SIZES.find((size) => storyFits(tpl, plans, size, g)) ?? BODY_SIZES[BODY_SIZES.length - 1];
   const s = sizesFor(tpl, bodySize);
 
   // Sizes for a text-only card's block (see SIZE_STEPS).
@@ -476,7 +490,7 @@ export async function buildAICards(structuredCards, styleTemplate) {
       const card = newCard({}, { imageGenerationFailed: false, imagePrompt: '' });
       const [kept, more] = splitToFit(tpl, '', rest, s.header, s.body, s.gap, AVAILABLE);
       const z = textCardSizes('', kept);
-      card.elements = centredStack(card.id, tpl, ct, '', kept, z.header, s.body, z.gap, z.body);
+      card.elements = centredStack(g, card.id, tpl, ct, '', kept, z.header, s.body, z.gap, z.body);
       cards.push(card);
       rest = more;
     }
@@ -491,7 +505,7 @@ export async function buildAICards(structuredCards, styleTemplate) {
       image_url: src.imageUrl,
       crop_ratio: 'original',
       x: (box.x / REFERENCE_CARD_SIZE) * 100,
-      y: (box.y / REFERENCE_CARD_SIZE) * 100,
+      y: (box.y / g.height) * 100,
       displayWidth: box.w,
       displayHeight: box.h,
       z_index: 0,
@@ -505,7 +519,7 @@ export async function buildAICards(structuredCards, styleTemplate) {
       const { total } = blockHeights(tpl, p.header, p.body, s.cover, s.body, s.gap);
       if (hasImage) {
         // Full-bleed picture under a scrim in the card colour; title anchored bottom-left.
-        const img = imageEl({ x: 0, y: 0, w: CARD, h: CARD }, {
+        const img = imageEl({ x: 0, y: 0, w: CARD, h: g.height }, {
           clipTop: 0, clipBottom: 0, clipLeft: 0, clipRight: 0,
           overlay_type: 'Color', overlay_color: tpl.dominant, overlay_position: 'Bottom', overlay_intensity: 80,
         });
@@ -513,8 +527,8 @@ export async function buildAICards(structuredCards, styleTemplate) {
         card.elements.push(img);
         card.backgroundImageId = img.id;
       }
-      const top = hasImage ? CARD - MARGIN - total : MARGIN + (AVAILABLE - total) * 0.55;
-      card.elements.push(...stack(card.id, tpl, ct, top, p.header, p.body, s.cover, s.body, s.gap));
+      const top = hasImage ? g.height - MARGIN - total : MARGIN + (AVAILABLE - total) * 0.55;
+      card.elements.push(...stack(g, card.id, tpl, ct, top, p.header, p.body, s.cover, s.body, s.gap));
       cards.push(card);
       continue;
     }
@@ -522,14 +536,18 @@ export async function buildAICards(structuredCards, styleTemplate) {
     if (p.kind === 'photo') {
       const ct = use('base');
       const card = newCard(src);
+      // On a taller card (4:5) the extra height goes to the picture, so the
+      // text keeps the same room as on a square card and the card doesn't
+      // end in an empty band. 1:1: exactly PHOTO_HEIGHT, as before.
+      const PHOTO_MAX = PHOTO_HEIGHT + (g.height - CARD);
       // Shrink the picture (never below MIN_PHOTO_HEIGHT) before moving text away.
-      const textRoomAt = (photoH) => CARD - MARGIN - (MARGIN + photoH + PHOTO_GAP);
-      const photoHFor = (total) => Math.max(MIN_PHOTO_HEIGHT, Math.min(PHOTO_HEIGHT, CARD - 2 * MARGIN - PHOTO_GAP - total));
+      const textRoomAt = (photoH) => g.height - MARGIN - (MARGIN + photoH + PHOTO_GAP);
+      const photoHFor = (total) => Math.max(MIN_PHOTO_HEIGHT, Math.min(PHOTO_MAX, AVAILABLE - PHOTO_GAP - total));
       // Larger text when it all fits under the picture at full size.
       const z = stepUp(tpl, s, (zz) =>
-        blockHeights(tpl, p.header, p.body, zz.header, s.body, zz.gap, CONTENT_WIDTH, zz.body).total <= textRoomAt(PHOTO_HEIGHT));
+        blockHeights(tpl, p.header, p.body, zz.header, s.body, zz.gap, CONTENT_WIDTH, zz.body).total <= textRoomAt(PHOTO_MAX));
       if (z.body > s.body) {
-        const box = { x: MARGIN, y: MARGIN, w: CONTENT_WIDTH, h: PHOTO_HEIGHT };
+        const box = { x: MARGIN, y: MARGIN, w: CONTENT_WIDTH, h: PHOTO_MAX };
         card.imageBox = box;
         if (hasImage) {
           const img = imageEl(box);
@@ -537,7 +555,7 @@ export async function buildAICards(structuredCards, styleTemplate) {
           card.elements.push(img);
           card.backgroundImageId = img.id;
         }
-        card.elements.push(...stack(card.id, tpl, ct, MARGIN + PHOTO_HEIGHT + PHOTO_GAP, p.header, p.body,
+        card.elements.push(...stack(g, card.id, tpl, ct, MARGIN + PHOTO_MAX + PHOTO_GAP, p.header, p.body,
           z.header, s.body, z.gap, CONTENT_WIDTH, z.body));
         cards.push(card);
         continue;
@@ -571,7 +589,7 @@ export async function buildAICards(structuredCards, styleTemplate) {
         card.elements.push(img);
         card.backgroundImageId = img.id;
       }
-      card.elements.push(...stack(card.id, tpl, ct, photoTop + photoH + PHOTO_GAP, p.header, body, s.header, s.body, s.gap));
+      card.elements.push(...stack(g, card.id, tpl, ct, photoTop + photoH + PHOTO_GAP, p.header, body, s.header, s.body, s.gap));
       cards.push(card);
       pushContinuation(src, overflow, ct);
       continue;
@@ -580,7 +598,7 @@ export async function buildAICards(structuredCards, styleTemplate) {
     if (p.kind === 'statement') {
       const ct = use(statementKind());
       const card = newCard(src);
-      card.elements.push(...centredStack(card.id, tpl, ct, p.header, '', s.statement, s.body, s.gap));
+      card.elements.push(...centredStack(g, card.id, tpl, ct, p.header, '', s.statement, s.body, s.gap));
       cards.push(card);
       continue;
     }
@@ -594,7 +612,7 @@ export async function buildAICards(structuredCards, styleTemplate) {
     }
     // Larger text when the card has room for it (see SIZE_STEPS).
     const z = textCardSizes(p.header, body);
-    card.elements.push(...centredStack(card.id, tpl, ct, p.header, body, z.header, s.body, z.gap, z.body));
+    card.elements.push(...centredStack(g, card.id, tpl, ct, p.header, body, z.header, s.body, z.gap, z.body));
     cards.push(card);
     pushContinuation(src, overflow, ct);
   }

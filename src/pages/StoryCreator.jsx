@@ -9,7 +9,7 @@ import BottomIsland, { ISLAND_CHROME } from '@/components/creator/BottomIsland';
 import PostFlowSheet from '@/components/creator/PostFlowSheet';
 import { DraftMediaProvider } from '@/components/creator/DraftMediaContext';
 import { CardFormatProvider } from '@/components/creator/CardFormatContext';
-import { getCardSize, LEGACY_CARD_SIZE } from '@/lib/cardGeometry';
+import { getCardSize, LEGACY_CARD_SIZE, DEFAULT_NEW_CARD_SIZE } from '@/lib/cardGeometry';
 import { applyTemplateToStory } from '@/lib/storyTemplates';
 import { frameworkTemplateForStory, isFrameworkTemplate } from '@/lib/frameworkTemplates';
 import { aiCarouselBuilderEnabled } from '@/lib/featureFlags';
@@ -82,6 +82,13 @@ function hasRealContent(cards) {
       return false;
     });
   });
+}
+
+// The card size of a story made from a template (it starts a new story):
+// the size picked for the story on screen while that story is still empty
+// (the size choice is only offered then), otherwise the new-story default.
+function templateCardSizeFor(cards, cardFormat) {
+  return hasRealContent(cards) ? DEFAULT_NEW_CARD_SIZE : cardFormat;
 }
 
 // Fields set asynchronously by image/video load handlers, not by user edits.
@@ -198,9 +205,10 @@ export default function StoryCreator() {
   const [aiGenerated, setAiGenerated] = useState(!!editStory?.ai_generated);
   const [generationStyle, setGenerationStyle] = useState(editStory?.generation_style || null);
   // The story's card size (posts.card_size, decision 45): '1:1' or '4:5'.
-  // Provided to every renderer below through CardFormatProvider. Stories
-  // saved before card sizes existed have none and stay square.
-  const [cardFormat, setCardFormat] = useState(() => getCardSize(editStory?.card_size).id);
+  // Provided to every renderer below through CardFormatProvider. A new
+  // story starts at 4:5; an opened story keeps its own size (one saved
+  // before card sizes existed has none and stays square).
+  const [cardFormat, setCardFormat] = useState(() => (editStory ? getCardSize(editStory.card_size).id : DEFAULT_NEW_CARD_SIZE));
   // Card height ÷ width (1 for 1:1, 1.25 for 4:5): the on-screen card is
   // sized by its width, so the vertical room it needs scales with this.
   const cardAspect = getCardSize(cardFormat).height / REFERENCE_CARD_SIZE;
@@ -266,6 +274,11 @@ export default function StoryCreator() {
     : undefined;
 
   const currentCard = cards[currentCardIndex];
+  // The size choice (4:5 / 1:1) is offered only while the story is still
+  // empty; switching a story that has content comes with its own rules
+  // (decision 45). Templates follow the same choice (templateCardSizeFor).
+  const canChooseCardFormat = !hasRealContent(cards);
+  const templateCardSize = templateCardSizeFor(cards, cardFormat);
 
   const updateCurrentCard = useCallback((updates) => {
     setCards((prev) => prev.map((c, i) => i === currentCardIndex ? { ...c, ...updates } : c));
@@ -984,6 +997,11 @@ export default function StoryCreator() {
   // isDirty: if clean, apply immediately; if dirty, show the confirmation modal.
 
   const applyTemplateContent = useCallback(async (template, cardIndex = 0) => {
+    // The new story's size, read before the current story is saved and
+    // replaced (see templateCardSize). Plain templates only exist at 1:1.
+    const size = isFrameworkTemplate(template)
+      ? templateCardSizeFor(cardsRef.current, cardFormatRef.current)
+      : LEGACY_CARD_SIZE;
     await flushActiveTextEdit();
     await cancelAutosave();
     // The template replaces the whole story, so the current one must be safely
@@ -1005,7 +1023,7 @@ export default function StoryCreator() {
     if (isFrameworkTemplate(template)) {
       let laidOut;
       try {
-        laidOut = await frameworkTemplateForStory(template);
+        laidOut = await frameworkTemplateForStory(template, size);
       } catch (e) {
         console.error('[StoryCreator] template layout failed:', e);
         toast({ variant: 'destructive', title: "Couldn't open this template", description: 'Check your connection and try again.' });
@@ -1030,9 +1048,7 @@ export default function StoryCreator() {
     setEditingPostId(null);
     setInitialTitle('');
     setInitialTags([]);
-    // Templates are laid out on square cards for now (4:5 layouts come with
-    // decision 45 step 3), so the new story is square.
-    setCardFormat(LEGACY_CARD_SIZE);
+    setCardFormat(size);
     setCards(migratedCards);
     setColorTokens(migratedTokens);
     setCurrentCardIndex(Math.min(cardIndex, migratedCards.length - 1));
@@ -1183,6 +1199,7 @@ export default function StoryCreator() {
           attachments,
           postId: draftIdRef.current,
           theme: genTheme,
+          cardSize: cardFormatRef.current,
           // Progress only arrives once the server job exists; from then on
           // leaving is safe, so the "Sit back" card can say so.
           onProgress: (p) => { setGenProgress(p); setGenCanLeave(true); },
@@ -1203,6 +1220,7 @@ export default function StoryCreator() {
           existingCards: editMode === 'edits_only' ? cards : [],
           existingStyleTemplate: editMode === 'edits_only' ? generationStyle : undefined,
           theme: genTheme,
+          cardSize: cardFormatRef.current,
           onProgress: (p) => setGenProgress(p),
         });
       }
@@ -1419,6 +1437,8 @@ export default function StoryCreator() {
           onRemoveAttachment={handleRemoveAttachment}
           theme={genTheme}
           onThemeChange={setGenTheme}
+          cardFormat={cardFormat}
+          onCardFormatChange={canChooseCardFormat ? setCardFormat : undefined}
         />
       ) : (
       <div className="flex-1 flex flex-col md:flex-row min-h-0">
@@ -1493,6 +1513,9 @@ export default function StoryCreator() {
         onDuplicateElementToCard={duplicateElementToCard}
         onReorderElements={reorderTextElements}
         onApplyTemplate={handleApplyTemplate}
+        templateCardSize={templateCardSize}
+        cardFormat={cardFormat}
+        onCardFormatChange={canChooseCardFormat ? setCardFormat : undefined}
         initialCardsTab={editStory || cardsTabVisitedRef.current ? 'Gallery' : 'Templates'}
         cardResetToken={cardResetToken}
         appliedTemplateId={appliedTemplateId}

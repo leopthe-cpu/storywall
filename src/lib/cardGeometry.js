@@ -26,6 +26,10 @@ export const CARD_SIZES = {
 // the database column's default).
 export const LEGACY_CARD_SIZE = '1:1';
 
+// The size a new story starts at (decision 45, Oz 2026-10-26): portrait,
+// the Instagram/LinkedIn carousel format. 1:1 stays available.
+export const DEFAULT_NEW_CARD_SIZE = '4:5';
+
 // A story's card size; anything unknown or missing falls back to square.
 export function getCardSize(cardSize) {
   return CARD_SIZES[cardSize] || CARD_SIZES[LEGACY_CARD_SIZE];
