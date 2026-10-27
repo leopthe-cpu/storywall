@@ -7,9 +7,10 @@ import { registerMedia } from '@/lib/mediaLibrary';
 import CanvasArea, { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/components/creator/CanvasArea';
 import BottomIsland, { ISLAND_CHROME } from '@/components/creator/BottomIsland';
 import PostFlowSheet from '@/components/creator/PostFlowSheet';
+import AddCardMenu from '@/components/creator/AddCardMenu';
 import { DraftMediaProvider } from '@/components/creator/DraftMediaContext';
-import { CardFormatProvider } from '@/components/creator/CardFormatContext';
-import { getCardSize, LEGACY_CARD_SIZE, DEFAULT_NEW_CARD_SIZE } from '@/lib/cardGeometry';
+import { getCardSize, cardSizeOf, fitCard, LEGACY_CARD_SIZE, DEFAULT_NEW_CARD_SIZE, LAYOUT_CARD_SIZES } from '@/lib/cardGeometry';
+import { resizeCard } from '@/lib/cardResize';
 import { applyTemplateToStory } from '@/lib/storyTemplates';
 import { frameworkTemplateForStory, isFrameworkTemplate } from '@/lib/frameworkTemplates';
 import { aiCarouselBuilderEnabled } from '@/lib/featureFlags';
@@ -84,11 +85,20 @@ function hasRealContent(cards) {
   });
 }
 
-// The card size of a story made from a template (it starts a new story):
-// the size picked for the story on screen while that story is still empty
-// (the size choice is only offered then), otherwise the new-story default.
-function templateCardSizeFor(cards, cardFormat) {
-  return hasRealContent(cards) ? DEFAULT_NEW_CARD_SIZE : cardFormat;
+// The card size a template story is laid out at (it starts a new story):
+// the size of the card on screen when the layout engine supports it
+// (LAYOUT_CARD_SIZES), otherwise the new-story default.
+function templateCardSizeFor(card) {
+  const size = cardSizeOf(card);
+  return LAYOUT_CARD_SIZES.includes(size) ? size : DEFAULT_NEW_CARD_SIZE;
+}
+
+// Cards of a stored story with their size written on each one (decision 45:
+// a card carries its own size). Cards saved before that take the story's
+// posts.card_size, so they look exactly as before; the next save keeps it.
+function withCardSizes(cards, storySize) {
+  const fallback = getCardSize(storySize).id;
+  return (cards || []).map((c) => (c.card_size ? c : { ...c, card_size: fallback }));
 }
 
 // Fields set asynchronously by image/video load handlers, not by user edits.
@@ -120,8 +130,9 @@ const SAFE_ZONE_PCT = (SAFE_ZONE_INSET / REFERENCE_CARD_SIZE) * 100;
 // purgeEmptyText/purgeAllEmptyText strips it back out (card nav, tool
 // switch, and right before Publish/Update), so an untouched card never
 // actually ships an empty text box.
-const newCard = () => ({
+const newCard = (size = DEFAULT_NEW_CARD_SIZE) => ({
   id: `card-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  card_size: getCardSize(size).id,
   background_color: DEFAULT_CARD_COLOR,
   elements: [{
     id: `el-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -154,7 +165,7 @@ export default function StoryCreator() {
   // and text colors not updating.)
   const initialStoryState = useRef(null);
   if (!initialStoryState.current) {
-    const initialCards = editStory?.cards?.length ? editStory.cards : [newCard()];
+    const initialCards = editStory?.cards?.length ? withCardSizes(editStory.cards, editStory.card_size) : [newCard()];
     initialStoryState.current = editStory?.color_tokens?.length
       ? { cards: initialCards, tokens: editStory.color_tokens }
       : migrateToTokens(initialCards, []);
@@ -204,14 +215,8 @@ export default function StoryCreator() {
   const [showRegenerateChoice, setShowRegenerateChoice] = useState(false);
   const [aiGenerated, setAiGenerated] = useState(!!editStory?.ai_generated);
   const [generationStyle, setGenerationStyle] = useState(editStory?.generation_style || null);
-  // The story's card size (posts.card_size, decision 45): '1:1' or '4:5'.
-  // Provided to every renderer below through CardFormatProvider. A new
-  // story starts at 4:5; an opened story keeps its own size (one saved
-  // before card sizes existed has none and stays square).
-  const [cardFormat, setCardFormat] = useState(() => (editStory ? getCardSize(editStory.card_size).id : DEFAULT_NEW_CARD_SIZE));
-  // Card height ÷ width (1 for 1:1, 1.25 for 4:5): the on-screen card is
-  // sized by its width, so the vertical room it needs scales with this.
-  const cardAspect = getCardSize(cardFormat).height / REFERENCE_CARD_SIZE;
+  // Size of the cards a Generate run lays out (notes screen, decision 45).
+  const [genCardSize, setGenCardSize] = useState(DEFAULT_NEW_CARD_SIZE);
 
   const screenH = typeof window !== 'undefined' ? window.innerHeight : 800;
   const screenW = typeof window !== 'undefined' ? window.innerWidth : 390;
@@ -235,10 +240,10 @@ export default function StoryCreator() {
 
   // Island constraints — no nav row anymore, just chrome
   const islandMinH = ISLAND_CHROME + 40;
-  const islandMaxH = screenH - TOP_BAR_HEIGHT - Math.round(screenW * CARD_MIN_RATIO * cardAspect) - 24;
+  const islandMaxH = screenH - TOP_BAR_HEIGHT - Math.round(screenW * CARD_MIN_RATIO) - 24;
 
   // Default: card at ~56% width → island fills remaining
-  const defaultCardSize = Math.round(screenW * 0.73 * cardAspect);
+  const defaultCardSize = Math.round(screenW * 0.73);
   const defaultIslandH = clamp(screenH - TOP_BAR_HEIGHT - defaultCardSize - 16, islandMinH, islandMaxH);
 
   const [islandHeight, setIslandHeight] = useState(defaultIslandH);
@@ -256,15 +261,23 @@ export default function StoryCreator() {
   // card's size. DESKTOP_CARD_MAX is the size in Oz's reference layout (15.6"
   // laptop, ~1560x780 window): the biggest it should ever get, so it stops
   // growing on larger screens. Mobile sizing is untouched.
-  // cardSize is the card's WIDTH. On a taller card (4:5) the height-based
-  // limits are divided by cardAspect, so the card's HEIGHT stays within the
-  // same range as a square card's; 1:1 sizing is unchanged.
-  const cardSize = isDesktop
-    ? clamp(Math.round(Math.min(screenH * 0.56 / cardAspect, (screenW - DESKTOP_PANEL_WIDTH) * 0.6)), Math.round(DESKTOP_CARD_MIN / cardAspect), Math.round(DESKTOP_CARD_MAX / cardAspect))
+  // The builder keeps the space a square card has always had (cardSlot, the
+  // same maths as before card sizes) and every card is fitted inside it
+  // (Oz, 2026-10-27): a 4:5 or 9:16 card is narrower, a 16:9 card shorter,
+  // so the panel and the layout never move when switching cards. On a phone,
+  // a tall card may also use free height above the panel (a tall screen, or
+  // the panel dragged down) up to its full width; on desktop it stays in the
+  // square.
+  const cardSlot = isDesktop
+    ? clamp(Math.round(Math.min(screenH * 0.56, (screenW - DESKTOP_PANEL_WIDTH) * 0.6)), DESKTOP_CARD_MIN, DESKTOP_CARD_MAX)
     // Phone layout: unchanged for phones; on wider portrait screens (small
     // tablets) it's capped at the same maximum as desktop.
-    : Math.min(DESKTOP_CARD_MAX, clamp(Math.round(availableForCard / cardAspect), Math.round(screenW * CARD_MIN_RATIO), Math.round(screenW * CARD_MAX_RATIO)));
-  const cardHeight = Math.round(cardSize * cardAspect);
+    : Math.min(DESKTOP_CARD_MAX, clamp(availableForCard, Math.round(screenW * CARD_MIN_RATIO), Math.round(screenW * CARD_MAX_RATIO)));
+  const currentCardSize = cardSizeOf(cards[currentCardIndex]);
+  const cardBox = fitCard(currentCardSize, cardSlot, isDesktop ? cardSlot : Math.max(cardSlot, availableForCard));
+  // CanvasArea takes the card's width; it derives the height from the size.
+  const cardSize = cardBox.width;
+  const cardHeight = cardBox.height;
   // Desktop optical balance: centre the card + add-card button as one group
   // (the button hangs ADD_CARD_REACH px off the card's right side), and sit
   // it a little above the middle of the WINDOW rather than of the area under
@@ -274,11 +287,8 @@ export default function StoryCreator() {
     : undefined;
 
   const currentCard = cards[currentCardIndex];
-  // The size choice (4:5 / 1:1) is offered only while the story is still
-  // empty; switching a story that has content comes with its own rules
-  // (decision 45). Templates follow the same choice (templateCardSizeFor).
-  const canChooseCardFormat = !hasRealContent(cards);
-  const templateCardSize = templateCardSizeFor(cards, cardFormat);
+  const templateCardSize = templateCardSizeFor(currentCard);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
 
   const updateCurrentCard = useCallback((updates) => {
     setCards((prev) => prev.map((c, i) => i === currentCardIndex ? { ...c, ...updates } : c));
@@ -507,7 +517,7 @@ export default function StoryCreator() {
     if (cards.length === 1) {
       const { token, tokens: newTokens } = findOrCreateToken(DEFAULT_CARD_COLOR, colorTokens);
       if (newTokens.length > colorTokens.length) setColorTokens(newTokens);
-      setCards([{ ...newCard(), background_token: token.id }]);
+      setCards([{ ...newCard(cardSizeOf(cards[0])), background_token: token.id }]);
       return;
     }
     const next = cards.filter((_, i) => i !== index);
@@ -536,10 +546,20 @@ export default function StoryCreator() {
     setSelectedElementId(null);
   };
 
-  const addCard = () => {
+  // Switches the card on screen to another size (Cards panel). Elements keep
+  // their position and shape; any that would hang off are moved back on
+  // (resizeCard). One undo step, like any other edit.
+  const changeCardSize = useCallback((size) => {
+    setCards((prev) => prev.map((c, i) => (i === currentCardIndex && cardSizeOf(c) !== size
+      ? resizeCard(c, cardSizeOf(c), size).card
+      : c)));
+  }, [currentCardIndex]);
+
+  // `size`: the card size picked in the add menu (AddCardMenu).
+  const addCard = (size = DEFAULT_NEW_CARD_SIZE) => {
     const { token, tokens: newTokens } = findOrCreateToken(DEFAULT_CARD_COLOR, colorTokens);
     if (newTokens.length > colorTokens.length) setColorTokens(newTokens);
-    const c = { ...newCard(), background_token: token.id };
+    const c = { ...newCard(size), background_token: token.id };
     setCards((prev) => [...prev, c]);
     setCurrentCardIndex(cards.length);
     setSelectedElementId(null);
@@ -671,8 +691,6 @@ export default function StoryCreator() {
   aiGeneratedRef.current = aiGenerated;
   const generationStyleRef = useRef(generationStyle);
   generationStyleRef.current = generationStyle;
-  const cardFormatRef = useRef(cardFormat);
-  cardFormatRef.current = cardFormat;
   const colorTokensRef = useRef(colorTokens);
   colorTokensRef.current = colorTokens;
   // baselineContent model: dirty is computed fresh as a deep comparison of
@@ -814,7 +832,6 @@ export default function StoryCreator() {
     const snapRawNotes = rawNotesRef.current;
     const snapAiGenerated = aiGeneratedRef.current;
     const snapGenerationStyle = generationStyleRef.current;
-    const snapCardFormat = cardFormatRef.current;
     const p = (async () => {
       try {
         // A media element still shows its optimistic local preview (a blob:
@@ -835,7 +852,6 @@ export default function StoryCreator() {
             ...(snapRawNotes ? { raw_notes: snapRawNotes } : {}),
             ...(snapAiGenerated ? { ai_generated: true } : {}),
             ...(snapGenerationStyle ? { generation_style: snapGenerationStyle } : {}),
-            card_size: snapCardFormat,
           });
           // Only reset the baseline if the content hasn't changed (canonically)
           // while the save was in flight. Uses canonical comparison instead of
@@ -860,7 +876,6 @@ export default function StoryCreator() {
             ...(snapRawNotes ? { raw_notes: snapRawNotes } : {}),
             ...(snapAiGenerated ? { ai_generated: true } : {}),
             ...(snapGenerationStyle ? { generation_style: snapGenerationStyle } : {}),
-            card_size: snapCardFormat,
           });
           if (storyEpochRef.current === epoch) {
             setDraftId(created.id);
@@ -1000,7 +1015,7 @@ export default function StoryCreator() {
     // The new story's size, read before the current story is saved and
     // replaced (see templateCardSize). Plain templates only exist at 1:1.
     const size = isFrameworkTemplate(template)
-      ? templateCardSizeFor(cardsRef.current, cardFormatRef.current)
+      ? templateCardSizeFor(cardsRef.current[currentCardIndexRef.current])
       : LEGACY_CARD_SIZE;
     await flushActiveTextEdit();
     await cancelAutosave();
@@ -1048,7 +1063,6 @@ export default function StoryCreator() {
     setEditingPostId(null);
     setInitialTitle('');
     setInitialTags([]);
-    setCardFormat(size);
     setCards(migratedCards);
     setColorTokens(migratedTokens);
     setCurrentCardIndex(Math.min(cardIndex, migratedCards.length - 1));
@@ -1102,14 +1116,14 @@ export default function StoryCreator() {
       // that background save from touching the draft being opened.
       persistDraft();
       storyEpochRef.current += 1;
-      const { cards: migratedCards, tokens: migratedTokens } = migrateToTokens(draft.cards || [newCard()], draft.color_tokens || []);
+      const { cards: migratedCards, tokens: migratedTokens } = migrateToTokens(
+        draft.cards?.length ? withCardSizes(draft.cards, draft.card_size) : [newCard()], draft.color_tokens || []);
       setCards(migratedCards);
       setColorTokens(migratedTokens);
       setCurrentCardIndex(Math.min(cardIndex, migratedCards.length - 1));
       setSelectedElementId(null);
       setDraftId(draft.id);
       draftIdRef.current = draft.id;
-      setCardFormat(getCardSize(draft.card_size).id);
       setEditingPostId(draft.id);
       setInitialTitle(draft.title || '');
       setInitialTags(draft.tags || []);
@@ -1199,7 +1213,7 @@ export default function StoryCreator() {
           attachments,
           postId: draftIdRef.current,
           theme: genTheme,
-          cardSize: cardFormatRef.current,
+          cardSize: genCardSize,
           // Progress only arrives once the server job exists; from then on
           // leaving is safe, so the "Sit back" card can say so.
           onProgress: (p) => { setGenProgress(p); setGenCanLeave(true); },
@@ -1220,7 +1234,7 @@ export default function StoryCreator() {
           existingCards: editMode === 'edits_only' ? cards : [],
           existingStyleTemplate: editMode === 'edits_only' ? generationStyle : undefined,
           theme: genTheme,
-          cardSize: cardFormatRef.current,
+          cardSize: genCardSize,
           onProgress: (p) => setGenProgress(p),
         });
       }
@@ -1391,7 +1405,6 @@ export default function StoryCreator() {
 
   return (
   <DraftMediaProvider>
-  <CardFormatProvider value={cardFormat}>
   <div className="flex flex-col overflow-hidden select-none" style={{ height: '100dvh', backgroundColor: '#111' }}>
 
       {/* TOP BAR: profile | undo/redo | counter | post.
@@ -1437,8 +1450,8 @@ export default function StoryCreator() {
           onRemoveAttachment={handleRemoveAttachment}
           theme={genTheme}
           onThemeChange={setGenTheme}
-          cardFormat={cardFormat}
-          onCardFormatChange={canChooseCardFormat ? setCardFormat : undefined}
+          cardFormat={genCardSize}
+          onCardFormatChange={setGenCardSize}
         />
       ) : (
       <div className="flex-1 flex flex-col md:flex-row min-h-0">
@@ -1473,15 +1486,22 @@ export default function StoryCreator() {
             tokens={colorTokens} />
           {loadingDraft && <DraftLoadingOverlay />}
           
-          {/* Quick add card — just outside the right edge, vertically centered */}
+          {/* Quick add card — just outside the right edge, vertically
+              centered. Asks for the new card's size (AddCardMenu). */}
           <button
-            onClick={addCard}
+            onClick={() => setAddMenuOpen(true)}
             title="Add card"
             className="absolute top-1/2 -translate-y-1/2 w-8 h-8 rounded-[6px] border border-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 text-emerald-400 flex items-center justify-center transition-colors active:scale-95 mr-2"
             style={{ right: -ADD_CARD_REACH }}>
             
             <Plus size={16} />
           </button>
+          {addMenuOpen && (
+            <AddCardMenu
+              className="top-1/2 -translate-y-1/2 right-2"
+              onPick={addCard}
+              onClose={() => setAddMenuOpen(false)} />
+          )}
         </div>
         }
       </div>
@@ -1514,8 +1534,7 @@ export default function StoryCreator() {
         onReorderElements={reorderTextElements}
         onApplyTemplate={handleApplyTemplate}
         templateCardSize={templateCardSize}
-        cardFormat={cardFormat}
-        onCardFormatChange={canChooseCardFormat ? setCardFormat : undefined}
+        onCardSizeChange={changeCardSize}
         initialCardsTab={editStory || cardsTabVisitedRef.current ? 'Gallery' : 'Templates'}
         cardResetToken={cardResetToken}
         appliedTemplateId={appliedTemplateId}
@@ -1562,7 +1581,6 @@ export default function StoryCreator() {
       }
 
     </div>
-    </CardFormatProvider>
     </DraftMediaProvider>);
 
 }

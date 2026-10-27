@@ -10,8 +10,8 @@ import AudioRecorder from '@/components/creator/AudioRecorder';
 import TrimPanel from '@/components/creator/panels/TrimPanel';
 import SizeStepper from '@/components/creator/SizeStepper';
 import PixelSpinner from '@/components/ui/PixelSpinner';
-import { REFERENCE_CARD_SIZE, getCardSize } from '@/lib/cardGeometry';
-import { useCardFormat } from '../CardFormatContext';
+import { REFERENCE_CARD_SIZE } from '@/lib/cardGeometry';
+import { useCardSize } from '../CardFormatContext';
 import { getImageDisplayDims } from '@/lib/imageLayout';
 import { ENABLE_VIDEO_AND_AUDIO } from '@/lib/featureFlags';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -108,7 +108,8 @@ function getMediaDuration(file) {
 }
 
 export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateElementById, onAddElement, onDeleteElement, currentCard, currentCardIndex, onSelectElement, onDuplicateElementToCard, onUpdateCard, cards = [], onNavigate, onRemoveMediaByUrl, galleryResetToken }) {
-  const refHeight = getCardSize(useCardFormat()).height;
+  // Height of the card on screen ("Fit to card" covers it).
+  const refHeight = useCardSize(currentCard).height;
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const [tab, setTab] = useState('gallery');

@@ -3,8 +3,8 @@ import { Plus, AlignLeft, AlignCenter, AlignRight } from '@/components/icons';
 import ColorPicker from '@/components/creator/ColorPicker';
 import ThumbMenu from '@/components/creator/ThumbMenu';
 import MinimalSlider from '@/components/creator/MinimalSlider';
-import { REFERENCE_CARD_SIZE, getCardSize } from '@/lib/cardGeometry';
-import { useCardFormat } from '@/components/creator/CardFormatContext';
+import { REFERENCE_CARD_SIZE, cardSizeOf, fitCard } from '@/lib/cardGeometry';
+import { useCardFormat, useCardSize } from '@/components/creator/CardFormatContext';
 import { cssFontFamily, getFontRole, isTitleOnlyFont } from '@/lib/fontLibrary';
 import FontPicker from '@/components/creator/panels/FontPicker';
 import SizeStepper from '@/components/creator/SizeStepper';
@@ -76,9 +76,11 @@ const TILE = 64;
 const THUMB_SCALE = TILE / REFERENCE_CARD_SIZE;
 const TYPE_SCALE = [8, 12, 16, 20, 24, 28, 32, 36, 40, 48];
 
-function TextThumb({ element, cardBg, tokens }) {
+// `width`: the tile's width (narrower for a 9:16 card), so text keeps its
+// size relative to the card.
+function TextThumb({ element, cardBg, tokens, width = TILE }) {
   const baseFontSize = element.font_size ? parseInt(element.font_size) : 14;
-  const scaledFontSize = Math.max(1, Math.round(baseFontSize * THUMB_SCALE));
+  const scaledFontSize = Math.max(1, Math.round(baseFontSize * THUMB_SCALE * width / TILE));
   const hasContent = !!(element.content && element.content.trim());
   const textDeco = [
     element.font_underline ? 'underline' : '',
@@ -121,9 +123,11 @@ export default function TextPanel({
   onUpdateElementById,
 }) {
   const { resolveMediaUrl } = useDraftMedia();
-  // Text thumbnails have the story's card shape: TILE wide, taller on 4:5.
-  const refHeight = getCardSize(useCardFormat()).height;
-  const tileHeight = Math.round(TILE * refHeight / REFERENCE_CARD_SIZE);
+  // Height of the card on screen (a new box is placed on it).
+  const refHeight = useCardSize(currentCard).height;
+  // Each text thumbnail has its card's shape, fitted in a TILE-wide 4:5 slot.
+  const fallbackSize = useCardFormat();
+  const tileBox = (card) => fitCard(cardSizeOf(card, fallbackSize), TILE, Math.round(TILE * 1.25));
   const tokensRef = useRef(tokens);
   tokensRef.current = tokens;
   const [tab, setTab] = useState('gallery');
@@ -373,7 +377,7 @@ export default function TextPanel({
                 <button
                   onClick={addText}
                   className="rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center hover:border-white/50 transition-colors"
-                  style={{ width: TILE, height: tileHeight }}
+                  style={{ width: TILE, height: TILE }}
                 >
                   <Plus size={16} className="text-white/40" />
                 </button>
@@ -386,6 +390,7 @@ export default function TextPanel({
                   card-position badge + kebab sit to the right instead of
                   centered below. */}
               {allTextElements.map(({ el, cardIdx, cardBg: elCardBg }) => {
+                const box = tileBox(cards[cardIdx]);
                 const isSelected = selectedElement?.id === el.id;
                 const onCurrentCard = cardIdx === currentCardIndex;
                 return (
@@ -395,9 +400,9 @@ export default function TextPanel({
                     className={`rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
                       isSelected ? 'border-emerald-400' : onCurrentCard ? 'border-emerald-400/40' : 'border-white/20 hover:border-white/50'
                     }`}
-                    style={{ width: TILE, height: tileHeight }}
+                    style={box}
                   >
-                    <TextThumb element={el} cardBg={elCardBg} tokens={tokens} />
+                    <TextThumb element={el} cardBg={elCardBg} tokens={tokens} width={box.width} />
                   </div>
                   <div className="flex flex-col items-start gap-1 pt-0.5">
                     <span

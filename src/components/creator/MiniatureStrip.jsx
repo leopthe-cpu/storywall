@@ -1,6 +1,6 @@
 import CardThumb from '@/components/creator/CardThumb';
 import { useCardFormat } from '@/components/creator/CardFormatContext';
-import { getCardSize, REFERENCE_CARD_SIZE } from '@/lib/cardGeometry';
+import { cardSizeOf, fitCard } from '@/lib/cardGeometry';
 
 // Shared miniature strip with segmented position indicator.
 // Used wherever a list of cards is shown as small miniatures (Templates, Drafts, etc.)
@@ -15,8 +15,9 @@ import { getCardSize, REFERENCE_CARD_SIZE } from '@/lib/cardGeometry';
 //   tokens           — color tokens for CardThumb rendering
 //   activeIndex      — index of the currently shown card (null/undefined = none highlighted)
 //   onMiniatureClick — callback(index) when a miniature is tapped
-//   thumbSize        — miniature width in px (default 28); the height follows
-//                      the card size (CardFormatContext)
+//   thumbSize        — miniature width in px (default 28); each card is
+//                      fitted in its slot at its own size (fitCard), the
+//                      strip is as tall as a 4:5 card
 //   gap              — gap between miniatures in px (default 4)
 //   offset           — pagination scroll offset in number of cards (default 0)
 export default function MiniatureStrip({
@@ -28,7 +29,11 @@ export default function MiniatureStrip({
   gap = 4,
   offset = 0,
 }) {
-  const thumbHeight = Math.round(thumbSize * getCardSize(useCardFormat()).height / REFERENCE_CARD_SIZE);
+  const fallbackSize = useCardFormat();
+  const boxOf = (card) => fitCard(cardSizeOf(card, fallbackSize), thumbSize, Math.round(thumbSize * 1.25));
+  // As tall as the tallest miniature (a story of square cards keeps its
+  // old, square strip).
+  const thumbHeight = Math.max(0, ...cards.map((card) => boxOf(card).height));
   const STEP = thumbSize + gap;
   const shift = -offset * STEP;
   const hasActive = activeIndex != null && activeIndex >= 0 && activeIndex < cards.length;
@@ -41,21 +46,27 @@ export default function MiniatureStrip({
           className="flex transition-transform duration-200"
           style={{ transform: `translateX(${shift}px)`, gap }}
         >
-          {cards.map((card, i) => (
-            <button
-              key={i}
-              onClick={(e) => { e.stopPropagation(); onMiniatureClick(i); }}
-              className="flex-shrink-0 rounded overflow-hidden border transition-opacity hover:opacity-100"
-              style={{
-                width: thumbSize,
-                height: thumbHeight,
-                opacity: hasActive && activeIndex === i ? 1 : 0.6,
-                borderColor: hasActive && activeIndex === i ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.1)',
-              }}
-            >
-              <CardThumb card={card} displaySize={thumbSize} tokens={tokens} />
-            </button>
-          ))}
+          {cards.map((card, i) => {
+            const box = boxOf(card);
+            // Every slot is thumbSize wide (the paging maths counts in
+            // slots); a narrower card is centred in its slot.
+            return (
+              <div key={i} className="flex-shrink-0 flex items-center justify-center" style={{ width: thumbSize, height: thumbHeight }}>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onMiniatureClick(i); }}
+                  className="flex-shrink-0 rounded overflow-hidden border transition-opacity hover:opacity-100"
+                  style={{
+                    width: box.width,
+                    height: box.height,
+                    opacity: hasActive && activeIndex === i ? 1 : 0.6,
+                    borderColor: hasActive && activeIndex === i ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.1)',
+                  }}
+                >
+                  <CardThumb card={card} displaySize={box.width} tokens={tokens} />
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
 

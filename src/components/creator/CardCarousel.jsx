@@ -2,7 +2,7 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from '@/components/icons';
 import CardThumb from '@/components/creator/CardThumb';
 import { useCardFormat } from '@/components/creator/CardFormatContext';
-import { getCardSize } from '@/lib/cardGeometry';
+import { cardSizeOf, getCardSize } from '@/lib/cardGeometry';
 
 // Custom transform-based carousel with scroll-intent passthrough:
 // - Touch: touch-action: pan-y lets vertical swipes scroll the page natively;
@@ -17,9 +17,21 @@ export default function CardCarousel({ cards, onTap, tokens }) {
   const [cardW, setCardW] = useState(320);
   const [dragging, setDragging] = useState(false);
   const drag = useRef(null);
-  // The story's card shape (CardFormatContext): height as a % of the width.
-  const { width: refW, height: refH } = getCardSize(useCardFormat());
-  const heightPct = `${(refH / refW) * 100}%`;
+  // A story can mix card sizes (decision 45). Like the builder, every card
+  // is fitted inside one fixed slot, here the cover card's shape, centred:
+  // the carousel keeps its height while swiping, instead of jumping to the
+  // tallest card and leaving gaps under the others. Cards saved without a
+  // size take the story's.
+  const fallbackSize = useCardFormat();
+  const ratioOf = (card) => {
+    const { width, height } = getCardSize(cardSizeOf(card, fallbackSize));
+    return height / width;
+  };
+  const slotRatio = ratioOf(cards?.[0]);
+  const fitted = (card) => {
+    const w = Math.min(cardW, (cardW * slotRatio) / ratioOf(card));
+    return { width: w, height: w * ratioOf(card) };
+  };
 
   // Reset/clamp when the card set changes or viewport resizes
   const clamp = useCallback((v) => {
@@ -163,12 +175,12 @@ export default function CardCarousel({ cards, onTap, tokens }) {
         >
           {cards.map((card) => (
             <div key={card.id} data-card-item className="flex-shrink-0" style={{ width: '100%' }}>
-              <div
-                className="relative w-full overflow-hidden rounded-2xl"
-                style={{ paddingTop: heightPct, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
-              >
-                <div className="absolute inset-0">
-                  <CardThumb card={card} displaySize={cardW} autoplay tokens={tokens} />
+              <div className="relative w-full" style={{ paddingTop: `${slotRatio * 100}%` }}>
+                <div
+                  className="absolute inset-0 m-auto overflow-hidden rounded-2xl"
+                  style={{ ...fitted(card), boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
+                >
+                  <CardThumb card={card} displaySize={fitted(card).width} autoplay tokens={tokens} />
                 </div>
               </div>
             </div>

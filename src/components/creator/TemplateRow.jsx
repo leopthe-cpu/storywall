@@ -5,7 +5,7 @@ import { buildTemplateCards } from '@/lib/storyTemplates';
 import { buildFrameworkTemplate, isFrameworkTemplate } from '@/lib/frameworkTemplates';
 import { ChevronLeft, ChevronRight } from '@/components/icons';
 import { CardFormatProvider } from '@/components/creator/CardFormatContext';
-import { LEGACY_CARD_SIZE, cardAspectRatio } from '@/lib/cardGeometry';
+import { LEGACY_CARD_SIZE, cardSizeOf, fitCard } from '@/lib/cardGeometry';
 
 const THUMB_SIZE = 28;
 const GAP = 4;
@@ -49,6 +49,8 @@ function TemplateRowBody({ template, onApply, appliedTemplateId, currentCardInde
   const isApplied = appliedTemplateId === template.id;
   const templateCards = useTemplateCards(template, cardSize);
   const coverCard = templateCards[0];
+  // The cover in its size, fitted in a 4:5 box 56 px wide.
+  const cover = fitCard(cardSizeOf(coverCard, cardSize), 56, 70);
 
   const [offset, setOffset] = useState(0);
   const rowRef = useRef(null);
@@ -81,8 +83,8 @@ function TemplateRowBody({ template, onApply, appliedTemplateId, currentCardInde
       }`}
     >
       {/* Cover thumbnail — always the first card, fixed */}
-      <div className="w-14 rounded-lg overflow-hidden flex-shrink-0 border border-white/10" style={{ aspectRatio: cardAspectRatio(cardSize) }}>
-        {coverCard ? <CardThumb card={coverCard} displaySize={56} /> : <div className="w-full h-full bg-white/5" />}
+      <div className="rounded-lg overflow-hidden flex-shrink-0 border border-white/10" style={cover}>
+        {coverCard ? <CardThumb card={coverCard} displaySize={cover.width} /> : <div className="w-full h-full bg-white/5" />}
       </div>
 
       {/* Name + miniature strip with position indicator + pagination arrows.

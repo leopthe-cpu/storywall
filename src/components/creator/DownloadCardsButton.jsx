@@ -5,7 +5,7 @@ import PixelSpinner from '@/components/ui/PixelSpinner';
 import CardThumb from '@/components/creator/CardThumb';
 import { saveCardImages } from '@/lib/cardExport';
 import { useCardFormat } from '@/components/creator/CardFormatContext';
-import { getCardSize } from '@/lib/cardGeometry';
+import { cardSizeOf, getCardSize } from '@/lib/cardGeometry';
 
 // "Download all cards as images" — admin-only for now (planned premium
 // feature). The caller decides visibility; this renders nothing about who
@@ -91,12 +91,17 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
   // restart (and strand) the running export.
   const titleRef = useRef(title);
   titleRef.current = title;
-  // Export size of the story's card shape (CardFormatContext).
-  const { exportWidth, exportHeight } = getCardSize(useCardFormat());
+  // The story's fallback size, for cards saved without their own.
+  const fallbackSize = useCardFormat();
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
   const exportable = (cards || []).filter(Boolean);
+  // Each card exports at its own size (1080×1350 for 4:5, 1920×1080 for
+  // 16:9…); the hidden layer is as big as the largest.
+  const sizes = exportable.map((card) => getCardSize(cardSizeOf(card, fallbackSize)));
+  const layerWidth = Math.max(0, ...sizes.map((z) => z.exportWidth));
+  const layerHeight = Math.max(0, ...sizes.map((z) => z.exportHeight));
 
   useEffect(() => {
     if (status !== 'rendering' || runRef.current) return;
@@ -128,8 +133,6 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
         const { toBlob, getFontEmbedCSS } = await import('html-to-image');
         const nodes = Array.from(layer.querySelectorAll('[data-export-card]'));
         const options = {
-          width: exportWidth,
-          height: exportHeight,
           pixelRatio: 1,
           // Bypass the cache: an image first loaded by a plain <img> can be
           // cached without CORS headers and then fail the CORS re-fetch.
@@ -149,7 +152,8 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
         for (let i = 0; i < nodes.length; i++) {
           if (cancelled) return;
           setProgress(i);
-          const blob = await toBlob(nodes[i], options);
+          const { exportWidth, exportHeight } = sizes[i];
+          const blob = await toBlob(nodes[i], { ...options, width: exportWidth, height: exportHeight });
           if (!blob) throw new Error(`Card ${i + 1} could not be rendered.`);
           blobs.push(blob);
         }
@@ -205,15 +209,15 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
         <div
           ref={layerRef}
           aria-hidden="true"
-          style={{ position: 'fixed', top: 0, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -1, overflow: 'hidden', width: exportWidth, height: exportHeight }}
+          style={{ position: 'fixed', top: 0, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -1, overflow: 'hidden', width: layerWidth, height: layerHeight }}
         >
           {exportable.map((card, i) => (
             <div
               key={card.id || i}
               data-export-card
-              style={{ position: 'absolute', top: 0, left: 0, width: exportWidth, height: exportHeight }}
+              style={{ position: 'absolute', top: 0, left: 0, width: sizes[i].exportWidth, height: sizes[i].exportHeight }}
             >
-              <CardThumb card={card} displaySize={exportWidth} tokens={tokens} />
+              <CardThumb card={card} displaySize={sizes[i].exportWidth} tokens={tokens} />
             </div>
           ))}
         </div>,

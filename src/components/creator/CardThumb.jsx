@@ -1,8 +1,8 @@
-import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET, getCardSize } from '@/lib/cardGeometry';
+import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/lib/cardGeometry';
 import AudioWidget from './AudioWidget';
 import TrimmedVideo from './TrimmedVideo';
 import { useDraftMedia } from './DraftMediaContext';
-import { useCardFormat } from './CardFormatContext';
+import { useCardSize } from './CardFormatContext';
 import { resolveColor } from '@/lib/colorTokens';
 import { getTextEffectStyle, hasTextWarp } from '@/lib/textEffects';
 import { getTextBoxLayout } from '@/lib/textLayout';
@@ -18,14 +18,13 @@ const isImageLike = (t) => t === 'image' || t === 'video';
 // REFERENCE_CARD_SIZE coordinate space, then scaled to the display size with a
 // single CSS transform. Text never reflows and proportions are identical at
 // any display size — matching the creator canvas exactly.
-// displaySize is the card's WIDTH on screen. cardFormat is the story's card
-// size (posts.card_size, e.g. '4:5'), by default the one CardFormatContext
-// provides; the parent sizes this box to the same shape (CARD_SIZES in
-// cardGeometry.js), this only lays out the content.
-export default function CardThumb({ card, displaySize = 64, autoplay = false, tokens = [], cardFormat }) {
+// displaySize is the card's WIDTH on screen. The card's height comes from
+// its size (card.card_size, else its story's: useCardSize); the parent sizes
+// this box to the same shape (CARD_SIZES in cardGeometry.js), this only lays
+// out the content.
+export default function CardThumb({ card, displaySize = 64, autoplay = false, tokens = [] }) {
   const refSize = REFERENCE_CARD_SIZE;
-  const contextFormat = useCardFormat();
-  const refHeight = getCardSize(cardFormat ?? contextFormat).height;
+  const refHeight = useCardSize(card).height;
   const scale = displaySize / refSize;
   const elements = [...(card.elements || [])].sort((a, b) => (a.z_index ?? 0) - (b.z_index ?? 0));
   const cardBg = resolveColor(card.background_token, tokens, card.background_color || '#FFFFFF');

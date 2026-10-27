@@ -1,12 +1,12 @@
 import { createContext, useContext } from 'react';
-import { LEGACY_CARD_SIZE, getCardSize } from '@/lib/cardGeometry';
+import { LEGACY_CARD_SIZE, cardSizeOf, getCardSize } from '@/lib/cardGeometry';
 
-// The card size of the story being shown (posts.card_size: '1:1', '4:5'),
-// decision 45. Every card of a story has the same size, so it's provided once
-// around a whole story — the builder (StoryCreator) and each story on a wall
-// (StoryCard) — and every renderer underneath (canvas, thumbnails, preview,
-// panels) reads the same value instead of each being passed its own copy.
-// Without a provider it's square, which is what every story was before.
+// The fallback card size for the cards being shown (decision 45). Each card
+// stores its own size (card.card_size); this only covers cards saved before
+// that, which take their story's posts.card_size. It's provided once around
+// a story (StoryCard on a wall, DraftEntry per draft, TemplateRow per
+// template); without a provider it's square, which is what every card was
+// before card sizes.
 const CardFormatContext = createContext(LEGACY_CARD_SIZE);
 
 export function CardFormatProvider({ value, children }) {
@@ -17,7 +17,13 @@ export function CardFormatProvider({ value, children }) {
   );
 }
 
-// The size id ('1:1', '4:5'); pass it to getCardSize() for the dimensions.
+// The fallback size id ('1:1', '4:5', …) of the story being shown.
 export function useCardFormat() {
   return useContext(CardFormatContext);
+}
+
+// The size of one card ({ id, width, height, exportWidth, exportHeight }):
+// its own, else its story's. Every renderer sizes a card through this.
+export function useCardSize(card) {
+  return getCardSize(cardSizeOf(card, useContext(CardFormatContext)));
 }

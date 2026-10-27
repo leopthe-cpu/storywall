@@ -2,19 +2,19 @@ import { useRef, useState, useLayoutEffect } from 'react';
 import DraggableElement from './DraggableElement';
 import { resolveColor } from '@/lib/colorTokens';
 import PixelSpinner from '@/components/ui/PixelSpinner';
-import { useCardFormat } from './CardFormatContext';
+import { useCardSize } from './CardFormatContext';
 
 // The card geometry lives in @/lib/cardGeometry; re-exported here so the
 // editor files that import it from CanvasArea keep working.
-import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET, getCardSize } from '@/lib/cardGeometry';
+import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/lib/cardGeometry';
 export { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET };
 
-// cardSize is the canvas WIDTH in screen px. The story's card size
-// (CardFormatContext, posts.card_size) sets the height.
+// cardSize is the canvas WIDTH in screen px. The card's own size
+// (card.card_size, useCardSize) sets the height.
 export default function CanvasArea({ card, cardSize, selectedElementId, onSelectElement, onUpdateElement, autoEditId, onAutoEditConsumed, onRetryImageGeneration, tokens }) {
   const canvasRef = useRef(null);
   const scale = cardSize / REFERENCE_CARD_SIZE;
-  const refHeight = getCardSize(useCardFormat()).height;
+  const refHeight = useCardSize(card).height;
   const cardHeight = Math.round(cardSize * refHeight / REFERENCE_CARD_SIZE);
   const [isDragging, setIsDragging] = useState(false);
   const [hoveredElementId, setHoveredElementId] = useState(null);
