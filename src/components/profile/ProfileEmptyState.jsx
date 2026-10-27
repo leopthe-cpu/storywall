@@ -10,7 +10,7 @@ export default function ProfileEmptyState({ isOwner, hasTagFilter }) {
   if (hasTagFilter) {
     return (
       <div className="text-center py-12">
-        <p className="text-[#8A877F] text-sm">No stories match the selected tags</p>
+        <p className="text-wall-text-3 text-sm">No stories match the selected tags</p>
       </div>
     );
   }
@@ -18,16 +18,16 @@ export default function ProfileEmptyState({ isOwner, hasTagFilter }) {
   if (isOwner) {
     return (
       <div className="flex flex-col items-center text-center py-8 px-6">
-        <div className="w-16 h-16 rounded-2xl bg-[#ECE9E1] flex items-center justify-center mb-4">
-          <Sparkles size={28} className="text-[#8A877F]" />
+        <div className="w-16 h-16 rounded-2xl bg-wall-surface flex items-center justify-center mb-4">
+          <Sparkles size={28} className="text-wall-text-3" />
         </div>
-        <h2 className="font-display text-2xl leading-tight font-medium text-[#262624]">Your wall is empty</h2>
-        <p className="text-[#6B6964] text-sm mt-2 max-w-xs">
+        <h2 className="font-display text-2xl leading-tight font-medium text-wall-text">Your wall is empty</h2>
+        <p className="text-wall-text-2 text-sm mt-2 max-w-xs">
           Share your first story and let the world know what you're made of.
         </p>
         <button
           onClick={() => navigate('/create')}
-          className="mt-6 bg-[#262624] text-[#F4F2EC] px-5 py-3 rounded-full font-semibold text-sm hover:bg-[#30302E] active:scale-95 transition-all"
+          className="mt-6 bg-wall-btn text-wall-btn-text px-5 py-3 rounded-full font-semibold text-sm hover:bg-wall-btn-hover active:scale-95 transition-all"
         >
           Create your first story
         </button>
@@ -37,7 +37,7 @@ export default function ProfileEmptyState({ isOwner, hasTagFilter }) {
 
   return (
     <div className="text-center py-12">
-      <p className="text-[#8A877F] text-sm">No stories yet</p>
+      <p className="text-wall-text-3 text-sm">No stories yet</p>
     </div>
   );
 }

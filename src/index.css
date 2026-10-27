@@ -32,6 +32,32 @@
     --input: 0 0% 93%;
     --ring: 0 0% 5%;
     --radius: 0.75rem;
+
+    /* Wall colours (the public profile page). Named so a premium profile
+       theme can replace them for one wall (Oz, 2026-10-27: background, text
+       and tags are the user's three picks; the rest follows from those).
+       Defaults are exactly the colours the wall always had. Defined here
+       for the whole app because the onboarding preview and the landing page
+       reuse wall pieces (ProfileInfo, Tag). Used through the `wall-*`
+       colours in tailwind.config.js. The story cards keep their own colours. */
+    --wall-bg: #F4F2EC;            /* page background */
+    --wall-grid: #E6E0D2;          /* paper grid, dividers, pressed buttons */
+    --wall-surface: #ECE9E1;       /* empty/loading card tiles, button hover */
+    --wall-skeleton: #F3F4F6;      /* phone loading tiles */
+    --wall-text: #262624;          /* headings, link hover */
+    --wall-title: #111827;         /* story titles */
+    --wall-text-2: #6B6964;        /* bio, links */
+    --wall-text-3: #8A877F;        /* location, "more", quiet messages */
+    --wall-btn: #262624;           /* pill buttons */
+    --wall-btn-hover: #30302E;
+    --wall-btn-text: #F4F2EC;
+    --wall-tag: #FFFFFF;           /* tag chips */
+    --wall-tag-text: #374151;
+    --wall-tag-border: #E5E7EB;
+    --wall-tag-border-hover: #9CA3AF;
+    --wall-tag-selected: #000000;  /* a tag filtering the wall */
+    --wall-tag-selected-text: #FFFFFF;
+    --wall-topbar: #262624;        /* top bar label and icons (not themeable) */
   }
 }
 
