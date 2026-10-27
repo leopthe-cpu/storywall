@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import CardCarousel from '@/components/creator/CardCarousel';
 import Tag from '@/components/profile/Tag';
+import { CardFormatProvider } from '@/components/creator/CardFormatContext';
 
 export default function StoryCard({ post, selectedTags = [], onToggleTag, kebab, onTap }) {
   const hasTitle = !!post.title;
@@ -38,7 +39,10 @@ export default function StoryCard({ post, selectedTags = [], onToggleTag, kebab,
 
       {/* Horizontal card carousel with kebab overlay */}
       <div className="relative">
-        <CardCarousel cards={post.cards} onTap={onTap} tokens={post.color_tokens} />
+        {/* Each story has its own card size (posts.card_size). */}
+        <CardFormatProvider value={post.card_size}>
+          <CardCarousel cards={post.cards} onTap={onTap} tokens={post.color_tokens} />
+        </CardFormatProvider>
         {kebab && (
           <div className="absolute bottom-3 right-3 z-20">
             {kebab}

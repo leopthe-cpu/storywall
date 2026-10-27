@@ -17,6 +17,8 @@ import { aiCarouselBuilderEnabled } from '@/lib/featureFlags';
 import PrivateProfileState from '@/components/profile/PrivateProfileState';
 import NotFoundProfileState from '@/components/profile/NotFoundProfileState';
 import LazyMount from '@/components/profile/LazyMount';
+import { CardFormatProvider } from '@/components/creator/CardFormatContext';
+import { cardAspectRatio } from '@/lib/cardGeometry';
 import { ProfileHeroCard, ProfileInfo } from '@/components/profile/ProfileHeader';
 import PageLoader from '@/components/ui/PageLoader';
 import useDocumentTitle from '@/lib/useDocumentTitle';
@@ -389,7 +391,11 @@ export default function PublicProfile() {
           ) : (
             <div className="flex flex-col gap-8">
               {visiblePosts.map((post) => (
-                <LazyMount key={post.id} data-story-id={post.id}>
+                <LazyMount
+                  key={post.id}
+                  data-story-id={post.id}
+                  placeholder={<div className="w-full rounded-2xl bg-gray-100 animate-pulse" style={{ aspectRatio: cardAspectRatio(post.card_size) }} />}
+                >
                   {() => (
                     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                       <StoryCard post={post} selectedTags={selectedTags} onToggleTag={toggleTag} kebab={storyKebab(post)} onTap={() => handleStoryTap(post.id)} />
@@ -444,7 +450,7 @@ export default function PublicProfile() {
                     key={post.id}
                     data-story-id={post.id}
                     style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH }}
-                    placeholder={<div className="w-full rounded-2xl bg-[#ECE9E1] animate-pulse" style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH, aspectRatio: '1/1' }} />}
+                    placeholder={<div className="w-full rounded-2xl bg-[#ECE9E1] animate-pulse" style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH, aspectRatio: cardAspectRatio(post.card_size) }} />}
                   >
                     {() => (
                       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH }}>
@@ -532,14 +538,16 @@ export default function PublicProfile() {
               </button>
             </div>
             <Suspense fallback={null}>
-              <DownloadCardsButton
-                key={downloadPost.id}
-                cards={downloadPost.cards}
-                tokens={downloadPost.color_tokens}
-                title={downloadPost.title}
-                autoStart
-                onDone={() => setDownloadPost(null)}
-              />
+              <CardFormatProvider value={downloadPost.card_size}>
+                <DownloadCardsButton
+                  key={downloadPost.id}
+                  cards={downloadPost.cards}
+                  tokens={downloadPost.color_tokens}
+                  title={downloadPost.title}
+                  autoStart
+                  onDone={() => setDownloadPost(null)}
+                />
+              </CardFormatProvider>
             </Suspense>
           </div>
         </div>

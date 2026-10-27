@@ -10,7 +10,8 @@ import AudioRecorder from '@/components/creator/AudioRecorder';
 import TrimPanel from '@/components/creator/panels/TrimPanel';
 import SizeStepper from '@/components/creator/SizeStepper';
 import PixelSpinner from '@/components/ui/PixelSpinner';
-import { REFERENCE_CARD_SIZE } from '@/lib/cardGeometry';
+import { REFERENCE_CARD_SIZE, getCardSize } from '@/lib/cardGeometry';
+import { useCardFormat } from '../CardFormatContext';
 import { getImageDisplayDims } from '@/lib/imageLayout';
 import { ENABLE_VIDEO_AND_AUDIO } from '@/lib/featureFlags';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -107,6 +108,7 @@ function getMediaDuration(file) {
 }
 
 export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateElementById, onAddElement, onDeleteElement, currentCard, currentCardIndex, onSelectElement, onDuplicateElementToCard, onUpdateCard, cards = [], onNavigate, onRemoveMediaByUrl, galleryResetToken }) {
+  const refHeight = getCardSize(useCardFormat()).height;
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const [tab, setTab] = useState('gallery');
@@ -435,19 +437,21 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
     // which cropped the photo invisibly and then jumped shape on the first
     // corner drag. From here the user can enlarge it and drag it in any
     // direction; only what's inside the card shows.
+    // On a non-square card (4:5) "cover" means the photo is at least as
+    // wide AND as tall as the card, whichever needs the bigger scale.
     if (value === 'fill') {
-      const refSize = REFERENCE_CARD_SIZE;
+      const cw = REFERENCE_CARD_SIZE, ch = refHeight;
       const nw = selectedElement?.naturalWidth, nh = selectedElement?.naturalHeight;
-      let w = refSize, h = refSize;
+      let w = cw, h = ch;
       if (nw && nh) {
-        const a = nw / nh;
-        if (a >= 1) { h = refSize; w = Math.round(refSize * a); }
-        else { w = refSize; h = Math.round(refSize / a); }
+        const s = Math.max(cw / nw, ch / nh);
+        w = Math.round(nw * s);
+        h = Math.round(nh * s);
       }
       onUpdateElement({
         crop_ratio: 'original',
-        x: Math.round(((refSize - w) / 2 / refSize) * 10000) / 100,
-        y: Math.round(((refSize - h) / 2 / refSize) * 10000) / 100,
+        x: Math.round(((cw - w) / 2 / cw) * 10000) / 100,
+        y: Math.round(((ch - h) / 2 / ch) * 10000) / 100,
         displayWidth: w, displayHeight: h,
         clipTop: 0, clipBottom: 0, clipLeft: 0, clipRight: 0,
         zoom: 100, focalX: 50, focalY: 50,
@@ -482,10 +486,11 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
       const { displayWidth: oldW, displayHeight: oldH } = getImageDisplayDims(selectedElement, ref);
       const visW = Math.max(20, oldW - (selectedElement.clipLeft || 0) - (selectedElement.clipRight || 0));
       const visH = Math.max(20, oldH - (selectedElement.clipTop || 0) - (selectedElement.clipBottom || 0));
+      // x is a % of the card's width, y a % of its height.
       const cx = (selectedElement.x ?? 0) + (visW / ref * 100) / 2;
-      const cy = (selectedElement.y ?? 0) + (visH / ref * 100) / 2;
+      const cy = (selectedElement.y ?? 0) + (visH / refHeight * 100) / 2;
       updates.x = Math.round((cx - (updates.displayWidth / ref * 100) / 2) * 100) / 100;
-      updates.y = Math.round((cy - (updates.displayHeight / ref * 100) / 2) * 100) / 100;
+      updates.y = Math.round((cy - (updates.displayHeight / refHeight * 100) / 2) * 100) / 100;
     }
     onUpdateElement(updates);
   };

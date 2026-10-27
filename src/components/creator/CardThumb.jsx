@@ -1,7 +1,8 @@
-import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/lib/cardGeometry';
+import { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET, getCardSize } from '@/lib/cardGeometry';
 import AudioWidget from './AudioWidget';
 import TrimmedVideo from './TrimmedVideo';
 import { useDraftMedia } from './DraftMediaContext';
+import { useCardFormat } from './CardFormatContext';
 import { resolveColor } from '@/lib/colorTokens';
 import { getTextEffectStyle, hasTextWarp } from '@/lib/textEffects';
 import { getTextBoxLayout } from '@/lib/textLayout';
@@ -17,8 +18,14 @@ const isImageLike = (t) => t === 'image' || t === 'video';
 // REFERENCE_CARD_SIZE coordinate space, then scaled to the display size with a
 // single CSS transform. Text never reflows and proportions are identical at
 // any display size — matching the creator canvas exactly.
-export default function CardThumb({ card, displaySize = 64, autoplay = false, tokens = [] }) {
+// displaySize is the card's WIDTH on screen. cardFormat is the story's card
+// size (posts.card_size, e.g. '4:5'), by default the one CardFormatContext
+// provides; the parent sizes this box to the same shape (CARD_SIZES in
+// cardGeometry.js), this only lays out the content.
+export default function CardThumb({ card, displaySize = 64, autoplay = false, tokens = [], cardFormat }) {
   const refSize = REFERENCE_CARD_SIZE;
+  const contextFormat = useCardFormat();
+  const refHeight = getCardSize(cardFormat ?? contextFormat).height;
   const scale = displaySize / refSize;
   const elements = [...(card.elements || [])].sort((a, b) => (a.z_index ?? 0) - (b.z_index ?? 0));
   const cardBg = resolveColor(card.background_token, tokens, card.background_color || '#FFFFFF');
@@ -35,7 +42,7 @@ export default function CardThumb({ card, displaySize = 64, autoplay = false, to
           top: 0,
           left: 0,
           width: refSize,
-          height: refSize,
+          height: refHeight,
           transform: `scale(${scale})`,
           transformOrigin: 'top left'
         }}>
@@ -123,7 +130,7 @@ export default function CardThumb({ card, displaySize = 64, autoplay = false, to
           // Same safe-zone clamping of position and width as the editor
           // (shared helper) — using the raw stored x/displayWidth here made
           // boxes near the edge jump and re-wrap on publish.
-          const { xPct, yPct, width: textWidth } = getTextBoxLayout(el);
+          const { xPct, yPct, width: textWidth } = getTextBoxLayout(el, refHeight);
           const textDeco = [
             el.font_underline ? 'underline' : '',
             el.font_strikethrough ? 'line-through' : '',
@@ -136,7 +143,7 @@ export default function CardThumb({ card, displaySize = 64, autoplay = false, to
               left: `${xPct}%`,
               top: `${yPct}%`,
               width: textWidth,
-              maxHeight: refSize - 2 * SAFE_ZONE_INSET,
+              maxHeight: refHeight - 2 * SAFE_ZONE_INSET,
               zIndex: el.z_index ?? 1000,
               padding: 2,
               overflow: 'visible'

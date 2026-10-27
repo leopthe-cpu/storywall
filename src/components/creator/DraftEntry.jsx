@@ -4,6 +4,8 @@ import { formatDistanceToNow } from 'date-fns';
 import CardThumb from '@/components/creator/CardThumb';
 import MiniatureStrip from '@/components/creator/MiniatureStrip';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import { CardFormatProvider, useCardFormat } from '@/components/creator/CardFormatContext';
+import { getCardSize, REFERENCE_CARD_SIZE } from '@/lib/cardGeometry';
 
 const MAIN_SIZE = 72;
 const THUMB_SIZE = 28;
@@ -15,7 +17,18 @@ const STEP = THUMB_SIZE + GAP;
 // Tapping the row opens the draft into the builder at card 1.
 // Tapping a miniature opens the draft at that specific card.
 // Both actions autosave the current story first.
-export default function DraftEntry({ draft, onApply, onDelete, confirmDelete, isApplied, currentCardIndex }) {
+// Each draft is shown in its own card size (posts.card_size), whatever the
+// size of the story open in the builder around it.
+export default function DraftEntry(props) {
+  return (
+    <CardFormatProvider value={props.draft.card_size}>
+      <DraftEntryBody {...props} />
+    </CardFormatProvider>
+  );
+}
+
+function DraftEntryBody({ draft, onApply, onDelete, confirmDelete, isApplied, currentCardIndex }) {
+  const mainHeight = Math.round(MAIN_SIZE * getCardSize(useCardFormat()).height / REFERENCE_CARD_SIZE);
   const cards = draft.cards || [];
   const [offset, setOffset] = useState(0);
   const rowRef = useRef(null);
@@ -90,7 +103,7 @@ export default function DraftEntry({ draft, onApply, onDelete, confirmDelete, is
       {/* Main preview — always the first card (cover) */}
       <div
         className="rounded-lg overflow-hidden flex-shrink-0"
-        style={{ width: MAIN_SIZE, height: MAIN_SIZE }}
+        style={{ width: MAIN_SIZE, height: mainHeight }}
       >
         <CardThumb card={coverCard} displaySize={MAIN_SIZE} tokens={draft.color_tokens} />
       </div>

@@ -1,6 +1,8 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from '@/components/icons';
 import CardThumb from '@/components/creator/CardThumb';
+import { useCardFormat } from '@/components/creator/CardFormatContext';
+import { getCardSize } from '@/lib/cardGeometry';
 
 // Custom transform-based carousel with scroll-intent passthrough:
 // - Touch: touch-action: pan-y lets vertical swipes scroll the page natively;
@@ -15,6 +17,9 @@ export default function CardCarousel({ cards, onTap, tokens }) {
   const [cardW, setCardW] = useState(320);
   const [dragging, setDragging] = useState(false);
   const drag = useRef(null);
+  // The story's card shape (CardFormatContext): height as a % of the width.
+  const { width: refW, height: refH } = getCardSize(useCardFormat());
+  const heightPct = `${(refH / refW) * 100}%`;
 
   // Reset/clamp when the card set changes or viewport resizes
   const clamp = useCallback((v) => {
@@ -160,7 +165,7 @@ export default function CardCarousel({ cards, onTap, tokens }) {
             <div key={card.id} data-card-item className="flex-shrink-0" style={{ width: '100%' }}>
               <div
                 className="relative w-full overflow-hidden rounded-2xl"
-                style={{ paddingTop: '100%', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
+                style={{ paddingTop: heightPct, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
               >
                 <div className="absolute inset-0">
                   <CardThumb card={card} displaySize={cardW} autoplay tokens={tokens} />

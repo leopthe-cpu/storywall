@@ -1,4 +1,6 @@
 import CardThumb from '@/components/creator/CardThumb';
+import { useCardFormat } from '@/components/creator/CardFormatContext';
+import { getCardSize, REFERENCE_CARD_SIZE } from '@/lib/cardGeometry';
 
 // Shared miniature strip with segmented position indicator.
 // Used wherever a list of cards is shown as small miniatures (Templates, Drafts, etc.)
@@ -13,7 +15,8 @@ import CardThumb from '@/components/creator/CardThumb';
 //   tokens           — color tokens for CardThumb rendering
 //   activeIndex      — index of the currently shown card (null/undefined = none highlighted)
 //   onMiniatureClick — callback(index) when a miniature is tapped
-//   thumbSize        — miniature size in px (default 28)
+//   thumbSize        — miniature width in px (default 28); the height follows
+//                      the card size (CardFormatContext)
 //   gap              — gap between miniatures in px (default 4)
 //   offset           — pagination scroll offset in number of cards (default 0)
 export default function MiniatureStrip({
@@ -25,6 +28,7 @@ export default function MiniatureStrip({
   gap = 4,
   offset = 0,
 }) {
+  const thumbHeight = Math.round(thumbSize * getCardSize(useCardFormat()).height / REFERENCE_CARD_SIZE);
   const STEP = thumbSize + gap;
   const shift = -offset * STEP;
   const hasActive = activeIndex != null && activeIndex >= 0 && activeIndex < cards.length;
@@ -32,7 +36,7 @@ export default function MiniatureStrip({
   return (
     <div className="flex flex-col gap-1">
       {/* Miniature thumbnails */}
-      <div className="overflow-hidden" style={{ height: thumbSize }}>
+      <div className="overflow-hidden" style={{ height: thumbHeight }}>
         <div
           className="flex transition-transform duration-200"
           style={{ transform: `translateX(${shift}px)`, gap }}
@@ -44,7 +48,7 @@ export default function MiniatureStrip({
               className="flex-shrink-0 rounded overflow-hidden border transition-opacity hover:opacity-100"
               style={{
                 width: thumbSize,
-                height: thumbSize,
+                height: thumbHeight,
                 opacity: hasActive && activeIndex === i ? 1 : 0.6,
                 borderColor: hasActive && activeIndex === i ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.1)',
               }}

@@ -3,7 +3,9 @@ import { createPortal } from 'react-dom';
 import { Download } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 import CardThumb from '@/components/creator/CardThumb';
-import { EXPORT_SIZE, saveCardImages } from '@/lib/cardExport';
+import { saveCardImages } from '@/lib/cardExport';
+import { useCardFormat } from '@/components/creator/CardFormatContext';
+import { getCardSize } from '@/lib/cardGeometry';
 
 // "Download all cards as images" — admin-only for now (planned premium
 // feature). The caller decides visibility; this renders nothing about who
@@ -12,7 +14,8 @@ import { EXPORT_SIZE, saveCardImages } from '@/lib/cardExport';
 //
 // How it works: while exporting, every card is rendered once more through
 // CardThumb (the same renderer as the preview and the published card, so
-// the export matches what people see) at EXPORT_SIZE in a hidden layer,
+// the export matches what people see) at the story's export size
+// (CARD_SIZES: 1080×1080 for 1:1, 1080×1350 for 4:5) in a hidden layer,
 // then each node is rasterised with html-to-image (SVG foreignObject — the
 // browser itself paints the card, so object-fit crops, transforms and text
 // effects come out right, unlike html2canvas).
@@ -88,6 +91,8 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
   // restart (and strand) the running export.
   const titleRef = useRef(title);
   titleRef.current = title;
+  // Export size of the story's card shape (CardFormatContext).
+  const { exportWidth, exportHeight } = getCardSize(useCardFormat());
   const onDoneRef = useRef(onDone);
   onDoneRef.current = onDone;
 
@@ -123,8 +128,8 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
         const { toBlob, getFontEmbedCSS } = await import('html-to-image');
         const nodes = Array.from(layer.querySelectorAll('[data-export-card]'));
         const options = {
-          width: EXPORT_SIZE,
-          height: EXPORT_SIZE,
+          width: exportWidth,
+          height: exportHeight,
           pixelRatio: 1,
           // Bypass the cache: an image first loaded by a plain <img> can be
           // cached without CORS headers and then fail the CORS re-fetch.
@@ -200,15 +205,15 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
         <div
           ref={layerRef}
           aria-hidden="true"
-          style={{ position: 'fixed', top: 0, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -1, overflow: 'hidden', width: EXPORT_SIZE, height: EXPORT_SIZE }}
+          style={{ position: 'fixed', top: 0, left: 0, opacity: 0, pointerEvents: 'none', zIndex: -1, overflow: 'hidden', width: exportWidth, height: exportHeight }}
         >
           {exportable.map((card, i) => (
             <div
               key={card.id || i}
               data-export-card
-              style={{ position: 'absolute', top: 0, left: 0, width: EXPORT_SIZE, height: EXPORT_SIZE }}
+              style={{ position: 'absolute', top: 0, left: 0, width: exportWidth, height: exportHeight }}
             >
-              <CardThumb card={card} displaySize={EXPORT_SIZE} tokens={tokens} />
+              <CardThumb card={card} displaySize={exportWidth} tokens={tokens} />
             </div>
           ))}
         </div>,
