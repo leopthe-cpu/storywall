@@ -7,7 +7,7 @@ import { registerMedia } from '@/lib/mediaLibrary';
 import CanvasArea, { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET } from '@/components/creator/CanvasArea';
 import BottomIsland, { ISLAND_CHROME } from '@/components/creator/BottomIsland';
 import PostFlowSheet from '@/components/creator/PostFlowSheet';
-import AddCardMenu from '@/components/creator/AddCardMenu';
+import { createPortal } from 'react-dom';
 import { DraftMediaProvider } from '@/components/creator/DraftMediaContext';
 import { getCardSize, cardSizeOf, fitCard, LEGACY_CARD_SIZE, DEFAULT_NEW_CARD_SIZE, LAYOUT_CARD_SIZES } from '@/lib/cardGeometry';
 import { resizeCard } from '@/lib/cardResize';
@@ -288,7 +288,10 @@ export default function StoryCreator() {
 
   const currentCard = cards[currentCardIndex];
   const templateCardSize = templateCardSizeFor(currentCard);
-  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  // The format chooser (Oz, 2026-10-27): adding a card or changing one's
+  // format dims the builder except the Cards gallery, which shows the four
+  // formats. { mode: 'add' } or { mode: 'change', index }; null = closed.
+  const [formatPicker, setFormatPicker] = useState(null);
 
   const updateCurrentCard = useCallback((updates) => {
     setCards((prev) => prev.map((c, i) => i === currentCardIndex ? { ...c, ...updates } : c));
@@ -546,16 +549,32 @@ export default function StoryCreator() {
     setSelectedElementId(null);
   };
 
-  // Switches the card on screen to another size (Cards panel). Elements keep
-  // their position and shape; any that would hang off are moved back on
-  // (resizeCard). One undo step, like any other edit.
-  const changeCardSize = useCallback((size) => {
-    setCards((prev) => prev.map((c, i) => (i === currentCardIndex && cardSizeOf(c) !== size
+  // Switches card `index` to another size. Elements keep their position and
+  // shape; any that would hang off are moved back on (resizeCard). One undo
+  // step, like any other edit.
+  const changeCardSize = useCallback((index, size) => {
+    setCards((prev) => prev.map((c, i) => (i === index && cardSizeOf(c) !== size
       ? resizeCard(c, cardSizeOf(c), size).card
       : c)));
-  }, [currentCardIndex]);
+  }, []);
 
-  // `size`: the card size picked in the add menu (AddCardMenu).
+  // Opens the format chooser: the Cards panel on its Gallery tab, nothing
+  // selected on the card.
+  const startFormat = (mode, index) => {
+    setSelectedElementId(null);
+    setActiveTool('cards');
+    setCardResetToken((t) => t + 1);
+    setFormatPicker({ mode, index });
+  };
+  const pickFormat = (size) => {
+    const picker = formatPicker;
+    setFormatPicker(null);
+    if (!picker) return;
+    if (picker.mode === 'add') addCard(size);
+    else changeCardSize(picker.index ?? currentCardIndex, size);
+  };
+
+  // `size`: the format picked in the format chooser.
   const addCard = (size = DEFAULT_NEW_CARD_SIZE) => {
     const { token, tokens: newTokens } = findOrCreateToken(DEFAULT_CARD_COLOR, colorTokens);
     if (newTokens.length > colorTokens.length) setColorTokens(newTokens);
@@ -1487,27 +1506,28 @@ export default function StoryCreator() {
           {loadingDraft && <DraftLoadingOverlay />}
           
           {/* Quick add card — just outside the right edge, vertically
-              centered. Asks for the new card's size (AddCardMenu). */}
+              centered. Opens the format chooser in the Cards gallery. */}
           <button
-            onClick={() => setAddMenuOpen(true)}
+            onClick={() => startFormat('add')}
             title="Add card"
             className="absolute top-1/2 -translate-y-1/2 w-8 h-8 rounded-[6px] border border-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 text-emerald-400 flex items-center justify-center transition-colors active:scale-95 mr-2"
             style={{ right: -ADD_CARD_REACH }}>
             
             <Plus size={16} />
           </button>
-          {addMenuOpen && (
-            <AddCardMenu
-              className="top-1/2 -translate-y-1/2 right-2"
-              onPick={addCard}
-              onClose={() => setAddMenuOpen(false)} />
-          )}
         </div>
         }
       </div>
 
       {/* Bottom Island — mobile: bottom; desktop: left column */}
       <div className="order-2 md:order-1 md:w-[360px] md:h-full flex-shrink-0 flex flex-col">
+      {/* Format chooser open: a tap anywhere outside the lit gallery cancels.
+          Just under the panel's lit area (z-60, BottomIsland); at page level
+          so the desktop card's transform can't trap it. */}
+      {formatPicker && createPortal(
+        <div className="fixed inset-0 z-[59]" onClick={() => setFormatPicker(null)} />,
+        document.body
+      )}
       <BottomIsland
         islandHeight={islandHeight}
         onDragIsland={handleIslandDrag}
@@ -1534,7 +1554,10 @@ export default function StoryCreator() {
         onReorderElements={reorderTextElements}
         onApplyTemplate={handleApplyTemplate}
         templateCardSize={templateCardSize}
-        onCardSizeChange={changeCardSize}
+        formatPicker={formatPicker}
+        onStartFormat={startFormat}
+        onPickFormat={pickFormat}
+        onCancelFormat={() => setFormatPicker(null)}
         initialCardsTab={editStory || cardsTabVisitedRef.current ? 'Gallery' : 'Templates'}
         cardResetToken={cardResetToken}
         appliedTemplateId={appliedTemplateId}

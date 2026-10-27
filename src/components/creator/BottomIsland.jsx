@@ -30,7 +30,7 @@ export default function BottomIsland({
   activeTool, onToolChange, currentCard, onUpdateCard,
   selectedElement, onUpdateElement, onUpdateElementById, onAddElement, onApplyDraft, activeDraftId,
   onSelectElement, onDeleteElement, onRemoveMediaByUrl, onDuplicateElement, onDuplicateElementToCard, onReorderElements,
-  onApplyTemplate, templateCardSize, onCardSizeChange,
+  onApplyTemplate, templateCardSize, formatPicker, onStartFormat, onPickFormat, onCancelFormat,
   colorTokens, onApplyTokenColor, onPreviewColor, onSetTokens,
   initialCardsTab, cardResetToken, appliedTemplateId, appliedDraftId,
 }) {
@@ -91,8 +91,15 @@ export default function BottomIsland({
         ))}
       </div>
 
-      {/* Panel Content */}
-      <div className={`flex-1 min-h-0 flex flex-col ${panelScrollable ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden'} md:overflow-y-auto md:overscroll-contain`}>
+      {/* Panel Content. While the format chooser is open (formatPicker) this
+          area stays lit and everything else is dimmed: a shadow spread far
+          past the screen, drawn above the rest of the page (z-60; the tap
+          catcher that cancels sits just under it, see StoryCreator). The
+          panel's own tab row is dimmed inside CardsPanel. */}
+      <div
+        className={`flex-1 min-h-0 flex flex-col ${panelScrollable ? 'overflow-y-auto overscroll-contain' : 'overflow-hidden'} md:overflow-y-auto md:overscroll-contain ${formatPicker ? 'relative z-[60] bg-[#1A1A1A]' : ''}`}
+        style={formatPicker ? { boxShadow: '0 0 0 100vmax rgba(0,0,0,0.6)' } : undefined}
+      >
         {activeTool === 'color' && (
           <ColorPanel
             card={currentCard}
@@ -155,7 +162,10 @@ export default function BottomIsland({
             activeDraftId={activeDraftId}
             onApplyTemplate={onApplyTemplate}
             templateCardSize={templateCardSize}
-            onCardSizeChange={onCardSizeChange}
+            formatPicker={formatPicker}
+            onStartFormat={onStartFormat}
+            onPickFormat={onPickFormat}
+            onCancelFormat={onCancelFormat}
             tokens={colorTokens}
             initialTab={initialCardsTab}
             galleryResetToken={cardResetToken}

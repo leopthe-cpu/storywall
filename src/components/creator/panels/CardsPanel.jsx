@@ -3,10 +3,10 @@ import { Plus, ChevronLeft, ChevronRight } from '@/components/icons';
 import { motion } from 'framer-motion';
 import { getMe, filterPosts, deletePost } from '@/api/storywallApi';
 import CardThumb from '@/components/creator/CardThumb';
-import CardSizePicker from '@/components/creator/CardSizePicker';
 import { useCardFormat } from '@/components/creator/CardFormatContext';
 import { cardSizeOf, fitCard } from '@/lib/cardGeometry';
-import AddCardMenu from '@/components/creator/AddCardMenu';
+import FormatChooser from '@/components/creator/FormatChooser';
+import { CardSizeIcon } from '@/components/creator/CardSizePicker';
 import ThumbMenu, { ReorderBar } from '@/components/creator/ThumbMenu';
 import DraftEntry from '@/components/creator/DraftEntry';
 import { templatesEnabled, SHOW_TEMPLATES_AND_STYLES } from '@/lib/featureFlags';
@@ -49,11 +49,12 @@ const STYLE_PLACEHOLDERS = [
   '#3d0c02', '#0f3460', '#2c3e50', '#7b2d8b',
 ];
 
-export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReorder, onAddCard, onDeleteCard, onDuplicateCard, onApplyDraft, activeDraftId, onApplyTemplate, templateCardSize, onCardSizeChange, tokens, initialTab, galleryResetToken, appliedTemplateId, appliedDraftId }) {
-  // Each thumbnail has its card's shape, fitted in a 64 × 80 slot.
+export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReorder, onAddCard, onDeleteCard, onDuplicateCard, onApplyDraft, activeDraftId, onApplyTemplate, templateCardSize, formatPicker, onStartFormat, onPickFormat, onCancelFormat, tokens, initialTab, galleryResetToken, appliedTemplateId, appliedDraftId }) {
+  // Every thumbnail is the same square as the Add tile (Oz, 2026-10-27),
+  // with its card fitted inside at the card's own shape (60 = 64 minus the
+  // 2 px border on each side).
   const fallbackSize = useCardFormat();
-  const thumbBox = (card) => fitCard(cardSizeOf(card, fallbackSize), 64, 80);
-  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const thumbBox = (card) => fitCard(cardSizeOf(card, fallbackSize), 60, 60);
   const [tab, setTab] = useState(initialTab || 'Gallery');
 
   const handleTabChange = (newTab) => {
@@ -136,8 +137,10 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
 
   return (
     <div className="flex flex-col h-full">
-      {/* Tab row */}
-      <div className="flex border-b border-white/10 flex-shrink-0">
+      {/* Tab row. Dimmed (and a tap cancels) while the format chooser is
+          open: only the gallery stays lit, see StoryCreator's formatPicker. */}
+      <div className="relative flex border-b border-white/10 flex-shrink-0">
+        {formatPicker && <div className="absolute inset-0 z-10 bg-black/60" onClick={onCancelFormat} />}
         {TABS.map(t => (
           <button key={t} onClick={() => handleTabChange(t)}
             className={`flex-1 py-2 text-xs font-medium transition-colors ${tab === t ? 'text-white border-b-2 border-white' : 'text-white/40 hover:text-white/60'}`}>
@@ -149,27 +152,39 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
       {/* GALLERY tab */}
       {tab === 'Gallery' && (
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3">
+          {formatPicker ? (
+            <FormatChooser
+              mode={formatPicker.mode}
+              current={cardSizeOf(cards[formatPicker.index ?? currentCardIndex], fallbackSize)}
+              onPick={onPickFormat}
+              onCancel={onCancelFormat}
+            />
+          ) : (
+          <>
           {reorderMode && <ReorderBar onDone={() => setReorderMode(false)} label="Tap arrows to reorder" />}
-          {/* Size of the card on screen; tapping another switches it. */}
-          {onCardSizeChange && !reorderMode && cards[currentCardIndex] && (
-            <div className="mb-3">
-              <CardSizePicker value={cardSizeOf(cards[currentCardIndex], fallbackSize)} onChange={onCardSizeChange} />
-            </div>
+          {/* Format of the card on screen, and the way to change it. */}
+          {onStartFormat && !reorderMode && cards[currentCardIndex] && (
+            <button
+              type="button"
+              onClick={() => onStartFormat('change', currentCardIndex)}
+              className="mb-3 flex items-center gap-2 h-8 px-2.5 rounded-[4px] bg-white/10 hover:bg-white/15 text-xs text-white/70 transition-colors"
+            >
+              <CardSizeIcon id={cardSizeOf(cards[currentCardIndex], fallbackSize)} />
+              Format {cardSizeOf(cards[currentCardIndex], fallbackSize)}
+              <span className="text-emerald-400 font-medium">Change</span>
+            </button>
           )}
           <div className="flex flex-wrap gap-1">
             {/* Add button — always first */}
-            <div className="relative flex-shrink-0 flex flex-col items-center gap-1.5">
+            <div className="flex-shrink-0 flex flex-col items-center gap-1.5">
               <button
-                onClick={() => setAddMenuOpen(true)}
+                onClick={() => onStartFormat ? onStartFormat('add') : onAddCard()}
                 aria-label="Add card"
                 className="w-16 h-16 rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center hover:border-white/50 transition-colors"
               >
                 <Plus size={20} className="text-white/40" />
               </button>
               <span className="text-[9px] text-white/20">Add</span>
-              {addMenuOpen && (
-                <AddCardMenu className="top-full left-0 mt-1" onPick={onAddCard} onClose={() => setAddMenuOpen(false)} />
-              )}
             </div>
 
             {/* Card thumbnails */}
@@ -179,12 +194,13 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
               <motion.div key={card.id} layout className="flex-shrink-0 flex flex-col items-center gap-1.5" style={{ width: 64 }}>
                 <div
                   onClick={reorderMode ? undefined : () => onNavigate(i)}
-                  className={`rounded-lg overflow-hidden border-2 cursor-pointer transition-all relative ${
+                  className={`w-16 h-16 rounded-lg overflow-hidden border-2 cursor-pointer transition-all relative flex items-center justify-center ${
                     i === currentCardIndex ? 'border-emerald-400' : 'border-white/20 hover:border-white/50'
                   }`}
-                  style={{ width: box.width, height: box.height }}
                 >
-                  <CardThumb card={card} displaySize={box.width} tokens={tokens} />
+                  <div className="rounded-[4px] overflow-hidden flex-shrink-0" style={{ width: box.width, height: box.height }}>
+                    <CardThumb card={card} displaySize={box.width} tokens={tokens} />
+                  </div>
                   <span className="absolute bottom-0.5 right-1 text-[9px] text-white/60 drop-shadow">{i + 1}</span>
 
                   {/* Reorder arrow controls */}
@@ -216,12 +232,15 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
                     onDelete={() => handleDelete(i)}
                     deleteDisabled={cards.length === 1}
                     deleteTitle="Delete card"
+                    onChangeFormat={onStartFormat ? () => { onNavigate(i); onStartFormat('change', i); } : undefined}
                   />
                 )}
               </motion.div>
               );
             })}
           </div>
+          </>
+          )}
         </div>
       )}
 
