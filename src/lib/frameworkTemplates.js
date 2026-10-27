@@ -1,4 +1,5 @@
 import { buildAICards } from '@/lib/aiStyleTemplates';
+import { LEGACY_CARD_SIZE } from '@/lib/cardGeometry';
 
 // Framework templates (roadmap A4, Oz 2026-10-16): one ready-made story per
 // story framework (STAR, RICE, …). Each is a short made-up story that shows
@@ -241,30 +242,32 @@ export const FRAMEWORK_TEMPLATES = [
 
 export const isFrameworkTemplate = (template) => FRAMEWORK_TEMPLATES.some((t) => t.id === template?.id);
 
-// Lays a template out. Returns { cards, tokens } like a generated story.
-// Cached per template, since the picker previews and the apply step both
-// need it (callers must not mutate the result).
+// Lays a template out at a card size ('1:1' default, '4:5'). Returns
+// { cards, tokens } like a generated story. Cached per template and size,
+// since the picker previews and the apply step both need it (callers must
+// not mutate the result).
 const built = new Map();
-export function buildFrameworkTemplate(template) {
-  if (!built.has(template.id)) {
+export function buildFrameworkTemplate(template, cardSize = LEGACY_CARD_SIZE) {
+  const key = `${template.id}|${cardSize}`;
+  if (!built.has(key)) {
     const structured = template.cards.map((c) => ({
       text: c.text || '',
       subtitle: c.subtitle || '',
       needsImage: !!c.picture,
       ...(c.picture ? { imageUrl: placeholderUrl(), imageType: 'image' } : {}),
     }));
-    const promise = buildAICards(structured, template.style);
+    const promise = buildAICards(structured, template.style, { cardSize });
     // A failed build (e.g. a font didn't load) is retried next time.
-    promise.catch(() => built.delete(template.id));
-    built.set(template.id, promise);
+    promise.catch(() => built.delete(key));
+    built.set(key, promise);
   }
-  return built.get(template.id);
+  return built.get(key);
 }
 
 // A fresh copy for a new story: new card and element ids each time, so two
 // stories made from the same template never share ids.
-export async function frameworkTemplateForStory(template) {
-  const { cards, tokens } = await buildFrameworkTemplate(template);
+export async function frameworkTemplateForStory(template, cardSize) {
+  const { cards, tokens } = await buildFrameworkTemplate(template, cardSize);
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return {
     cards: cards.map((card, i) => {

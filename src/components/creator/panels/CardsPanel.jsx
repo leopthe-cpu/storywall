@@ -3,6 +3,7 @@ import { Plus, ChevronLeft, ChevronRight } from '@/components/icons';
 import { motion } from 'framer-motion';
 import { getMe, filterPosts, deletePost } from '@/api/storywallApi';
 import CardThumb from '@/components/creator/CardThumb';
+import CardSizePicker from '@/components/creator/CardSizePicker';
 import { useCardFormat } from '@/components/creator/CardFormatContext';
 import { cardAspectRatio } from '@/lib/cardGeometry';
 import ThumbMenu, { ReorderBar } from '@/components/creator/ThumbMenu';
@@ -47,7 +48,7 @@ const STYLE_PLACEHOLDERS = [
   '#3d0c02', '#0f3460', '#2c3e50', '#7b2d8b',
 ];
 
-export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReorder, onAddCard, onDeleteCard, onDuplicateCard, onApplyDraft, activeDraftId, onApplyTemplate, tokens, initialTab, galleryResetToken, appliedTemplateId, appliedDraftId }) {
+export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReorder, onAddCard, onDeleteCard, onDuplicateCard, onApplyDraft, activeDraftId, onApplyTemplate, templateCardSize, cardFormat, onCardFormatChange, tokens, initialTab, galleryResetToken, appliedTemplateId, appliedDraftId }) {
   // Card thumbnails have the open story's card shape (CardFormatContext).
   const thumbAspect = cardAspectRatio(useCardFormat());
   const [tab, setTab] = useState(initialTab || 'Gallery');
@@ -146,6 +147,12 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
       {tab === 'Gallery' && (
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-3">
           {reorderMode && <ReorderBar onDone={() => setReorderMode(false)} label="Tap arrows to reorder" />}
+          {/* Card size of a new story, while it's still empty (StoryCreator). */}
+          {onCardFormatChange && !reorderMode && (
+            <div className="mb-3">
+              <CardSizePicker value={cardFormat} onChange={onCardFormatChange} />
+            </div>
+          )}
           <div className="flex flex-wrap gap-1">
             {/* Add button — always first */}
             <div className="flex-shrink-0 flex flex-col items-center gap-1.5">
@@ -223,6 +230,7 @@ export default function CardsPanel({ cards, currentCardIndex, onNavigate, onReor
                     onApply={onApplyTemplate}
                     appliedTemplateId={appliedTemplateId}
                     currentCardIndex={currentCardIndex}
+                    cardSize={templateCardSize}
                   />
                 )}
               </LazyMount>

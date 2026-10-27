@@ -59,7 +59,7 @@ export function markMissingPictures(cards) {
 // editMode:
 //   'full'       — run the entire pipeline (structure + image generation)
 //   'edits_only' — re-structure only, keep existing images & style template
-export async function runGeneratePipeline({ text, attachments, onProgress, editMode = 'full', existingCards = [], existingStyleTemplate, theme = null }) {
+export async function runGeneratePipeline({ text, attachments, onProgress, editMode = 'full', existingCards = [], existingStyleTemplate, theme = null, cardSize }) {
   let userId = null;
   try {
     const user = await getMe();
@@ -198,7 +198,7 @@ export async function runGeneratePipeline({ text, attachments, onProgress, editM
     : pickStyleVariant(structured.styleTemplate, text);
 
   // The colour theme picked on the notes screen, if any (ThemePicker).
-  const { cards: assembledCards, tokens } = await buildAICards(cards, withTheme(getStyleTemplate(styleTemplate), theme));
+  const { cards: assembledCards, tokens } = await buildAICards(cards, withTheme(getStyleTemplate(styleTemplate), theme), { cardSize });
 
   return {
     cards: assembledCards,

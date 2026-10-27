@@ -1,11 +1,12 @@
 import { useRef, useEffect, useState } from 'react';
 import { ImagePlus, Video } from '@/components/icons';
 import ThemePicker from '@/components/creator/ThemePicker';
+import CardSizePicker from '@/components/creator/CardSizePicker';
 
 // Full-screen notes editor for Generate mode.
 // Plain white canvas with a blinking text cursor (native textarea cursor).
 // User can type free-text and press-and-hold anywhere to attach images/video.
-export default function NotesView({ value, onChange, attachments, onAddAttachment, onRemoveAttachment, theme, onThemeChange }) {
+export default function NotesView({ value, onChange, attachments, onAddAttachment, onRemoveAttachment, theme, onThemeChange, cardFormat, onCardFormatChange }) {
   const textareaRef = useRef(null);
   const longPressTimer = useRef(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -51,6 +52,20 @@ export default function NotesView({ value, onChange, attachments, onAddAttachmen
       onMouseUp={handleEndPress}
       onMouseLeave={handleEndPress}
     >
+      {/* Card size of the story to generate (CardSizePicker), offered while
+          the story is still empty. A row above the notes: the bottom of the
+          screen already holds the AI notice, the attach hint and the theme.
+          Presses on it don't start the press-and-hold attach menu. */}
+      {onCardFormatChange && (
+        <div
+          className="flex-shrink-0 px-6 pt-4"
+          onTouchStart={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <CardSizePicker value={cardFormat} onChange={onCardFormatChange} tone="light" />
+        </div>
+      )}
+
       {/* Notes textarea — fills available space */}
       <textarea
         ref={textareaRef}
@@ -95,6 +110,7 @@ export default function NotesView({ value, onChange, attachments, onAddAttachmen
           <ThemePicker value={theme} onChange={onThemeChange} />
         </div>
       )}
+
 
       {/* AI notice (docs/legal-and-privacy-plan.md Step 3): what happens to
           the notes, and that the result needs checking. Shown while the

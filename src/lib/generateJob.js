@@ -117,8 +117,9 @@ export async function waitForJob(jobId, onProgress, isActive = () => true) {
 // pipeline did: attached pictures on their cards, AI pictures where made,
 // the retry badge where one failed, then the style template's layout.
 // The colours are the theme saved with the job, or `theme` (the one on
-// screen) for a job started before the server kept themes.
-export async function assembleJob(job, theme = null) {
+// screen) for a job started before the server kept themes. `cardSize` is
+// the story's card size (posts.card_size), so the layout fits its cards.
+export async function assembleJob(job, theme = null, cardSize) {
   const structured = job.result;
   if (!structured || !Array.isArray(structured.cards)) throw new Error('Job has no cards');
   const cards = structured.cards.map((c) => ({ ...c }));
@@ -141,7 +142,7 @@ export async function assembleJob(job, theme = null) {
   markMissingPictures(cards);
   const styleTemplate = pickStyleVariant(structured.styleTemplate, job.id);
   const style = withTheme(getStyleTemplate(styleTemplate), job.options?.theme || theme);
-  const { cards: assembledCards, tokens } = await buildAICards(cards, style);
+  const { cards: assembledCards, tokens } = await buildAICards(cards, style, { cardSize });
   return {
     cards: assembledCards,
     tokens,
@@ -153,7 +154,7 @@ export async function assembleJob(job, theme = null) {
 // The whole run: start (or join) the job, follow it, lay it out.
 // Returns null when the job version isn't available, so the caller can use
 // the old pipeline instead.
-export async function runGenerateJob({ text, attachments, postId, theme, onProgress, isActive = () => true }) {
+export async function runGenerateJob({ text, attachments, postId, theme, cardSize, onProgress, isActive = () => true }) {
   let started;
   try {
     started = await startJob({ text, attachments, postId, theme });
@@ -164,6 +165,14 @@ export async function runGenerateJob({ text, attachments, postId, theme, onProgr
     }
     throw e;
   }
+  // A draft the server just created has the database's default card size
+  // (1:1). Give it the story's size straight away, so a story finished
+  // later from Drafts (attachJobsToDrafts) is laid out at the size picked
+  // here. Best effort: on failure the story is still made, at 1:1.
+  if (started.postId && cardSize) {
+    updatePost(started.postId, { card_size: cardSize })
+      .catch((e) => console.warn('[generate-job] could not set the card size:', e?.message));
+  }
   onProgress?.({ completedSteps: 0, totalSteps: 1, label: 'Writing your cards…' });
   window.dispatchEvent(new Event(JOB_STARTED_EVENT));
   followedJobs.add(started.jobId);
@@ -173,7 +182,7 @@ export async function runGenerateJob({ text, attachments, postId, theme, onProgr
   } finally {
     followedJobs.delete(started.jobId);
   }
-  const result = await assembleJob(job, theme);
+  const result = await assembleJob(job, theme, cardSize);
   // Seen: the finished story is on screen, so no "ready" e-mail is needed.
   // Best effort; a failure here must not lose the story.
   getSupabase().from('generation_jobs').update({ seen_at: new Date().toISOString() }).eq('id', job.id)
@@ -221,7 +230,7 @@ export async function attachJobsToDrafts(drafts) {
     if (!state) return draft;
     if (state !== 'done') return { ...draft, generation: state };
     try {
-      const result = await assembleJob(job);
+      const result = await assembleJob(job, null, draft.card_size);
       const saved = await updatePost(draft.id, {
         cards: result.cards,
         color_tokens: result.tokens || [],
