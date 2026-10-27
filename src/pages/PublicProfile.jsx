@@ -18,7 +18,7 @@ import PrivateProfileState from '@/components/profile/PrivateProfileState';
 import NotFoundProfileState from '@/components/profile/NotFoundProfileState';
 import LazyMount from '@/components/profile/LazyMount';
 import { CardFormatProvider } from '@/components/creator/CardFormatContext';
-import { cardAspectRatio } from '@/lib/cardGeometry';
+import { cardAspectRatio, cardSizeOf } from '@/lib/cardGeometry';
 import { ProfileHeroCard, ProfileInfo } from '@/components/profile/ProfileHeader';
 import PageLoader from '@/components/ui/PageLoader';
 import useDocumentTitle from '@/lib/useDocumentTitle';
@@ -394,7 +394,7 @@ export default function PublicProfile() {
                 <LazyMount
                   key={post.id}
                   data-story-id={post.id}
-                  placeholder={<div className="w-full rounded-2xl bg-gray-100 animate-pulse" style={{ aspectRatio: cardAspectRatio(post.card_size) }} />}
+                  placeholder={<div className="w-full rounded-2xl bg-gray-100 animate-pulse" style={{ aspectRatio: cardAspectRatio(cardSizeOf(post.cards?.[0], post.card_size)) }} />}
                 >
                   {() => (
                     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -450,7 +450,7 @@ export default function PublicProfile() {
                     key={post.id}
                     data-story-id={post.id}
                     style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH }}
-                    placeholder={<div className="w-full rounded-2xl bg-[#ECE9E1] animate-pulse" style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH, aspectRatio: cardAspectRatio(post.card_size) }} />}
+                    placeholder={<div className="w-full rounded-2xl bg-[#ECE9E1] animate-pulse" style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH, aspectRatio: cardAspectRatio(cardSizeOf(post.cards?.[0], post.card_size)) }} />}
                   >
                     {() => (
                       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH }}>

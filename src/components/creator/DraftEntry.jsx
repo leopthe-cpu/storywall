@@ -4,8 +4,8 @@ import { formatDistanceToNow } from 'date-fns';
 import CardThumb from '@/components/creator/CardThumb';
 import MiniatureStrip from '@/components/creator/MiniatureStrip';
 import PixelSpinner from '@/components/ui/PixelSpinner';
-import { CardFormatProvider, useCardFormat } from '@/components/creator/CardFormatContext';
-import { getCardSize, REFERENCE_CARD_SIZE } from '@/lib/cardGeometry';
+import { CardFormatProvider, useCardSize } from '@/components/creator/CardFormatContext';
+import { fitCard } from '@/lib/cardGeometry';
 
 const MAIN_SIZE = 72;
 const THUMB_SIZE = 28;
@@ -28,7 +28,8 @@ export default function DraftEntry(props) {
 }
 
 function DraftEntryBody({ draft, onApply, onDelete, confirmDelete, isApplied, currentCardIndex }) {
-  const mainHeight = Math.round(MAIN_SIZE * getCardSize(useCardFormat()).height / REFERENCE_CARD_SIZE);
+  // The cover (first card) in its own size, fitted in a 4:5 box.
+  const main = fitCard(useCardSize(draft.cards?.[0]).id, MAIN_SIZE, Math.round(MAIN_SIZE * 1.25));
   const cards = draft.cards || [];
   const [offset, setOffset] = useState(0);
   const rowRef = useRef(null);
@@ -103,9 +104,9 @@ function DraftEntryBody({ draft, onApply, onDelete, confirmDelete, isApplied, cu
       {/* Main preview — always the first card (cover) */}
       <div
         className="rounded-lg overflow-hidden flex-shrink-0"
-        style={{ width: MAIN_SIZE, height: mainHeight }}
+        style={{ width: main.width, height: main.height }}
       >
-        <CardThumb card={coverCard} displaySize={MAIN_SIZE} tokens={draft.color_tokens} />
+        <CardThumb card={coverCard} displaySize={main.width} tokens={draft.color_tokens} />
       </div>
 
       <div className="flex-1 min-w-0 flex flex-col gap-1.5">

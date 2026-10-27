@@ -201,9 +201,9 @@ const STATEMENT_MAX_CHARS = 70;
 // bottom margins, and how tall a cover title may get (it must leave most of
 // its picture visible).
 function cardGeometryFor(cardSize) {
-  const height = getCardSize(cardSize).height;
+  const { id, height } = getCardSize(cardSize);
   const available = height - 2 * MARGIN;
-  return { height, available, coverMaxText: Math.round(available * 0.6) };
+  return { id, height, available, coverMaxText: Math.round(available * 0.6) };
 }
 // Per-card text size (Oz, 2026-10-16: "some cards with not much text the
 // text just looks too small for the card"). The story's base size is set by
@@ -472,6 +472,8 @@ export async function buildAICards(structuredCards, styleTemplate, { cardSize } 
     const id = `ai-${tpl.id}-${cards.length}-${ts}-${Math.random().toString(36).slice(2)}`;
     return {
       id,
+      // Every card carries its own size (decision 45: a story can mix them).
+      card_size: g.id,
       background_color: scheme.bg.color,
       background_token: scheme.bg.id,
       elements: [],

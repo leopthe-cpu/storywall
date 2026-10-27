@@ -30,7 +30,7 @@ export default function BottomIsland({
   activeTool, onToolChange, currentCard, onUpdateCard,
   selectedElement, onUpdateElement, onUpdateElementById, onAddElement, onApplyDraft, activeDraftId,
   onSelectElement, onDeleteElement, onRemoveMediaByUrl, onDuplicateElement, onDuplicateElementToCard, onReorderElements,
-  onApplyTemplate, templateCardSize, cardFormat, onCardFormatChange,
+  onApplyTemplate, templateCardSize, onCardSizeChange,
   colorTokens, onApplyTokenColor, onPreviewColor, onSetTokens,
   initialCardsTab, cardResetToken, appliedTemplateId, appliedDraftId,
 }) {
@@ -155,8 +155,7 @@ export default function BottomIsland({
             activeDraftId={activeDraftId}
             onApplyTemplate={onApplyTemplate}
             templateCardSize={templateCardSize}
-            cardFormat={cardFormat}
-            onCardFormatChange={onCardFormatChange}
+            onCardSizeChange={onCardSizeChange}
             tokens={colorTokens}
             initialTab={initialCardsTab}
             galleryResetToken={cardResetToken}
