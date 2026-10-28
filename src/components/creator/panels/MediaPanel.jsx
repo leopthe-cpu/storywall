@@ -16,6 +16,7 @@ import { getImageDisplayDims } from '@/lib/imageLayout';
 import { ENABLE_VIDEO_AND_AUDIO } from '@/lib/featureFlags';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { optimizeImageFile, withTimeout } from '@/lib/imageOptimize';
+import { heicToJpeg, HEIC_FAILED_MESSAGE } from '@/lib/heicConvert';
 import { useToast } from '@/components/ui/use-toast';
 
 // Uploads can stall on a bad connection with no error ever firing — this
@@ -163,12 +164,25 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
     if (selectedElement) setTab(defaultTabForType(selectedElement.type));
   }, [selectedElement?.id]);
 
-  const handleUpload = async (file) => {
-    if (!file) return;
-    const mtype = detectMediaType(file);
+  const handleUpload = async (picked) => {
+    if (!picked) return;
+    const mtype = detectMediaType(picked);
     if (!ENABLE_VIDEO_AND_AUDIO && mtype !== 'image') return;
     setUploading(true);
     setShowAddOptions(false);
+    // iPhone (HEIC) photos become JPEGs first, so the preview and the
+    // upload are a picture every browser can show (heicConvert.js).
+    let file = picked;
+    if (mtype === 'image') {
+      try {
+        file = await heicToJpeg(picked);
+      } catch (e) {
+        console.error(e);
+        setUploading(false);
+        toast({ variant: 'destructive', ...HEIC_FAILED_MESSAGE });
+        return;
+      }
+    }
 
     // Optimistic preview: place the element on the card right away using a
     // local blob URL for the picked file, instead of waiting on the full
@@ -241,9 +255,18 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
 
   // Replace the selected element's image with a newly uploaded file.
   // Also saves the new file to the media gallery.
-  const handleReplaceUpload = async (file) => {
-    if (!file || !selectedElement) return;
+  const handleReplaceUpload = async (picked) => {
+    if (!picked || !selectedElement) return;
     setUploading(true);
+    let file;
+    try {
+      file = await heicToJpeg(picked); // see handleUpload
+    } catch (e) {
+      console.error(e);
+      setUploading(false);
+      toast({ variant: 'destructive', ...HEIC_FAILED_MESSAGE });
+      return;
+    }
     const targetId = selectedElement.id;
     const previousUrl = selectedElement.image_url;
     // Update by id throughout, not the selection-bound onUpdateElement —
