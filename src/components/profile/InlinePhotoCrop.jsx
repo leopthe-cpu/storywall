@@ -3,6 +3,8 @@ import { uploadPublicFile } from '@/api/storywallApi';
 import MinimalSlider from '@/components/creator/MinimalSlider';
 import { Check, EmojiSad, ImageIcon } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
+import { toast } from '@/components/ui/use-toast';
+import { heicToJpeg, HEIC_FAILED_MESSAGE } from '@/lib/heicConvert';
 
 const isTouchDevice = () => typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
 
@@ -169,13 +171,16 @@ export default function InlinePhotoCrop({ imageUrl, onSaved, onDiscard, size = 2
     return () => { commitRef.current = null; };
   });
 
-  const handleChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleChange = async (e) => {
+    const picked = e.target.files?.[0];
+    e.target.value = '';
+    if (!picked) return;
+    // iPhone (HEIC) photos become JPEGs first (heicConvert.js).
+    let file;
+    try { file = await heicToJpeg(picked); } catch (err) { console.error(err); toast({ variant: 'destructive', ...HEIC_FAILED_MESSAGE }); return; }
     const url = URL.createObjectURL(file);
     // onDiscard is reused here to signal "load new image into editor"
     onDiscard(url);
-    e.target.value = '';
   };
 
   return (

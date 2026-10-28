@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Pencil } from '@/components/icons';
 import { PixelCamera as Camera } from '@/components/icons-pixel-empty';
 import InlinePhotoCrop from './InlinePhotoCrop';
+import { toast } from '@/components/ui/use-toast';
+import { heicToJpeg, HEIC_FAILED_MESSAGE } from '@/lib/heicConvert';
 
 // Shared profile-picture editor used by both Onboarding and Edit Profile.
 // Shows a preview square; tapping it opens the inline zoom/pan/crop editor
@@ -62,11 +64,14 @@ export default function ProfilePhotoEditor({ value, onChange, size = 200, onEdit
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={e => {
-          const file = e.target.files?.[0];
-          if (!file) return;
-          setEditingPhoto(URL.createObjectURL(file));
+        onChange={async (e) => {
+          const picked = e.target.files?.[0];
           e.target.value = '';
+          if (!picked) return;
+          // iPhone (HEIC) photos become JPEGs first (heicConvert.js).
+          let file;
+          try { file = await heicToJpeg(picked); } catch (err) { console.error(err); toast({ variant: 'destructive', ...HEIC_FAILED_MESSAGE }); return; }
+          setEditingPhoto(URL.createObjectURL(file));
         }}
       />
     </div>

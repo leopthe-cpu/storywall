@@ -25,6 +25,7 @@ import { migrateToTokens, applyTokenColorChange, findOrCreateToken, resolveColor
 import PixelSpinner from '@/components/ui/PixelSpinner';
 import useDocumentTitle from '@/lib/useDocumentTitle';
 import { useToast } from '@/components/ui/use-toast';
+import { heicToJpeg, HEIC_FAILED_MESSAGE } from '@/lib/heicConvert';
 
 // Dimmed overlay + spinner shown over the card while a draft is being opened.
 // Waits ~150ms before appearing so a fast open doesn't flash it.
@@ -1225,13 +1226,17 @@ export default function StoryCreator() {
 
   // ── AI Carousel Builder: Generate mode handlers ──
 
-  const handleAddAttachment = async (file) => {
+  const handleAddAttachment = async (picked) => {
     try {
-      const isVideo = file.type.startsWith('video/');
+      const isVideo = picked.type.startsWith('video/');
+      // iPhone (HEIC) photos become JPEGs, which the AI and every browser
+      // can read (heicConvert.js).
+      const file = isVideo ? picked : await heicToJpeg(picked);
       const { file_url } = await uploadPublicFile(file);
       setAttachments(prev => [...prev, { url: file_url, type: isVideo ? 'video' : 'image' }]);
     } catch (e) {
       console.error('[StoryCreator] attachment upload failed:', e);
+      if (/HEIC/.test(e?.message || '')) toast({ variant: 'destructive', ...HEIC_FAILED_MESSAGE });
     }
   };
 
