@@ -229,6 +229,7 @@ export default function Landing() {
         <footer className="pb-8 flex justify-center gap-5 text-[13px] text-[#8A877F]">
           <Link to="/terms" className="hover:text-[#262624]">Terms</Link>
           <Link to="/privacy" className="hover:text-[#262624]">Privacy</Link>
+          <Link to="/about/licenses" className="hover:text-[#262624]">Licences</Link>
         </footer>
       </div>
     </div>
