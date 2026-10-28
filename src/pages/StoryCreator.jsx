@@ -10,6 +10,8 @@ import PostFlowSheet from '@/components/creator/PostFlowSheet';
 import { createPortal } from 'react-dom';
 import { DraftMediaProvider } from '@/components/creator/DraftMediaContext';
 import { getCardSize, cardSizeOf, fitCard, LEGACY_CARD_SIZE, DEFAULT_NEW_CARD_SIZE, LAYOUT_CARD_SIZES } from '@/lib/cardGeometry';
+import { splitForCards } from '@/lib/textOverflow';
+import { getTextBoxLayout } from '@/lib/textLayout';
 import { resizeCard } from '@/lib/cardResize';
 import { applyTemplateToStory } from '@/lib/storyTemplates';
 import { frameworkTemplateForStory, isFrameworkTemplate } from '@/lib/frameworkTemplates';
@@ -548,6 +550,47 @@ export default function StoryCreator() {
     setCurrentCardIndex(index + 1);
     setSelectedElementId(null);
   };
+
+  // A paste too long for its text box even at the smallest size: the box
+  // kept what fits (DraggableElement) and `rest` continues on new cards
+  // inserted right after its card — same size, background and text style,
+  // the box at the top of each card, each piece as large as it can be up
+  // to the box's own size before the paste. The words are never changed.
+  const continueTextOnNewCards = useCallback((elementId, rest, maxSize) => {
+    const index = cardsRef.current.findIndex((c) => c.elements?.some((e) => e.id === elementId));
+    if (index < 0) return;
+    const src = cardsRef.current[index];
+    const el = src.elements.find((e) => e.id === elementId);
+    const height = getCardSize(cardSizeOf(src)).height;
+    const { width } = getTextBoxLayout(el, height);
+    const pieces = splitForCards(rest, el, width, height, maxSize);
+    const added = pieces.map((piece) => {
+      const { displayHeight: _h, ...style } = el;
+      return {
+        ...src,
+        id: `card-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        backgroundImageId: undefined,
+        elements: [{
+          ...style,
+          id: `el-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          content: piece.text,
+          font_size: String(piece.size),
+          font_size_locked: true,
+          y: (SAFE_ZONE_INSET / height) * 100,
+        }],
+      };
+    });
+    if (!added.length) return;
+    setCards((prev) => {
+      const at = prev.findIndex((c) => c.id === src.id);
+      if (at < 0) return prev;
+      return [...prev.slice(0, at + 1), ...added, ...prev.slice(at + 1)];
+    });
+    toast({
+      title: added.length === 1 ? 'Text continued on a new card' : `Text continued on ${added.length} new cards`,
+      description: "It didn't fit on this card, so the rest is on the next.",
+    });
+  }, [toast]);
 
   // Switches card `index` to another size. Elements keep their position and
   // shape; any that would hang off are moved back on (resizeCard). One undo
@@ -1502,6 +1545,7 @@ export default function StoryCreator() {
             onRetryImageGeneration={handleRetryImageGeneration}
             autoEditId={autoEditId}
             onAutoEditConsumed={() => setAutoEditId(null)}
+            onTextOverflow={continueTextOnNewCards}
             tokens={colorTokens} />
           {loadingDraft && <DraftLoadingOverlay />}
           

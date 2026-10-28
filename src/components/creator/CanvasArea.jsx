@@ -11,7 +11,7 @@ export { REFERENCE_CARD_SIZE, SAFE_ZONE_INSET };
 
 // cardSize is the canvas WIDTH in screen px. The card's own size
 // (card.card_size, useCardSize) sets the height.
-export default function CanvasArea({ card, cardSize, selectedElementId, onSelectElement, onUpdateElement, autoEditId, onAutoEditConsumed, onRetryImageGeneration, tokens }) {
+export default function CanvasArea({ card, cardSize, selectedElementId, onSelectElement, onUpdateElement, autoEditId, onAutoEditConsumed, onRetryImageGeneration, tokens, onTextOverflow }) {
   const canvasRef = useRef(null);
   const scale = cardSize / REFERENCE_CARD_SIZE;
   const refHeight = useCardSize(card).height;
@@ -116,6 +116,7 @@ export default function CanvasArea({ card, cardSize, selectedElementId, onSelect
             isSelected={el.id === selectedElementId}
             onSelect={(id) => onSelectElement(id ?? el.id)}
             onUpdate={(updates) => onUpdateElement(el.id, updates)}
+            onTextOverflow={onTextOverflow && ((rest, maxSize) => onTextOverflow(el.id, rest, maxSize))}
             canvasBounds={canvasRef}
             cardSize={cardSize}
             refHeight={refHeight}
