@@ -51,6 +51,10 @@ Core pieces:
 - It refuses (with a message) rather than exporting broken cards when an image hasn't loaded or its host blocks CORS. Not captured: the "Blur" photo overlay (backdrop-filter); videos export their current frame.
 - When it becomes a premium feature, gate it with premium access like Generate — it's client-only, so there's no server check to add.
 
+## Wall colours (premium wall theme, decision 49)
+
+- The public wall's colours are CSS variables (`--wall-*` in `src/index.css`, used as `wall-*` Tailwind colours, e.g. `text-wall-text-2`, `bg-wall-btn`). Their defaults are the plain theme; a premium theme replaces them for one wall. Use them for anything new on the wall page instead of fixed colours. Not themed: the hero card's text over the photo, story cards, red for errors, owner-only dialogs and sheets.
+
 ## Old gotcha (Base44 only): the schema stripped undeclared fields
 
 On Base44, any card/element field not declared in `base44/entities/Post.jsonc` was silently dropped on save (text sizes resetting, Text FX disappearing). On Supabase, `posts.cards` is jsonb and keeps every field as saved (checked Oct 2026: `line_height`, `font_size_estimated`, `naturalWidth` round-trip). Only top-level story fields are filtered (`POST_IGNORED` in `src/api/storywallApi.js`), so a new top-level column needs a migration.

@@ -50,7 +50,7 @@ const DESKTOP_BLOCK_WIDTH = DESKTOP_CARD_MAX_WIDTH * 2 + DESKTOP_COLUMN_GAP;
 const DESKTOP_CONTAINER_WIDTH = DESKTOP_BLOCK_WIDTH + 2 * 32;
 
 // Near-black used for the top bar's label and icons so they read as one set.
-const HEADER_INK = '#262624';
+const HEADER_INK = 'var(--wall-topbar)';
 
 // (Template demo content removed — every profile now shows only its own real data.)
 
@@ -308,8 +308,10 @@ export default function PublicProfile() {
     <div
       className="min-h-screen relative"
       style={{
-        background: '#F4F2EC',
-        backgroundImage: 'linear-gradient(#E6E0D2 1px, transparent 1px), linear-gradient(90deg, #E6E0D2 1px, transparent 1px)',
+        // Wall colours are CSS variables (--wall-*, src/index.css), so a
+        // profile theme can change them for this wall.
+        background: 'var(--wall-bg)',
+        backgroundImage: 'linear-gradient(var(--wall-grid) 1px, transparent 1px), linear-gradient(90deg, var(--wall-grid) 1px, transparent 1px)',
         backgroundSize: '38px 38px',
         backgroundPosition: 'center top',
       }}
@@ -323,7 +325,7 @@ export default function PublicProfile() {
           position: 'fixed',
           inset: 0,
           pointerEvents: 'none',
-          background: 'radial-gradient(120% 100% at 50% 0%, transparent 0%, #F4F2EC 72%)',
+          background: 'radial-gradient(120% 100% at 50% 0%, transparent 0%, var(--wall-bg) 72%)',
         }}
       />
 
@@ -342,10 +344,17 @@ export default function PublicProfile() {
           through it as they pass underneath, plus a hairline edge. */}
       <div
         className={`fixed top-0 left-0 right-0 z-30 py-1 border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ${
-          scrolled ? 'bg-[#F4F2EC]/55 border-[#E6E0D2]/70 shadow-[0_1px_12px_rgba(38,38,36,0.06)]' : 'bg-transparent border-transparent'
+          scrolled ? 'shadow-[0_1px_12px_rgba(38,38,36,0.06)]' : 'bg-transparent border-transparent'
         }`}
+        // The scrolled tint and edge are the page colours at 55% / 70%
+        // (color-mix, since they're variables: Tailwind's /55 needs a fixed
+        // colour).
         style={scrolled
-          ? { backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)' }
+          ? {
+            backgroundColor: 'color-mix(in srgb, var(--wall-bg) 55%, transparent)',
+            borderColor: 'color-mix(in srgb, var(--wall-grid) 70%, transparent)',
+            backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          }
           : { backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
       >
         {/* Logo (wide desktop only): centred halfway between the window's
@@ -384,7 +393,7 @@ export default function PublicProfile() {
             onToggleTag={toggleTag}
           />
         </div>
-        <div className="h-px bg-[#E6E0D2] mx-5 mt-5 mb-6" />
+        <div className="h-px bg-wall-grid mx-5 mt-5 mb-6" />
         <div className={`px-4 pb-20 ${visiblePosts.length === 0 ? 'flex flex-col items-center justify-center min-h-[45vh]' : ''}`}>
           {visiblePosts.length === 0 ? (
             <ProfileEmptyState isOwner={isOwner} hasTagFilter={selectedTags.length > 0} />
@@ -394,7 +403,7 @@ export default function PublicProfile() {
                 <LazyMount
                   key={post.id}
                   data-story-id={post.id}
-                  placeholder={<div className="w-full rounded-2xl bg-gray-100 animate-pulse" style={{ aspectRatio: cardAspectRatio(cardSizeOf(post.cards?.[0], post.card_size)) }} />}
+                  placeholder={<div className="w-full rounded-2xl bg-wall-skeleton animate-pulse" style={{ aspectRatio: cardAspectRatio(cardSizeOf(post.cards?.[0], post.card_size)) }} />}
                 >
                   {() => (
                     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
@@ -450,7 +459,7 @@ export default function PublicProfile() {
                     key={post.id}
                     data-story-id={post.id}
                     style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH }}
-                    placeholder={<div className="w-full rounded-2xl bg-[#ECE9E1] animate-pulse" style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH, aspectRatio: cardAspectRatio(cardSizeOf(post.cards?.[0], post.card_size)) }} />}
+                    placeholder={<div className="w-full rounded-2xl bg-wall-surface animate-pulse" style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH, aspectRatio: cardAspectRatio(cardSizeOf(post.cards?.[0], post.card_size)) }} />}
                   >
                     {() => (
                       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH }}>
@@ -469,7 +478,7 @@ export default function PublicProfile() {
       {isOwner && (
         <button
           onClick={() => aiCarouselBuilderEnabled ? setShowNewStoryToggle(true) : navigate('/create')}
-          className="fixed bottom-6 right-5 z-40 w-12 h-12 bg-[#262624] text-[#F4F2EC] rounded-full flex items-center justify-center shadow-lg hover:bg-[#30302E] active:scale-95 transition-all"
+          className="fixed bottom-6 right-5 z-40 w-12 h-12 bg-wall-btn text-wall-btn-text rounded-full flex items-center justify-center shadow-lg hover:bg-wall-btn-hover active:scale-95 transition-all"
         >
           <Plus size={22} />
         </button>
@@ -581,7 +590,7 @@ function IconBtn({ onClick, title, children }) {
     <button
       onClick={onClick}
       title={title}
-      className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-[#ECE9E1] active:bg-[#E6E0D2] transition-colors"
+      className="w-11 h-11 flex items-center justify-center rounded-xl hover:bg-wall-surface active:bg-wall-grid transition-colors"
       style={{ color: HEADER_INK }}
     >
       {children}

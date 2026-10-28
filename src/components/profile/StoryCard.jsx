@@ -30,7 +30,7 @@ export default function StoryCard({ post, selectedTags = [], onToggleTag, kebab,
           <h3
             onPointerDown={onTitlePointerDown}
             onPointerUp={onTitlePointerUp}
-            className="font-bold text-gray-900 text-base leading-snug cursor-pointer"
+            className="font-bold text-wall-title text-base leading-snug cursor-pointer"
           >
             {post.title}
           </h3>
