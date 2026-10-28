@@ -13,6 +13,7 @@ import ImageSkeleton from '@/components/ui/ImageSkeleton';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 import { cssFontFamily } from '@/lib/fontLibrary';
 import { textLineHeight } from '@/lib/cardLayout';
+import { MIN_TYPING_FONT, cutAtWord } from '@/lib/textOverflow';
 
 // Corner handles (blue circles) resize the display box (displayWidth/Height).
 // Edge handles (green pills) crop (clipTop/Bottom/Left/Right). The two sets
@@ -153,7 +154,7 @@ function computeEstimatedFontSize(content, displayWidth, availableHeight) {
   return Math.max(8, Math.min(128, estimated));
 }
 
-export default function DraggableElement({ element, scale = 1, isSelected, onSelect, onUpdate, canvasBounds, cardSize, refHeight = REFERENCE_CARD_SIZE, autoEdit, onAutoEditConsumed, cardBg, onDragStateChange, onCenterGuideChange, onAlignGuideChange, onHoldChange, hiddenByHold = false, availableHeight, tokens, isHovered, onHover }) {
+export default function DraggableElement({ element, scale = 1, isSelected, onSelect, onUpdate, canvasBounds, cardSize, refHeight = REFERENCE_CARD_SIZE, autoEdit, onAutoEditConsumed, cardBg, onDragStateChange, onCenterGuideChange, onAlignGuideChange, onHoldChange, hiddenByHold = false, availableHeight, tokens, isHovered, onHover, onTextOverflow }) {
   const elRef = useRef(null);
   const contentRef = useRef(null);
   // Lazy-init: when this element mounts already flagged for auto-edit (a
@@ -184,6 +185,8 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
   const holdTimerRef = useRef(null);
   const pressingRef = useRef(false);
   const prevContentRef = useRef(element.content || '');
+  // True while handleInput runs for a paste (see handlePaste).
+  const pastingRef = useRef(false);
   const hasSizedRef = useRef(false);
   // Mirrors of `editing` and the latest onUpdate, readable from the unmount
   // cleanup below (which otherwise only sees the first render's values).
@@ -702,6 +705,31 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
     window.addEventListener('pointerup', onUp);
   };
 
+  // Pastes come in as plain text: copied text (from a chat, a web page, a
+  // document) otherwise brings its own fonts, colours and paragraphs into
+  // the box while typing. Then the usual typing rules run (shrink to fit),
+  // except that a paste too long for the box continues on new cards
+  // (handleInput) instead of being refused.
+  const handlePaste = (e) => {
+    const text = (e.clipboardData?.getData('text/plain') || '').replace(/\r\n?/g, '\n');
+    e.preventDefault();
+    if (!text) return;
+    const node = e.currentTarget;
+    const sel = window.getSelection();
+    if (!sel.rangeCount || !node.contains(sel.anchorNode)) return;
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    const textNode = document.createTextNode(text);
+    range.insertNode(textNode);
+    range.setStartAfter(textNode);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    node.normalize();
+    pastingRef.current = true;
+    try { handleInput({ target: node }); } finally { pastingRef.current = false; }
+  };
+
   const handleDoubleClick = (e) => {
     e.stopPropagation();
     if (element.type === 'text') setEditing(true);
@@ -741,7 +769,6 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
       : Math.max(20, (refHeight - SAFE_ZONE_INSET) - boxTopRef);
     const roomPx = roomRef * scale - padPx * 2;
     if (node.scrollHeight > roomPx + 1) {
-      const MIN_TYPING_FONT = 8;
       const baseSize = parseInt(element.font_size) || 14;
       // Measure candidate sizes directly on the live node (restored after),
       // so the result accounts for real wrapping, font and effects.
@@ -761,6 +788,33 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
       Object.assign(node.style, saved);
       if (best) {
         updates.font_size = String(best);
+      } else if (pastingRef.current && onTextOverflow) {
+        // A paste that doesn't fit even at the smallest size: keep the
+        // longest start that fits (cut between words) at that size, and hand
+        // the rest to the builder, which continues it on new cards. It used
+        // to be refused like an extra keystroke, which threw the paste away.
+        const full = node.innerText;
+        node.style.fontSize = `${MIN_TYPING_FONT * scale}px`;
+        node.style.lineHeight = String(textLineHeight(MIN_TYPING_FONT, element.line_height));
+        node.style.minHeight = '0px';
+        node.style.height = 'auto';
+        let lo = 1, hi = full.length - 1, fit = 0;
+        while (lo <= hi) {
+          const mid = Math.floor((lo + hi) / 2);
+          node.innerText = full.slice(0, mid);
+          if (node.scrollHeight <= roomPx + 1) { fit = mid; lo = mid + 1; } else { hi = mid - 1; }
+        }
+        Object.assign(node.style, saved);
+        const [kept, rest] = cutAtWord(full, Math.max(1, fit));
+        node.innerText = kept;
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        updates.font_size = String(MIN_TYPING_FONT);
+        if (rest) onTextOverflow(rest, baseSize);
       } else {
         // Doesn't fit even at the minimum size — refuse the last keystroke.
         node.innerText = prevContentRef.current;
@@ -1299,6 +1353,7 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
           suppressContentEditableWarning
           onBlur={handleBlur}
           onInput={handleInput}
+          onPaste={handlePaste}
           className={`outline-none whitespace-pre-wrap break-words ${editing ? 'cursor-text' : ''}`}
           style={{
             fontSize: textFontSize,
