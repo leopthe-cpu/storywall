@@ -473,21 +473,22 @@ input, textarea, select {
   font-optical-sizing: auto;
 }
 
-/* Loading-screen percentage: Pixelify Sans, a free pixel font (SIL Open
-   Font License 1.1, licence in public/fonts/pixelify-sans-OFL.txt), so
-   self-hosting is permitted. Only the latin bold file: it's only used for
-   the number. Used instead of the logo font (FK Raster Grotesk): Oz asked
-   for a free pixel font (2026-10-17). */
+/* Loading-screen percentage: Micro 5, a free pixel font (SIL Open Font
+   License 1.1, licence in public/fonts/micro-5-OFL.txt), so self-hosting
+   is permitted. Only the latin file: it's only used for the number. Picked
+   by Oz (2026-10-28) from a comparison of free pixel fonts; it replaced
+   Pixelify Sans (2026-10-17), which replaced the logo font (FK Raster
+   Grotesk). */
 @font-face {
-  font-family: 'Pixelify Sans';
+  font-family: 'Micro 5';
   font-style: normal;
-  font-weight: 700;
+  font-weight: 400;
   font-display: swap;
-  src: url('/fonts/pixelify-sans-latin-700.woff2') format('woff2');
+  src: url('/fonts/micro-5-latin-400.woff2') format('woff2');
 }
 .font-pixel {
-  font-family: 'Pixelify Sans', ui-monospace, monospace;
-  font-weight: 700;
+  font-family: 'Micro 5', ui-monospace, monospace;
+  font-weight: 400;
 }
 
 /* Loading screens: the paper grid drifts downward forever (2s per
