@@ -338,7 +338,7 @@ export async function invokeFunction(name, body) {
 
 // The same fields getPublicProfile returns for a public wall.
 const WALL_PROFILE_FIELDS = 'id, username, full_name, display_name, headline, bio, location, skills, links, profile_image';
-const WALL_POST_FIELDS = 'id, author_id, title, status, cards, color_tokens, cover_image, tags, display_order, ai_generated, generation_style, card_size, created_at, updated_at';
+const WALL_POST_FIELDS = 'id, author_id, title, status, cards, color_tokens, cover_image, tags, display_order, pinned_at, ai_generated, generation_style, card_size, created_at, updated_at';
 
 // A wall as the page shows it: { status: 'public' | 'private' | 'not_found',
 // user, posts }. Visitors get exactly what getPublicProfile returns. The
