@@ -109,7 +109,9 @@ export default function StoryLoadingScreen({ ceiling, tau, lines, onBack, footer
       />
       <div className="relative flex flex-col items-center gap-4 px-6">
         <PixelSpinner size={24} />
-        <div className="font-pixel text-5xl text-gray-900 tabular-nums leading-none">{pct}%</div>
+        {/* 72px: Micro 5 draws small for its size; this matches the height
+            the number had before (Pixelify Sans at 48px). */}
+        <div className="font-pixel text-7xl text-gray-900 tabular-nums leading-none">{pct}%</div>
         {/* Fixed height so the lines changing don't move anything. */}
         <div className="h-5 flex items-center justify-center text-center" aria-hidden="true">
           <AnimatePresence mode="wait">
