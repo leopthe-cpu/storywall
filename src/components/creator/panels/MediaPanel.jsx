@@ -108,7 +108,7 @@ function getMediaDuration(file) {
   });
 }
 
-export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateElementById, onAddElement, onDeleteElement, currentCard, currentCardIndex, onSelectElement, onDuplicateElementToCard, onUpdateCard, cards = [], onNavigate, onRemoveMediaByUrl, galleryResetToken }) {
+export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateElementById, onAddElement, onDeleteElement, currentCard, currentCardIndex, onSelectElement, onDuplicateElementToCard, onUpdateCard, cards = [], onNavigate, onRemoveMediaByUrl, galleryResetToken, onCopyElement }) {
   // Height of the card on screen ("Fit to card" covers it).
   const refHeight = useCardSize(currentCard).height;
   const isMobile = useIsMobile();
@@ -713,6 +713,12 @@ export default function MediaPanel({ selectedElement, onUpdateElement, onUpdateE
                         </span>
                       ))}
                       <ThumbMenu
+                        onCopy={onCopyElement && item.placements.length ? () => {
+                          // The copy on this card if there is one, else the first.
+                          const p = item.placements.find((pl) => pl.cardIndex === currentCardIndex) || item.placements[0];
+                          const el = cards[p.cardIndex]?.elements?.find((e) => e.id === p.elementId);
+                          if (el) onCopyElement(el);
+                        } : undefined}
                         onReorder={() => setReorderMode(true)}
                         onDelete={() => deleteMedia(item)}
                         addToCard={{

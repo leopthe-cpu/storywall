@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useReducer } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2, PerspectiveView, Keyboard } from '@/components/icons';
+import { ChevronLeft, ChevronRight, Plus, Undo2, Redo2, PerspectiveView, Keyboard, Clipboard } from '@/components/icons';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
 import { getMe, createPost, updatePost, invokeFunction, uploadPublicFile } from '@/api/storywallApi';
 import { registerMedia } from '@/lib/mediaLibrary';
@@ -479,6 +479,41 @@ export default function StoryCreator() {
     return newId;
   }, [cards]);
 
+  // Copy and paste of one element between cards (Oz, 2026-10-28). Copy
+  // (gallery ⋮ menu, or Ctrl/Cmd+C on a selected element) keeps a snapshot
+  // of the element and its card's size, in memory only, so it can be pasted
+  // any number of times, onto any card, even in another story. Paste (the
+  // button beside the card, or Ctrl/Cmd+V) puts a copy on the current card
+  // at the same place, keeping its shape and style; on a card of another
+  // size it's placed the way a card-size switch places it (resizeCard), so
+  // it never lands hanging off the card. Nothing touches the system
+  // clipboard: pasting text into a text box is unaffected.
+  const [copiedElement, setCopiedElement] = useState(null);
+  const copyElement = useCallback((element) => {
+    const card = cards.find((c) => c.elements?.some((e) => e.id === element.id));
+    setCopiedElement({ element: structuredClone(element), cardSize: cardSizeOf(card) });
+    toast({ title: 'Copied', description: 'Tap Paste beside the card to put it on any card.' });
+  }, [cards, toast]);
+  const pasteElement = useCallback(() => {
+    if (!copiedElement) return;
+    const target = cards[currentCardIndex];
+    if (!target) return;
+    let el = resizeCard({ elements: [copiedElement.element] }, copiedElement.cardSize, cardSizeOf(target)).card.elements[0];
+    // A card's empty text box (the one every new card starts with) would sit
+    // under the pasted element, so it goes, as it would on leaving the card.
+    const isEmptyText = (e) => e.type === 'text' && !(e.content && e.content.trim());
+    if (target.elements?.some(isEmptyText)) {
+      setCards((prev) => prev.map((c, i) => (i === currentCardIndex ? { ...c, elements: c.elements.filter((e) => !isEmptyText(e)) } : c)));
+    }
+    // Pasted onto a card that already has it at that very spot: offset it,
+    // like Duplicate, so the copy is visible.
+    if (target.elements?.some((e) => !isEmptyText(e) && e.x === el.x && e.y === el.y && e.type === el.type)) {
+      el = { ...el, x: Math.min(80, (el.x ?? 16) + 5), y: Math.min(80, (el.y ?? 16) + 5) };
+    }
+    duplicateElementToCard(el, currentCardIndex);
+    setActiveTool(el.type === 'text' ? 'text' : 'media');
+  }, [copiedElement, cards, currentCardIndex, duplicateElementToCard]);
+
   const reorderTextElements = useCallback((orderedIds) => {
     setCards((prev) => prev.map((c, i) => {
       if (i !== currentCardIndex) return c;
@@ -690,6 +725,30 @@ export default function StoryCreator() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedElementId, deleteElement]);
+
+  // Ctrl/Cmd+C copies the selected element, Ctrl/Cmd+V pastes it onto the
+  // current card. Ignored while typing (the browser's own copy/paste of
+  // text) and when there's nothing to copy or paste.
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
+      const key = e.key.toLowerCase();
+      if (key !== 'c' && key !== 'v') return;
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
+      if (key === 'c') {
+        if (!selectedElement || window.getSelection()?.toString()) return;
+        e.preventDefault();
+        copyElement(selectedElement);
+      } else {
+        if (!copiedElement) return;
+        e.preventDefault();
+        pasteElement();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedElement, copiedElement, copyElement, pasteElement]);
 
   // Dev-only: detect canvas elements that leaked outside their card container (DOM leak guard)
   useEffect(() => {
@@ -1564,6 +1623,17 @@ export default function StoryCreator() {
             
             <Plus size={16} />
           </button>
+          {/* Paste: under the add button while an element is copied. */}
+          {copiedElement && (
+            <button
+              onClick={pasteElement}
+              title="Paste"
+              aria-label="Paste"
+              className="absolute top-1/2 translate-y-[24px] w-8 h-8 rounded-[6px] border border-white/30 bg-white/10 hover:bg-white/20 text-white/80 flex items-center justify-center transition-colors active:scale-95 mr-2"
+              style={{ right: -ADD_CARD_REACH }}>
+              <Clipboard size={16} />
+            </button>
+          )}
         </div>
         }
       </div>
@@ -1600,6 +1670,7 @@ export default function StoryCreator() {
         onRemoveMediaByUrl={removeMediaByUrl}
         onDuplicateElement={duplicateElement}
         onDuplicateElementToCard={duplicateElementToCard}
+        onCopyElement={copyElement}
         onReorderElements={reorderTextElements}
         onApplyTemplate={handleApplyTemplate}
         templateCardSize={templateCardSize}

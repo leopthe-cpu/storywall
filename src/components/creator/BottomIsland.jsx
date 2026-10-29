@@ -29,7 +29,7 @@ export default function BottomIsland({
   cards, currentCardIndex, onNavigate, onDeleteCard, onAddCard, onReorderCards, onDuplicateCard,
   activeTool, onToolChange, currentCard, onUpdateCard,
   selectedElement, onUpdateElement, onUpdateElementById, onAddElement, onApplyDraft, activeDraftId,
-  onSelectElement, onDeleteElement, onRemoveMediaByUrl, onDuplicateElement, onDuplicateElementToCard, onReorderElements,
+  onSelectElement, onDeleteElement, onRemoveMediaByUrl, onDuplicateElement, onDuplicateElementToCard, onReorderElements, onCopyElement,
   onApplyTemplate, templateCardSize, formatPicker, onStartFormat, onPickFormat, onCancelFormat,
   colorTokens, onApplyTokenColor, onPreviewColor, onSetTokens,
   initialCardsTab, cardResetToken, appliedTemplateId, appliedDraftId,
@@ -128,6 +128,7 @@ export default function BottomIsland({
             onNavigate={onNavigate}
             galleryResetToken={cardResetToken}
             onUpdateElementById={onUpdateElementById}
+            onCopyElement={onCopyElement}
           />
         )}
         {activeTool === 'media' && (
@@ -147,6 +148,7 @@ export default function BottomIsland({
             onNavigate={onNavigate}
             onRemoveMediaByUrl={onRemoveMediaByUrl}
             galleryResetToken={cardResetToken}
+            onCopyElement={onCopyElement}
           />
         )}
         {activeTool === 'cards' && (

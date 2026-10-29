@@ -11,7 +11,9 @@ import { MoreVertical, Copy, GripVertical, Trash2, Plus } from '@/components/ico
 // it's clear at a glance where a copy already lives.
 // `onChangeFormat` (CardsPanel only) adds a "Change format" row: switch the
 // card's size (decision 48).
-export default function ThumbMenu({ onDuplicate, onReorder, onDelete, deleteDisabled, deleteTitle, addToCard, onChangeFormat }) {
+// `onCopy` (Media/Text gallery items) adds a "Copy" row: the item can then be
+// pasted onto any card (Paste button beside the card, or Ctrl/Cmd+V).
+export default function ThumbMenu({ onDuplicate, onReorder, onDelete, deleteDisabled, deleteTitle, addToCard, onChangeFormat, onCopy }) {
   const [open, setOpen] = useState(false);
   const [pickingCard, setPickingCard] = useState(false);
   const ref = useRef(null);
@@ -56,6 +58,14 @@ export default function ThumbMenu({ onDuplicate, onReorder, onDelete, deleteDisa
             </div>
           ) : (
             <>
+              {onCopy && (
+                <button
+                  onClick={() => { setOpen(false); onCopy(); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/70 hover:bg-white/5 transition-colors"
+                >
+                  <Copy size={12} /> Copy
+                </button>
+              )}
               {addToCard ? (
                 <button
                   onClick={() => setPickingCard(true)}

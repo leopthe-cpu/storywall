@@ -121,6 +121,7 @@ export default function TextPanel({
   cards = [], onNavigate,
   galleryResetToken,
   onUpdateElementById,
+  onCopyElement,
 }) {
   const { resolveMediaUrl } = useDraftMedia();
   // Height of the card on screen (a new box is placed on it).
@@ -413,6 +414,7 @@ export default function TextPanel({
                       {cardIdx + 1}/{cards.length}
                     </span>
                     <ThumbMenu
+                      onCopy={onCopyElement && (() => onCopyElement(el))}
                       onDelete={() => onDeleteElement?.(el.id)}
                       addToCard={{
                         cards,
