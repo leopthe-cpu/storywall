@@ -14,6 +14,7 @@ import SignUp from '@/pages/SignUp';
 import ResetPassword from '@/pages/ResetPassword';
 import Terms from '@/pages/Terms';
 import Privacy from '@/pages/Privacy';
+import Licenses from '@/pages/Licenses';
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { getMe } from '@/api/storywallApi';
 import ErrorBoundary from '@/components/ErrorBoundary';
@@ -75,6 +76,8 @@ const AuthenticatedApp = () => {
       {/* 'terms' and 'privacy' are reserved usernames, so these can't hide a wall. */}
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
+      {/* Under /about, a reserved username, so it can never clash with a wall. */}
+      <Route path="/about/licenses" element={<Licenses />} />
 
       {/* Onboarding */}
       <Route path="/onboarding" element={page(<Onboarding />)} />

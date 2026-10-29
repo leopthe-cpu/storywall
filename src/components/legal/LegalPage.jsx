@@ -24,7 +24,7 @@ export function List({ items }) {
   );
 }
 
-export default function LegalPage({ title, summary, children, other }) {
+export default function LegalPage({ title, summary, children, other, updated = LEGAL_UPDATED }) {
   useDocumentTitle(`${title} | storywall`);
   return (
     <div className="min-h-screen bg-[#F4F2EC]">
@@ -33,7 +33,7 @@ export default function LegalPage({ title, summary, children, other }) {
           <img src="/logo-slash-ink.png" alt="Storywall" className="h-[20px] w-auto" />
         </Link>
         <h1 className="mt-10 font-display text-[34px] leading-tight font-medium text-[#262624]">{title}</h1>
-        <p className="mt-2 text-sm text-[#8A877F]">Last updated: {LEGAL_UPDATED}</p>
+        <p className="mt-2 text-sm text-[#8A877F]">Last updated: {updated}</p>
         <div className="mt-6 rounded-2xl bg-[#FAF9F5] border border-[#E6E0D2] p-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-[#6B6964]">In short</p>
           <div className="mt-2 space-y-2 text-[15px] leading-relaxed text-[#262624]">{summary}</div>
