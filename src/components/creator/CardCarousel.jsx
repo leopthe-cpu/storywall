@@ -10,7 +10,9 @@ import { cardSizeOf, getCardSize } from '@/lib/cardGeometry';
 //   horizontal gestures.
 // - Wheel: vertical wheel always passes through to the page; only significant
 //   horizontal (trackpad) wheel moves the carousel.
-export default function CardCarousel({ cards, onTap, tokens }) {
+// onActiveCardChange(index): called with the card in view after each swipe
+// (and 0 at first), for view counting.
+export default function CardCarousel({ cards, onTap, tokens, onActiveCardChange }) {
   const viewportRef = useRef(null);
   const trackRef = useRef(null);
   const [offset, setOffset] = useState(0);
@@ -66,6 +68,13 @@ export default function CardCarousel({ cards, onTap, tokens }) {
     if (vp) ro.observe(vp);
     return () => ro.disconnect();
   }, [cards?.length]);
+
+  // The card in view. Hooks must run before the early return below, so this
+  // is worked out here as well as for the progress bars further down.
+  const shownIndex = Math.max(0, Math.min((cards?.length || 1) - 1, Math.round(-offset / (cardW + 12))));
+  const onActiveRef = useRef(onActiveCardChange);
+  onActiveRef.current = onActiveCardChange;
+  useEffect(() => { if (cards?.length) onActiveRef.current?.(shownIndex); }, [shownIndex, cards?.length]);
 
   if (!cards?.length) return null;
 

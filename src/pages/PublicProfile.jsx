@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getMe, getWall, updatePost, deletePost, reorderPosts, getPostForEditing } from '@/api/storywallApi';
+import { getMe, getWall, updatePost, deletePost, reorderPosts, getPostForEditing, myStoryViewTotals } from '@/api/storywallApi';
 import { Plus, Share2, Pencil, SelectFace3d, X } from '@/components/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import StoryCard from '@/components/profile/StoryCard';
@@ -84,6 +84,9 @@ export default function PublicProfile() {
   const [authUserId, setAuthUserId] = useState(null);
   const [isPremium, setIsPremium] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLifetime, setIsLifetime] = useState(false);
+  // Lifetime: the owner's unique views per story, { [post id]: count }.
+  const [viewTotals, setViewTotals] = useState(null);
   const [showNewStoryToggle, setShowNewStoryToggle] = useState(false);
   const { toast } = useToast();
 
@@ -149,6 +152,7 @@ export default function PublicProfile() {
         // show/hide UI here; the server functions are the real gate.
         setIsAdmin(!!user?.is_admin);
         setIsPremium(!!user?.is_premium);
+        setIsLifetime(!!user?.is_lifetime);
       })
       .catch(() => setAuthUserId(null));
   }, []);
@@ -162,6 +166,18 @@ export default function PublicProfile() {
   useEffect(() => {
     setProfile(profileUser);
   }, [profileUser]);
+
+  // A Lifetime owner sees each story's unique views on their own wall.
+  useEffect(() => {
+    if (!isOwner || !isLifetime) { setViewTotals(null); return; }
+    myStoryViewTotals().then(setViewTotals).catch(() => setViewTotals(null));
+  }, [isOwner, isLifetime, username]);
+  // Visitors' views are counted; the owner's never are (the server checks
+  // too), and template placeholders aren't stories.
+  const storyViewProps = (post) => ({
+    trackViews: !isOwner && !String(post.id).startsWith('tpl'),
+    uniqueViews: viewTotals ? (viewTotals[post.id] ?? 0) : undefined,
+  });
 
   const allTags = [...new Set(posts.flatMap(p => p.tags || []))];
   // Pinned skills are only shown if at least one currently-published story
@@ -431,7 +447,7 @@ export default function PublicProfile() {
                 >
                   {() => (
                     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-                      <StoryCard post={post} selectedTags={selectedTags} onToggleTag={toggleTag} kebab={storyKebab(post)} onTap={() => handleStoryTap(post.id)} />
+                      <StoryCard post={post} selectedTags={selectedTags} onToggleTag={toggleTag} kebab={storyKebab(post)} onTap={() => handleStoryTap(post.id)} {...storyViewProps(post)} />
                     </motion.div>
                   )}
                 </LazyMount>
@@ -487,7 +503,7 @@ export default function PublicProfile() {
                   >
                     {() => (
                       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} style={{ maxWidth: DESKTOP_CARD_MAX_WIDTH }}>
-                        <StoryCard post={post} selectedTags={selectedTags} onToggleTag={toggleTag} kebab={storyKebab(post)} onTap={() => handleStoryTap(post.id)} />
+                        <StoryCard post={post} selectedTags={selectedTags} onToggleTag={toggleTag} kebab={storyKebab(post)} onTap={() => handleStoryTap(post.id)} {...storyViewProps(post)} />
                       </motion.div>
                     )}
                   </LazyMount>

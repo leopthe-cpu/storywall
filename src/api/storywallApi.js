@@ -359,6 +359,13 @@ export async function getWall(username) {
   return { status: 'public', user: own, posts };
 }
 
+// The signed-in author's unique views per story (Lifetime, decision 50):
+// { [post_id]: count }. Empty for everyone else (the database decides).
+export async function myStoryViewTotals() {
+  const rows = check(await getSupabase().rpc('my_story_view_totals')) || [];
+  return Object.fromEntries(rows.map((r) => [r.post_id, Number(r.unique_views) || 0]));
+}
+
 // ---------- File uploads (each user writes only inside their own folder)
 
 function fileExtension(file) {

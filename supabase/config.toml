@@ -424,6 +424,9 @@ verify_jwt = false
 [functions.getPublicProfile]
 verify_jwt = false
 
+[functions.recordView]
+verify_jwt = false
+
 [functions.searchProfiles]
 verify_jwt = true
 
