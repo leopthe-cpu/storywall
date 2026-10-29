@@ -11,6 +11,7 @@ import SizeStepper from '@/components/creator/SizeStepper';
 import { resolveColor, findOrCreateToken } from '@/lib/colorTokens';
 import { TEXT_FX_LIST, TEXT_WARP_LIST, getTextEffectStyle, hasTextWarp } from '@/lib/textEffects';
 import WarpedText from '@/components/creator/WarpedText';
+import { HighlightedText, HIGHLIGHT_SWATCHES, getActiveTextEditor } from '@/lib/textHighlights';
 import { useDraftMedia } from '@/components/creator/DraftMediaContext';
 import { pickReadableTextColor, sampleImageColor } from '@/lib/colorContrast';
 import { textLineHeight } from '@/lib/cardLayout';
@@ -108,7 +109,7 @@ function TextThumb({ element, cardBg, tokens, width = TILE }) {
       >
         {warped
           ? <WarpedText text={element.content} warp={element.text_warp} amount={element.text_warp_amount} decoration={textDeco} />
-          : (element.content || 'Text')}
+          : hasContent ? <HighlightedText text={element.content} highlights={element.highlights} /> : 'Text'}
       </div>
     </div>
   );
@@ -132,6 +133,8 @@ export default function TextPanel({
   const tokensRef = useRef(tokens);
   tokensRef.current = tokens;
   const [tab, setTab] = useState('gallery');
+  // Shown under the Highlight swatches when nothing is selected to apply to.
+  const [highlightHint, setHighlightHint] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   // Holds the colorField name (e.g. 'text_fx_shadow_color') of whichever
   // effect's swatch was tapped, since multiple effects can be active at once
@@ -502,6 +505,41 @@ export default function TextPanel({
                     <Icon size={13} />
                   </button>
                 ))}
+              </div>
+
+              {/* Highlight (decision 51): marks the words selected while
+                  typing. The buttons don't take focus (pointer-down is
+                  cancelled), so the text box keeps its selection. Marker
+                  colours first, then the story's own colours. */}
+              <div>
+                <label className="text-white/30 text-[9px] uppercase tracking-wider mb-0.5 block">Highlight</label>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[...HIGHLIGHT_SWATCHES, ...[...new Set((tokens || []).map((t) => t.color).filter(Boolean))].filter((c) => !HIGHLIGHT_SWATCHES.includes(c)).slice(0, 5)].map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      aria-label={`Highlight ${color}`}
+                      title="Highlight the selected words"
+                      onPointerDown={(e) => e.preventDefault()}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => setHighlightHint(!getActiveTextEditor()?.highlightSelection(color))}
+                      className="w-6 h-6 rounded-[4px] border border-white/20 hover:scale-110 transition-transform"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                  <button
+                    type="button"
+                    onPointerDown={(e) => e.preventDefault()}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setHighlightHint(!getActiveTextEditor()?.highlightSelection(null))}
+                    className="h-6 px-2 rounded-[4px] bg-white/10 text-white/70 text-[11px] hover:bg-white/15 transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+                {highlightHint && (
+                  <p className="text-white/40 text-[10px] mt-1">Select words in the text box first (tap it twice to type, then select).</p>
+                )}
               </div>
 
               {/* Layer order */}
