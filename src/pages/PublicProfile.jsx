@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { getMe, getWall, updatePost, deletePost, reorderPosts, getPostForEditing, myStoryViewTotals } from '@/api/storywallApi';
 import { Plus, Share2, Pencil, SelectFace3d, X } from '@/components/icons';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,6 +12,8 @@ import { wallThemeVars, wallTopbarIsLight } from '@/lib/wallTheme';
 import { useToast } from '@/components/ui/use-toast';
 import ProfileEmptyState from '@/components/profile/ProfileEmptyState';
 import ShareUrlModal from '@/components/profile/ShareUrlModal';
+import ShareStorySheet from '@/components/profile/ShareStorySheet';
+import { shareAfterPublishSkipped } from '@/lib/shareStory';
 import CopyToast from '@/components/profile/CopyToast';
 import WriteGenerateToggle from '@/components/creator/WriteGenerateToggle';
 import { aiCarouselBuilderEnabled } from '@/lib/featureFlags';
@@ -58,8 +60,10 @@ const HEADER_INK = 'var(--wall-topbar)';
 // ── Main component ─────────────────────────────────────────────────────────
 
 export default function PublicProfile() {
-  const { username } = useParams();
+  // storyId: a shared story's link (/:username/:storyId) opens the wall on it.
+  const { username, storyId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [profileUser, setProfileUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,8 +82,11 @@ export default function PublicProfile() {
   const [profile, setProfile] = useState(null);
   const [reorderMode, setReorderMode] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
-  // Story whose cards are being exported as images (admin-only).
+  // Story whose cards are being exported as images (Premium, decision 53).
   const [downloadPost, setDownloadPost] = useState(null);
+  // Story shown in "Share your story" (decision 53); afterPublish when it
+  // opened by itself right after publishing.
+  const [sharePost, setSharePost] = useState(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showCopyToast, setShowCopyToast] = useState(false);
   const [authUserId, setAuthUserId] = useState(null);
@@ -235,12 +242,48 @@ export default function PublicProfile() {
     }
   };
 
-  const handleShareStory = (post) => {
-    const url = `${window.location.origin}/${username}/${post.id}`;
-    navigator.clipboard.writeText(url)
-      .then(() => toast({ description: 'Link copied' }))
-      .catch(() => {});
-  };
+  // Right after a publish, the builder sends the story's id along: open
+  // "Share your story" for it (unless the owner chose not to see it again),
+  // then drop it from the history entry so a reload or Back doesn't reopen it.
+  const justPublished = location.state?.shareStory;
+  useEffect(() => {
+    if (!justPublished || !isOwner) return;
+    const post = posts.find((p) => p.id === justPublished);
+    if (!post) return;
+    if (!shareAfterPublishSkipped()) setSharePost({ post, afterPublish: true });
+    navigate(location.pathname, { replace: true, state: null });
+  }, [justPublished, isOwner, posts]);
+
+  // A story link: bring that story into view once the wall has loaded.
+  // Stories above it mount and grow as the page scrolls past them (LazyMount,
+  // pictures loading), which pushes it back down, so it is kept centred
+  // while the page settles: on every size change for a few seconds, until
+  // the visitor scrolls themselves.
+  const centredStory = useRef(null);
+  useEffect(() => {
+    if (!storyId || loading || !posts.some((p) => p.id === storyId)) return;
+    // Once per link: later changes to the list (a pin, a reload) don't move the page.
+    if (centredStory.current === storyId) return;
+    centredStory.current = storyId;
+    const visible = () => [...document.querySelectorAll(`[data-story-id="${storyId}"]`)].find((el) => el.offsetParent !== null);
+    const center = () => {
+      const el = visible();
+      if (!el) return;
+      el.dispatchEvent(new CustomEvent('storywall:reveal'));
+      el.scrollIntoView({ behavior: 'auto', block: 'center' });
+    };
+    const frame = requestAnimationFrame(center);
+    const observer = new ResizeObserver(center);
+    observer.observe(document.body);
+    const stop = () => {
+      observer.disconnect();
+      clearTimeout(timer);
+      ['wheel', 'touchstart', 'keydown'].forEach((t) => window.removeEventListener(t, stop));
+    };
+    const timer = setTimeout(stop, 4000);
+    ['wheel', 'touchstart', 'keydown'].forEach((t) => window.addEventListener(t, stop, { passive: true }));
+    return () => { cancelAnimationFrame(frame); stop(); };
+  }, [storyId, loading, posts]);
 
   const handleEditStory = async (post) => navigate('/create', { state: { editStory: await getPostForEditing(post) } });
 
@@ -327,7 +370,8 @@ export default function PublicProfile() {
       onArchive={() => handleArchiveStory(post)}
       onTogglePin={String(post.id).startsWith('tpl') ? undefined : () => togglePin(post)}
       pinned={!!post.pinned_at}
-      onDownload={isAdmin ? () => setDownloadPost(post) : undefined}
+      onShare={String(post.id).startsWith('tpl') ? undefined : () => setSharePost({ post, afterPublish: false })}
+      onDownload={isPremium ? () => setDownloadPost(post) : undefined}
     />
   ) : null;
 
@@ -587,7 +631,21 @@ export default function PublicProfile() {
         </Suspense>
       )}
 
-      {/* CARD IMAGE EXPORT (admin-only) — starts on open, closes itself
+      {/* SHARE YOUR STORY (owner, decision 53) */}
+      <AnimatePresence>
+        {sharePost && isOwner && (
+          <ShareStorySheet
+            key={sharePost.post.id}
+            post={sharePost.post}
+            username={profileUser?.username || username}
+            isPremium={isPremium}
+            afterPublish={sharePost.afterPublish}
+            onClose={() => setSharePost(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* CARD IMAGE EXPORT (Premium) — starts on open, closes itself
           once the files are saved; stays open to show any error. */}
       {downloadPost && (
         <div className="fixed inset-x-0 bottom-0 z-50 p-4 flex justify-center pointer-events-none">

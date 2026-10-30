@@ -1704,7 +1704,7 @@ export default function StoryCreator() {
         tokens={colorTokens}
         onClose={() => setShowPostFlow(false)}
         onPublishStart={cancelAutosave}
-        onPublished={(username) => navigate(`/${username}`)} />
+        onPublished={(username, postId) => navigate(`/${username}`, { state: postId ? { shareStory: postId } : undefined })} />
 
       }
 
