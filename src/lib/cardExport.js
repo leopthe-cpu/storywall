@@ -1,6 +1,6 @@
-// Helpers for exporting story cards as image files (admin-only today,
-// planned premium feature). Rendering lives in DownloadCardsButton.jsx;
-// this file only packages and saves the resulting blobs.
+// Helpers for exporting story cards as image files (Premium, decision 53).
+// Rendering lives in DownloadCardsButton.jsx; this file only packages and
+// saves the resulting blobs.
 
 // Output sizes for exported cards are per card size (exportWidth /
 // exportHeight in CARD_SIZES, src/lib/cardGeometry.js): 1080×1080 for 1:1,

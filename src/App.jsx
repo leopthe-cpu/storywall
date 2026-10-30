@@ -92,6 +92,8 @@ const AuthenticatedApp = () => {
 
       {/* Public profiles */}
       <Route path="/:username" element={<PublicProfile />} />
+      {/* A story's share link (decision 53): the wall, opened on that story */}
+      <Route path="/:username/:storyId" element={<PublicProfile />} />
 
       <Route path="*" element={<PageNotFound />} />
     </Routes>

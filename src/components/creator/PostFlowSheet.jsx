@@ -6,8 +6,6 @@ import CardCarousel from '@/components/creator/CardCarousel';
 import SkillsLoadingScreen from '@/components/creator/SkillsLoadingScreen';
 import GridBackdrop from '@/components/ui/GridBackdrop';
 import BackButton from '@/components/ui/BackButton';
-import DownloadCardsButton from '@/components/creator/DownloadCardsButton';
-import { useAuth } from '@/lib/AuthContext';
 import BusyLabel from '@/components/ui/BusyLabel';
 
 const MAX_REFRESHES = 3;
@@ -61,9 +59,6 @@ async function fetchSuggestedSkills(text, tagCount, alreadySelectedTags) {
 
 export default function PostFlowSheet({ cards, editingPostId, draftId, initialTitle, initialTags, onClose, onPublished, onPublishStart, tokens }) {
   const [title, setTitle] = useState(initialTitle || '');
-  // Card image export is admin-only for now (planned premium feature).
-  const { user } = useAuth();
-  const isAdmin = !!user?.is_admin;
   const [allSuggestedTags, setAllSuggestedTags] = useState([]);
   const [suggestedSelected, setSuggestedSelected] = useState(() => new Set());
   const [customTags, setCustomTags] = useState(() => initialTags && initialTags.length ? initialTags.slice() : []);
@@ -276,6 +271,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
       const publishedCards = pubRes?.data?.cards || cardsPayload;
       const firstPublished = publishedCards[0];
       const publishedCover = firstPublished?.elements?.find((e) => e.type === 'image')?.image_url || '';
+      let postId = editingPostId;
       if (editingPostId) {
         await updatePost(editingPostId, {
           title: title.trim(),
@@ -287,7 +283,7 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
         });
       } else {
         // The database sets the author to the signed-in user.
-        await createPost({
+        const created = await createPost({
           title: title.trim(),
           tags: selectedTags,
           cards: publishedCards,
@@ -295,11 +291,13 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
           status: 'published',
           cover_image: publishedCover
         });
+        postId = created?.id;
       }
       if (draftId && draftId !== editingPostId) {
         try {await deletePost(draftId);} catch (e) {console.error('Failed to delete draft:', e);}
       }
-      onPublished(user.username || user.id);
+      // The wall opens the share screen for this story (decision 53).
+      onPublished(user.username || user.id, postId);
     } catch (e) {
       setError(e.message);
       setPublishing(false);
@@ -389,7 +387,6 @@ export default function PostFlowSheet({ cards, editingPostId, draftId, initialTi
         {cards.length > 0 &&
         <div className="md:max-w-[340px] md:mx-auto">
           <CardCarousel cards={cards} tokens={tokens} />
-          {isAdmin && <DownloadCardsButton cards={cards} tokens={tokens} title={title} className="mt-3" />}
         </div>
         }
 

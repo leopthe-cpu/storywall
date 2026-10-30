@@ -7,10 +7,10 @@ import { saveCardImages } from '@/lib/cardExport';
 import { useCardFormat } from '@/components/creator/CardFormatContext';
 import { cardSizeOf, getCardSize } from '@/lib/cardGeometry';
 
-// "Download all cards as images" — admin-only for now (planned premium
-// feature). The caller decides visibility; this renders nothing about who
-// may use it. It's a purely client-side render of cards the viewer can
-// already see, so there's nothing to protect server-side.
+// "Download all cards as images" — a Premium feature on the share screen
+// (decisions 50, 53). The caller decides visibility; this renders nothing
+// about who may use it. It's a purely client-side render of cards the
+// viewer can already see, so there's nothing to protect server-side.
 //
 // How it works: while exporting, every card is rendered once more through
 // CardThumb (the same renderer as the preview and the published card, so
@@ -81,7 +81,8 @@ async function loadCardFonts(cards) {
 
 // autoStart: begin exporting on mount (used by the profile story menu, where
 // the menu tap itself is the intent). onDone: called after files are saved.
-export default function DownloadCardsButton({ cards, tokens, title, className = '', autoStart = false, onDone }) {
+// label: the idle button text (default "Download all N cards as images").
+export default function DownloadCardsButton({ cards, tokens, title, className = '', autoStart = false, onDone, label: idleLabel }) {
   const [status, setStatus] = useState(autoStart ? 'rendering' : 'idle'); // idle | rendering | error
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
@@ -185,7 +186,7 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
   const busy = status === 'rendering';
   const label = busy
     ? `Rendering ${Math.min(progress + 1, exportable.length)}/${exportable.length}…`
-    : exportable.length === 1 ? 'Download card as image' : `Download all ${exportable.length} cards as images`;
+    : idleLabel || (exportable.length === 1 ? 'Download card as image' : `Download all ${exportable.length} cards as images`);
 
   return (
     <div className={className}>
@@ -197,7 +198,6 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
       >
         {busy ? <PixelSpinner size={14} /> : <Download size={16} />}
         <span>{label}</span>
-        <span className="ml-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Admin</span>
       </button>
       {status === 'error' && message && <p className="mt-2 text-xs text-red-500">{message}</p>}
 
