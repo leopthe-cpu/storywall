@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { getMe, getWall, updatePost, deletePost, reorderPosts, getPostForEditing, myStoryViewTotals } from '@/api/storywallApi';
-import { Plus, Share2, Pencil, SelectFace3d, X } from '@/components/icons';
+import { Plus, Share2, SelectFace3d, X } from '@/components/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import StoryCard from '@/components/profile/StoryCard';
 import StoryKebab from '@/components/profile/StoryKebab';
 import DeleteStoryModal from '@/components/profile/DeleteStoryModal';
-import EditProfileModal from '@/components/profile/EditProfileModal';
 import BurgerMenu from '@/components/profile/BurgerMenu';
 import { wallThemeVars, wallTopbarIsLight } from '@/lib/wallTheme';
 import { useToast } from '@/components/ui/use-toast';
@@ -69,7 +68,6 @@ export default function PublicProfile() {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [profileStatus, setProfileStatus] = useState('loading');
-  const [showEdit, setShowEdit] = useState(false);
   // Top bar: invisible over the page at rest, frosted glass once the page
   // scrolls (see the bar below).
   const [scrolled, setScrolled] = useState(false);
@@ -472,7 +470,6 @@ export default function PublicProfile() {
           </span>
           <div className="flex items-center gap-1 -mr-3">
             <IconBtn onClick={handleShare} title="Share"><Share2 size={18} /></IconBtn>
-            {isOwner && <IconBtn onClick={() => setShowEdit(true)} title="Edit profile"><Pencil size={18} /></IconBtn>}
             {isOwner && <IconBtn onClick={() => setShowMenu(true)} title="Settings"><SelectFace3d size={18} /></IconBtn>}
           </div>
         </div>
@@ -595,33 +592,23 @@ export default function PublicProfile() {
         />
       )}
 
-      {/* EDIT PROFILE MODAL */}
-      <AnimatePresence>
-        {showEdit && (
-          <motion.div className="fixed inset-0 z-50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <EditProfileModal
-              profile={profile}
-              allTags={allTags}
-              onClose={() => setShowEdit(false)}
-              onSaved={async (updated) => {
-                setProfile(p => ({ ...p, ...updated }));
-                try {
-                  const freshUser = (await getWall(username))?.user || null;
-                  if (freshUser) setProfileUser({ ...freshUser, ...updated });
-                } catch (e) { /* keep optimistic update */ }
-              }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* BURGER MENU */}
       <AnimatePresence>
         {showMenu && (
           <BurgerMenu
             user={profileUser}
+            profile={profile}
+            allTags={allTags}
             access={{ isPremium, isLifetime }}
-            onEditProfile={() => { setShowMenu(false); setThemePreview(null); setShowEdit(true); }}
+            // Settings → Profile saved: show it on the wall at once, then
+            // take the server's copy (e.g. a resolved photo URL).
+            onProfileSaved={async (updated) => {
+              setProfile(p => ({ ...p, ...updated }));
+              try {
+                const freshUser = (await getWall(username))?.user || null;
+                if (freshUser) setProfileUser({ ...freshUser, ...updated });
+              } catch (e) { /* keep optimistic update */ }
+            }}
             onClose={() => { setShowMenu(false); setThemePreview(null); }}
             onArchivesChanged={reloadPosts}
             onThemePreview={setThemePreview}
