@@ -38,11 +38,12 @@ Core pieces:
 - Edge Functions are deployed with the Supabase CLI, setting `SUPABASE_ACCESS_TOKEN` from the right variable on each command, e.g. `SUPABASE_ACCESS_TOKEN="$SUPABASE_TOKEN_STAGING" supabase functions deploy <name> --project-ref vlgwcpqndmfhsfcxijpr`. Never export it for the whole shell, so a later command can't hit the wrong project.
 - Deploy to staging first. **Nothing goes to production without Oz's explicit OK.** Database changes still go through migrations and the GitHub integration, not these tokens.
 
-## Premium access
+## Access tiers (decision 50)
 
-- Premium is granted by admins only, via the `premium_grants` table (one row per user, `user_id`). Admins (rows in `admins`) are always premium.
-- The check is enforced server-side in `supabase/functions/_shared/premium.ts` (`hasPremium`), used by `structureStory`, `startGeneration`, `generateJobImage` and `generateImage`. Any new premium backend function must call it.
-- The client reads its access through the `my_access` database function (`myAccess()` in `src/api/storywallApi.js`) only to show/hide the Generate UI. Never gate premium features on client state alone, and never add access flags to the profile.
+- Three separate tiers: Free, **Lifetime** supporter (one-time) and **Premium** (subscription). Premium does not include Lifetime, nor the reverse. Admins (rows in `admins`) have every tier.
+- Until payments exist, tiers are granted by admins only: Premium via `premium_grants`, Lifetime via `lifetime_grants` (one row per user, `user_id`).
+- Enforced server-side in `supabase/functions/_shared/premium.ts`: `hasPremium` (used by `structureStory`, `startGeneration`, `generateJobImage` and `generateImage`) and `hasLifetime`. Any new tier-gated backend function must call the right one; database rules use `private.has_premium` / `private.has_lifetime`.
+- The client reads its access through the `my_access` database function (`myAccess()` in `src/api/storywallApi.js`: `is_admin`, `is_premium`, `is_lifetime`) only to show/hide UI. Never gate features on client state alone, and never add access flags to the profile.
 
 ## Card image export (admin-only, planned premium)
 

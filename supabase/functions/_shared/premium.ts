@@ -19,6 +19,21 @@ export async function hasPremium(admin: any, userId: string | undefined | null):
   return !!adminRow.data || !!grantRow.data;
 }
 
+// Lifetime supporter tier (decision 50): separate from Premium, so a
+// Lifetime feature checks this and a Premium feature checks hasPremium.
+// Admins have every tier.
+// deno-lint-ignore no-explicit-any
+export async function hasLifetime(admin: any, userId: string | undefined | null): Promise<boolean> {
+  if (!userId) return false;
+  const [adminRow, grantRow] = await Promise.all([
+    admin.from('admins').select('user_id').eq('user_id', userId).maybeSingle(),
+    admin.from('lifetime_grants').select('user_id').eq('user_id', userId).maybeSingle(),
+  ]);
+  if (adminRow.error) throw adminRow.error;
+  if (grantRow.error) throw grantRow.error;
+  return !!adminRow.data || !!grantRow.data;
+}
+
 // deno-lint-ignore no-explicit-any
 export async function isAdmin(admin: any, userId: string | undefined | null): Promise<boolean> {
   if (!userId) return false;

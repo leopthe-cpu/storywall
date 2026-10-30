@@ -155,12 +155,13 @@ export async function signOut() {
   return check(await getSupabase().auth.signOut({ scope: 'local' }));
 }
 
-// What the UI may show about the signed-in user: { is_admin, is_premium }.
+// What the UI may show about the signed-in user: { is_admin, is_premium,
+// is_lifetime } (tiers are separate, decision 50; admins have all three).
 export async function myAccess() {
-  if (!(await currentUser())) return { is_admin: false, is_premium: false };
+  if (!(await currentUser())) return { is_admin: false, is_premium: false, is_lifetime: false };
   const rows = check(await getSupabase().rpc('my_access'));
   const row = Array.isArray(rows) ? rows[0] : rows;
-  return { is_admin: !!row?.is_admin, is_premium: !!row?.is_premium };
+  return { is_admin: !!row?.is_admin, is_premium: !!row?.is_premium, is_lifetime: !!row?.is_lifetime };
 }
 
 // The signed-in user's own profile plus their email (from Supabase Auth,
