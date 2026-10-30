@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import CardCarousel from '@/components/creator/CardCarousel';
 import Tag from '@/components/profile/Tag';
 import { CardFormatProvider } from '@/components/creator/CardFormatContext';
+import { Pin } from '@/components/icons';
 
 export default function StoryCard({ post, selectedTags = [], onToggleTag, kebab, onTap }) {
   const hasTitle = !!post.title;
@@ -43,6 +44,12 @@ export default function StoryCard({ post, selectedTags = [], onToggleTag, kebab,
         <CardFormatProvider value={post.card_size}>
           <CardCarousel cards={post.cards} onTap={onTap} tokens={post.color_tokens} />
         </CardFormatProvider>
+        {/* Pinned to the top of the wall (decision 51), shown to everyone. */}
+        {post.pinned_at && (
+          <div className="absolute top-3 left-3 z-20 flex items-center gap-1 h-6 px-2 rounded-full text-[11px] font-medium text-white bg-black/30 backdrop-blur-sm pointer-events-none">
+            <Pin size={12} /> Pinned
+          </div>
+        )}
         {kebab && (
           <div className="absolute bottom-3 right-3 z-20">
             {kebab}

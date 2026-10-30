@@ -172,12 +172,15 @@ export default function PublicProfile() {
 
   const [selectedTags, setSelectedTags] = useState([]);
   const toggleTag = (tag) => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
-  // Display order: explicit display_order ascending, then stories without an
-  // explicit order fall back to created_at descending (newest first).
+  // Display order: pinned stories first (latest pin first, decision 51),
+  // then explicit display_order ascending, then stories without an explicit
+  // order by created_at descending (newest first).
   const sortedPosts = useMemo(() => {
-    const withOrder = posts.filter(p => p.display_order != null).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
-    const withoutOrder = posts.filter(p => p.display_order == null).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-    return [...withOrder, ...withoutOrder];
+    const pinned = posts.filter(p => p.pinned_at).sort((a, b) => new Date(b.pinned_at) - new Date(a.pinned_at));
+    const rest = posts.filter(p => !p.pinned_at);
+    const withOrder = rest.filter(p => p.display_order != null).sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    const withoutOrder = rest.filter(p => p.display_order == null).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    return [...pinned, ...withOrder, ...withoutOrder];
   }, [posts]);
   const visiblePosts = selectedTags.length === 0
     ? sortedPosts
@@ -247,6 +250,25 @@ export default function PublicProfile() {
     }
   };
 
+  // Pin or unpin a story. The 3-pin limit is checked here for a clear
+  // message, and enforced by the database (posts_check_pinned).
+  const togglePin = async (post) => {
+    const pinning = !post.pinned_at;
+    if (pinning && posts.filter(p => p.pinned_at).length >= 3) {
+      toast({ title: 'You can pin up to 3 stories', description: 'Unpin one first.' });
+      return;
+    }
+    const pinned_at = pinning ? new Date().toISOString() : null;
+    setPosts(prev => prev.map(p => (p.id === post.id ? { ...p, pinned_at } : p)));
+    try {
+      await updatePost(post.id, { pinned_at });
+    } catch (e) {
+      console.error('[PublicProfile] pin failed:', e);
+      setPosts(prev => prev.map(p => (p.id === post.id ? { ...p, pinned_at: post.pinned_at ?? null } : p)));
+      toast({ variant: 'destructive', title: pinning ? "Couldn't pin this story" : "Couldn't unpin this story", description: 'Please try again.' });
+    }
+  };
+
   const confirmDelete = async () => {
     const post = pendingDelete;
     setPendingDelete(null);
@@ -284,6 +306,8 @@ export default function PublicProfile() {
       onEdit={() => handleEditStory(post)}
       onDelete={() => setPendingDelete(post)}
       onArchive={() => handleArchiveStory(post)}
+      onTogglePin={String(post.id).startsWith('tpl') ? undefined : () => togglePin(post)}
+      pinned={!!post.pinned_at}
       onDownload={isAdmin ? () => setDownloadPost(post) : undefined}
     />
   ) : null;
