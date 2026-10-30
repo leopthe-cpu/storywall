@@ -1,13 +1,13 @@
 ---
 project: Storywall
 updated: 2026-10-30
-summary: On staging (develop), not yet released: per-card sizes (1:1, 4:5, 9:16, 16:9), long pastes continuing on new cards, iPhone (HEIC) photos, copy and paste between cards, a new loading font, a licences page, access tiers (Free, Lifetime, Premium), pinned stories, text highlights, profile colours for Lifetime, the Premium analytics screen and view counting (switched off until the privacy wording is OK'd). Next: the share screen after publishing, once Oz answers its questions.
+summary: On staging (develop), not yet released: per-card sizes (1:1, 4:5, 9:16, 16:9), long pastes continuing on new cards, iPhone (HEIC) photos, copy and paste between cards, a new loading font, a licences page, access tiers (Free, Lifetime, Premium), pinned stories, text highlights, profile colours for Lifetime, the Premium analytics screen with traffic sources, view counting (on in staging only), and the share screen after publishing with Premium image and LinkedIn PDF downloads. Next: Oz's phone tests, the privacy wording, then the release.
 ---
 
 ## Doing
-- [ ] View counting: all and unique views per story and card @claude #analytics
-  Merged and on staging, but switched off (VIEW_TRACKING_ENABLED). Location and link clicks come later.
-  Source: docs/decisions.md 34, 50, 51; PR 155
+- [ ] View counting: all and unique views per story and card, with traffic sources @claude #analytics
+  On in staging (2026-10-30; a test view with a source was counted, then deleted). Production waits for the privacy wording and Oz's OK. Location and link clicks come later.
+  Source: docs/decisions.md 34, 50, 51, 53; PRs 155, 164
 
 ## To do
 - [ ] Every story starts with a cover, and a new editorial design system @claude #builder #design
@@ -50,12 +50,6 @@ summary: On staging (develop), not yet released: per-card sizes (1:1, 4:5, 9:16,
   Source: docs/legal-and-privacy-plan.md Step 3
 - [ ] GDPR follow-up: records of processing, rights requests, DPIA, breach plan @claude #legal #later
   Source: docs/legal-and-privacy-plan.md Step 5
-- [ ] Share screen after publishing: copy link and caption; downloads (PNG, LinkedIn PDF) for Premium @claude #sharing
-  Waiting on Oz's answers (name, buttons, caption, when it shows). Also covers card-size step 4 (PNG at new sizes, PDF export).
-  Source: docs/decisions.md 45, 50
-- [ ] Traffic sources from a tag on shared links (?via=li/ig/x/email/link, referrer as fallback) @claude #analytics
-  Waiting on Oz's OK on the design.
-  Source: docs/decisions.md 34, 50
 - [ ] Dark mode (Lifetime), light/dark mode and glass profile effect (Premium) @claude #wall
   Source: docs/decisions.md 50
 - [ ] Links on cards (text link and preview widget) with safety checks, also for profile links @claude #sharing #security
@@ -64,17 +58,12 @@ summary: On staging (develop), not yet released: per-card sizes (1:1, 4:5, 9:16,
 - [ ] Payments for Lifetime (CA$4.99 one-time) and Premium (CA$8.99/month) @claude #payments #later
   Until then, admins grant tiers.
   Source: docs/decisions.md 50
-- [ ] Answer the share-screen questions (name, Free vs Premium buttons, caption, when it shows) @me #decision
-  Source: chat, 2026-10-29
-- [ ] Turn on view counting on staging: add the secret VIEW_TRACKING_ENABLED = true in the staging Supabase project @me #analytics
-  The agent's staging token can't set secrets.
-  Source: PR 155
 - [ ] Approve the Privacy Policy wording for view counting (or have the lawyer check it) before it goes live in production @me #legal #analytics
-  The policy says today that there are no analytics or tracking tools. Draft wording given in chat, 2026-10-30.
-  Source: docs/decisions.md 34
-- [ ] Test on a phone (staging): pin a story, highlight a word, paste a long text, add an iPhone (HEIC) photo, pick profile colours; and whether a left text box reopens with two taps @me #testing
-  Profile colours need a Lifetime grant (a lifetime_grants row) for the test account.
-  Source: PRs 147–158
+  The policy says today that there are no analytics or tracking tools. Draft wording given in chat, 2026-10-30, plus one line for traffic sources.
+  Source: docs/decisions.md 34, 53
+- [ ] Test on a phone (staging): pin a story, highlight a word, paste a long text, add an iPhone (HEIC) photo, pick profile colours, publish and share a story (link, caption, images, PDF), views and analytics; and whether a left text box reopens with two taps @me #testing
+  leopteh is admin, so it has every tier. Views only count from someone else (a private tab).
+  Source: PRs 147–164
 - [ ] Google Cloud account (for link safety checks) and a payment provider @me #later
   Source: docs/decisions.md 50
 - [ ] Per-person link previews for shared walls @claude #sharing
@@ -149,6 +138,12 @@ summary: On staging (develop), not yet released: per-card sizes (1:1, 4:5, 9:16,
 - [x] Text highlights (marker), colour picked by the user @claude #builder (2026-10-30)
   Live on staging. Still needs a check on a real iPhone.
   Source: docs/decisions.md 51; PR 156
+- [x] Share screen "Share your story" after publishing and in the story menu: link, editable caption; images and LinkedIn PDF for Premium @claude #sharing (2026-10-30)
+  On staging. Not yet checked on a real phone.
+  Source: docs/decisions.md 45, 53; PRs 161, 162, 163
+- [x] Traffic sources in Premium analytics (?via= tag on shared links, referring site otherwise) @claude #analytics (2026-10-30)
+  On staging (migration applied, recordView redeployed there).
+  Source: docs/decisions.md 53; PR 164
 - [x] Profile colours for Lifetime supporters: stored, shown on the wall, picked in Settings ("Profile theme") @claude #wall (2026-10-30)
   Live on staging (migration applied, getPublicProfile redeployed there).
   Source: docs/decisions.md 49–50; PRs 157, 158
