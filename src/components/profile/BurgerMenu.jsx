@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, LogOut, Archive, Download, BarChart, Palette, ChevronLeft, ChevronRight, Trash2, AlertCircle, Lock, Copy, Check, User } from '@/components/icons';
 import { getMe, signOut, filterPosts, updateMe } from '@/api/storywallApi';
@@ -11,13 +11,15 @@ import BusyLabel from '@/components/ui/BusyLabel';
 import { downloadMyData } from '@/lib/dataExport';
 import DeleteAccountSheet from '@/components/profile/DeleteAccountSheet';
 import ThemeSettings from '@/components/profile/ThemeSettings';
+import ProfileSettings from '@/components/profile/ProfileSettings';
 import { presetOf } from '@/lib/wallTheme';
 
 // onThemePreview / onThemeSaved: the Theme screen's live preview and saved
 // colours, applied by the wall. access: { isPremium, isLifetime } as the
 // wall already loaded them (my_access), so the perks show at once instead of
-// popping in after the menu opens. onEditProfile opens the profile editor.
-export default function BurgerMenu({ user, access, onClose, onArchivesChanged, onThemePreview, onThemeSaved, onEditProfile }) {
+// popping in after the menu opens. profile / allTags / onProfileSaved feed
+// the Profile screen (the wall's profile as shown, its skills, and saving).
+export default function BurgerMenu({ user, profile, allTags, access, onClose, onArchivesChanged, onThemePreview, onThemeSaved, onProfileSaved }) {
   const [currentUser, setCurrentUser] = useState(null);
   // null until the saved setting has loaded: the switch shows neither state
   // and ignores taps, so it never flashes "public" or flips the wrong way.
@@ -26,13 +28,26 @@ export default function BurgerMenu({ user, access, onClose, onArchivesChanged, o
   const [showAnalytics, setShowAnalytics] = useState(false);
   const navigate = useNavigate();
   const [archivedCount, setArchivedCount] = useState(0);
-  // Which screen of the panel is showing: home | account | theme | about.
+  // Which screen of the panel is showing: home | profile | account | theme | about.
   const [screen, setScreen] = useState('home');
+
+  // Unsaved changes (Oz, 2026-10-30): the Profile and Theme screens register
+  // a guard ({ isDirty, save, discard }). Going back, closing or tapping
+  // outside with unsaved edits first asks "Save your changes?" in a modal
+  // that blocks everything else until it's answered.
+  const guardRef = useRef(null);
+  const registerGuard = useCallback((guard) => { guardRef.current = guard; }, []);
+  const [pendingLeave, setPendingLeave] = useState(null); // the action waiting on the answer
+  const requestLeave = (action) => {
+    if (guardRef.current?.isDirty()) setPendingLeave(() => action);
+    else action();
+  };
   // Leaving Theme without saving puts the saved colours back on the wall.
-  const leaveScreen = () => {
+  const leaveScreen = () => requestLeave(() => {
     if (screen === 'theme') onThemePreview?.(null);
     setScreen('home');
-  };
+  });
+  const closeMenu = () => requestLeave(onClose);
   const handleThemeSaved = (theme) => {
     setCurrentUser((u) => (u ? { ...u, wall_theme: theme } : u));
     setSavedTheme(theme);
@@ -122,7 +137,7 @@ export default function BurgerMenu({ user, access, onClose, onArchivesChanged, o
           It now covers the whole screen and fades out as the panel leaves. */}
       <motion.div
         className="absolute inset-0 bg-black/30"
-        onClick={onClose}
+        onClick={closeMenu}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0, transition: { duration: 0.18, ease: 'easeIn' } }}
@@ -143,7 +158,7 @@ export default function BurgerMenu({ user, access, onClose, onArchivesChanged, o
         <PanelHeader
           title={SCREEN_TITLES[screen]}
           onBack={screen === 'home' ? null : leaveScreen}
-          onClose={onClose}
+          onClose={closeMenu}
           badge={screen === 'theme' ? 'Lifetime' : null}
         />
 
@@ -153,7 +168,7 @@ export default function BurgerMenu({ user, access, onClose, onArchivesChanged, o
               {/* Sections (Oz, 2026-10-30): Your wall, Stories, Your account,
                   Your perks (only what this person has), About. */}
               <Group title="Your wall">
-                <Row icon={<User size={20} />} label="Profile" sub="Photo, name, bio, links and skills" onClick={onEditProfile} />
+                <Row icon={<User size={20} />} label="Profile" sub="Photo, name, bio, links and skills" onClick={() => setScreen('profile')} />
               </Group>
 
               <Group title="Stories">
@@ -254,8 +269,12 @@ export default function BurgerMenu({ user, access, onClose, onArchivesChanged, o
             </div>
           )}
 
+          {screen === 'profile' && (
+            <ProfileSettings profile={profile || user} allTags={allTags} onSaved={onProfileSaved} registerGuard={registerGuard} />
+          )}
+
           {screen === 'theme' && currentUser && (
-            <ThemeSettings key={currentUser.id} currentUser={currentUser} onPreview={onThemePreview} onSaved={handleThemeSaved} />
+            <ThemeSettings key={currentUser.id} currentUser={currentUser} onPreview={onThemePreview} onSaved={handleThemeSaved} registerGuard={registerGuard} />
           )}
 
           {screen === 'about' && (
@@ -322,6 +341,26 @@ export default function BurgerMenu({ user, access, onClose, onArchivesChanged, o
 
       {showAnalytics && <AnalyticsModal onClose={() => setShowAnalytics(false)} />}
 
+      {pendingLeave && (
+        <UnsavedChangesModal
+          onSave={async () => {
+            const ok = await guardRef.current?.save();
+            if (!ok) return false;
+            const action = pendingLeave;
+            setPendingLeave(null);
+            action();
+            return true;
+          }}
+          onDiscard={() => {
+            guardRef.current?.discard();
+            const action = pendingLeave;
+            setPendingLeave(null);
+            action();
+          }}
+          onCancel={() => setPendingLeave(null)}
+        />
+      )}
+
       {showDelete && (
         <DeleteAccountSheet
           username={currentUser?.username || user?.username}
@@ -337,10 +376,42 @@ const PRIVACY_EMAIL = 'privacy@storywall.io';
 
 const SCREEN_TITLES = {
   home: 'Settings',
+  profile: 'Profile',
   account: 'Account',
   theme: 'Theme',
   about: 'Legal',
 };
+
+// "Save your changes?" Blocks the panel and the page under it (it covers
+// the whole screen, above the panel) until one of its buttons is chosen.
+function UnsavedChangesModal({ onSave, onDiscard, onCancel }) {
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const save = async () => {
+    setSaving(true);
+    setFailed(false);
+    const ok = await onSave();
+    if (!ok) { setFailed(true); setSaving(false); }
+  };
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/40" role="presentation">
+      <div role="alertdialog" aria-modal="true" aria-labelledby="unsaved-title" className="w-full sm:max-w-sm bg-[#FAF9F5] text-[#262624] rounded-t-3xl sm:rounded-3xl p-5 pb-7 flex flex-col gap-3">
+        <h2 id="unsaved-title" className="font-display text-2xl font-medium">Save your changes?</h2>
+        <p className="text-[15px] text-[#6B6964]">You have changes that aren&apos;t saved yet. If you leave now without saving, they&apos;ll be lost.</p>
+        {failed && <p className="text-[13px] text-red-700">Couldn&apos;t save. Check your connection and try again.</p>}
+        <button type="button" onClick={save} disabled={saving} className="h-12 rounded-lg bg-[#262624] text-[15px] font-medium text-[#F4F2EC] disabled:opacity-60">
+          <BusyLabel busy={saving} label="Saving…" tone="light" size={12}>Save changes</BusyLabel>
+        </button>
+        <button type="button" onClick={onDiscard} disabled={saving} className="h-12 rounded-lg border border-[#D6D2C7] bg-[#F4F2EC] text-[15px] font-medium text-red-700 disabled:opacity-60">
+          Discard changes
+        </button>
+        <button type="button" onClick={onCancel} disabled={saving} className="h-11 text-[15px] font-medium text-[#262624] disabled:opacity-60">
+          Keep editing
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function PanelHeader({ title, onBack, onClose, badge }) {
   return (
