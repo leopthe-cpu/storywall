@@ -1,11 +1,14 @@
+import { withVia } from '@/lib/visitSource';
+
 // The share screen ("Share your story", decision 53): the story's link and
 // a caption built from the author's own words. Nothing here rewrites them:
 // the caption is their cover headline as written, the link and their skill
 // tags as hashtags, and they can edit it before copying.
 
-// The author's wall, opening on this story (route /:username/:storyId).
+// The author's wall, opening on this story (route /:username/:storyId),
+// tagged ?via=link so its visits show as "Copied link" in analytics.
 export function storyShareUrl(username, postId, origin = window.location.origin) {
-  return `${origin}/${username}/${postId}`;
+  return withVia(`${origin}/${username}/${postId}`);
 }
 
 // The cover headline: the first text on the first card, as written (a
