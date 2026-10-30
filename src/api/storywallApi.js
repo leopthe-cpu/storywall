@@ -25,7 +25,7 @@ const PUBLIC_BUCKET = 'public-media';
 // these; username goes through the setUsername function).
 const PROFILE_FIELDS = [
   'full_name', 'display_name', 'headline', 'bio', 'location', 'profile_image',
-  'skills', 'links', 'is_private',
+  'skills', 'links', 'is_private', 'wall_theme',
 ];
 
 // Base44 record fields that have no column here. author_id is set by the
@@ -337,7 +337,7 @@ export async function invokeFunction(name, body) {
 // ---------- Walls
 
 // The same fields getPublicProfile returns for a public wall.
-const WALL_PROFILE_FIELDS = 'id, username, full_name, display_name, headline, bio, location, skills, links, profile_image';
+const WALL_PROFILE_FIELDS = 'id, username, full_name, display_name, headline, bio, location, skills, links, profile_image, wall_theme';
 const WALL_POST_FIELDS = 'id, author_id, title, status, cards, color_tokens, cover_image, tags, display_order, pinned_at, ai_generated, generation_style, card_size, created_at, updated_at';
 
 // A wall as the page shows it: { status: 'public' | 'private' | 'not_found',
