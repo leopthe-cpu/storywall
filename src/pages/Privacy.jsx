@@ -20,7 +20,7 @@ export default function Privacy() {
           <p>We collect what you give us to build your wall, plus the little we need to keep Storywall running and safe.</p>
           <p>No ads, no analytics trackers, and we never sell your data or use it to train AI.</p>
           <p>Your wall and published stories are public; drafts and Generate notes are private.</p>
-          <p>Download your data or delete your account any time in Settings → Privacy.</p>
+          <p>Download your data or delete your account any time in Settings → Account.</p>
         </>
       )}
     >
@@ -131,7 +131,7 @@ export default function Privacy() {
           'withdraw any consent you gave, without affecting what we did before.',
         ]} />
         <p>
-          You can do most of this yourself: edit your profile on your wall, and use Settings → Privacy to download your
+          You can do most of this yourself: edit your profile on your wall, and use Settings → Account to download your
           data or delete your account. For anything else, email {mail}. We answer within 30 days and may need to confirm
           it&apos;s you first. We won&apos;t treat you differently for using your rights.
         </p>

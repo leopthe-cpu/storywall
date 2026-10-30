@@ -116,7 +116,7 @@ export default function Terms() {
 
       <Section title="9. Leaving, suspension and closure">
         <List items={[
-          'You can delete your account at any time in Settings → Privacy. This deletes your profile, stories, drafts, notes and files. You can download your data first.',
+          'You can delete your account at any time in Settings → Account. This deletes your profile, stories, drafts, notes and files. You can download your data first.',
           'We may remove content or suspend or close an account that breaks these Terms or the law, or that puts others at risk. Where we reasonably can, we will tell you why and give you a chance to reply.',
           'If we ever shut Storywall down, we will give you reasonable notice and time to download your data.',
         ]} />

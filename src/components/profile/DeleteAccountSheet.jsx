@@ -4,7 +4,7 @@ import { X } from '@/components/icons';
 import { deleteMyAccount, signOut } from '@/api/storywallApi';
 import BusyLabel from '@/components/ui/BusyLabel';
 
-// "Delete my account" confirmation (Settings → Privacy). Deleting can't be
+// "Delete my account" confirmation (Settings → Account). Deleting can't be
 // undone, so the user types their username back (the server checks it too)
 // and is offered "Download my data" first.
 export default function DeleteAccountSheet({ username, onClose, onDownload }) {

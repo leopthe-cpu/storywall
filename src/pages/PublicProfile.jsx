@@ -620,6 +620,8 @@ export default function PublicProfile() {
         {showMenu && (
           <BurgerMenu
             user={profileUser}
+            access={{ isPremium, isLifetime }}
+            onEditProfile={() => { setShowMenu(false); setThemePreview(null); setShowEdit(true); }}
             onClose={() => { setShowMenu(false); setThemePreview(null); }}
             onArchivesChanged={reloadPosts}
             onThemePreview={setThemePreview}

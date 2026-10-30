@@ -107,6 +107,7 @@ export const AlignCenter = wrap(I.AlignCenter, 'AlignCenter');
 export const AlignRight = wrap(I.AlignRight, 'AlignRight');
 export const Pipette = wrap(I.ColorPicker, 'Pipette');
 export const Palette = wrap(I.Palette, 'Palette');
+export const User = wrap(I.User, 'User');
 export const Eraser = wrap(I.Erase, 'Eraser');
 export const FlaskConical = wrap(I.TestTube, 'FlaskConical');
 export const PanelLeft = wrap(I.LayoutLeft, 'PanelLeft');
