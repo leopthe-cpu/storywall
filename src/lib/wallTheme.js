@@ -11,6 +11,28 @@ import { hexToRgb, rgbToHex, contrastRatio } from '@/lib/colorContrast';
 
 export const HEX = /^#[0-9a-fA-F]{6}$/;
 export const PLAIN_THEME = { bg: '#F4F2EC', text: '#262624', tag: '#FFFFFF' };
+
+// Ready-made themes in Settings → Theme (Oz, 2026-10-30, like Slack's
+// themes): a starting point the owner can then change colour by colour.
+// Only the three colours are saved, never the preset's name, so a wall whose
+// colours match a preset shows it as picked.
+export const THEME_PRESETS = [
+  { id: 'plain', name: 'Plain', ...PLAIN_THEME },
+  { id: 'graphite', name: 'Graphite', bg: '#262624', text: '#F4F2EC', tag: '#3A3935' },
+  { id: 'sage', name: 'Sage', bg: '#E7EDE4', text: '#23302A', tag: '#C9D8C2' },
+  { id: 'ocean', name: 'Ocean', bg: '#E3ECF3', text: '#17324A', tag: '#BBD3E6' },
+  { id: 'clay', name: 'Clay', bg: '#F3E6DC', text: '#3B2418', tag: '#E3B79A' },
+  { id: 'blush', name: 'Blush', bg: '#F6E4E6', text: '#3A1F26', tag: '#EBC1C9' },
+  { id: 'midnight', name: 'Midnight', bg: '#14213D', text: '#F4F2EC', tag: '#FCA311' },
+  { id: 'forest', name: 'Forest', bg: '#1E2D24', text: '#EDEBDD', tag: '#A3B18A' },
+];
+
+const sameTheme = (a, b) => !!a && !!b && ['bg', 'text', 'tag'].every((k) => a[k]?.toUpperCase() === b[k]?.toUpperCase());
+
+// The preset whose colours these are, or null (custom colours).
+export function presetOf(theme) {
+  return THEME_PRESETS.find((p) => sameTheme(p, theme || PLAIN_THEME)) || null;
+}
 const TOPBAR_DARK = '#262624';
 const TOPBAR_LIGHT = '#F4F2EC';
 
