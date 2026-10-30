@@ -601,7 +601,8 @@ export default function StoryCreator() {
     const { width } = getTextBoxLayout(el, height);
     const pieces = splitForCards(rest, el, width, height, maxSize);
     const added = pieces.map((piece) => {
-      const { displayHeight: _h, ...style } = el;
+      // Highlights are offsets into the original box's text, so they stay there.
+      const { displayHeight: _h, highlights: _hl, ...style } = el;
       return {
         ...src,
         id: `card-${Date.now()}-${Math.random().toString(36).slice(2)}`,

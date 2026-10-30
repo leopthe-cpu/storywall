@@ -14,6 +14,7 @@ import PixelSpinner from '@/components/ui/PixelSpinner';
 import { cssFontFamily } from '@/lib/fontLibrary';
 import { textLineHeight } from '@/lib/cardLayout';
 import { MIN_TYPING_FONT, cutAtWord } from '@/lib/textOverflow';
+import { HighlightedText, remapHighlights, applyHighlight, removeHighlightRange, setActiveTextEditor, clearActiveTextEditor } from '@/lib/textHighlights';
 
 // Corner handles (blue circles) resize the display box (displayWidth/Height).
 // Edge handles (green pills) crop (clipTop/Bottom/Left/Right). The two sets
@@ -187,6 +188,12 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
   const prevContentRef = useRef(element.content || '');
   // True while handleInput runs for a paste (see handlePaste).
   const pastingRef = useRef(false);
+  // The latest element, for commits from effects and listeners.
+  const elementRef = useRef(element);
+  elementRef.current = element;
+  // Highlights set from the Text panel while typing, saved with the text
+  // on the commit that follows (see highlightSelection below).
+  const pendingHighlightsRef = useRef(null);
   const hasSizedRef = useRef(false);
   // Mirrors of `editing` and the latest onUpdate, readable from the unmount
   // cleanup below (which otherwise only sees the first render's values).
@@ -289,11 +296,62 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
   // missing from every save. So: commit when the box is deselected while
   // still editing, and as a last resort when it unmounts mid-edit. Reads the
   // live DOM text when available, else the last text handleInput recorded.
+  // Highlights follow the words as the text is edited (textHighlights.jsx).
+  const highlightsFor = (text) => {
+    const pending = pendingHighlightsRef.current;
+    pendingHighlightsRef.current = null;
+    if (pending) return pending;
+    const el = elementRef.current;
+    return el.highlights?.length ? remapHighlights(el.highlights, el.content || '', text) : undefined;
+  };
   const commitLiveText = () => {
     const node = contentRef.current;
     const text = node ? node.innerText : prevContentRef.current;
-    onUpdateRef.current?.({ content: text, font_size_locked: true });
+    const highlights = highlightsFor(text);
+    onUpdateRef.current?.({ content: text, font_size_locked: true, ...(highlights ? { highlights } : null) });
   };
+
+  // While this box is being typed into, the Text panel can highlight the
+  // words selected in it. The selection is measured in the same text that
+  // gets saved (innerText): two marker characters are dropped in at its
+  // ends, found in innerText, and taken out again. Then the box commits, so
+  // the highlight shows at once (highlights aren't drawn while typing).
+  useEffect(() => {
+    if (!editing || element.type !== 'text') return undefined;
+    const editor = {
+      elementId: element.id,
+      highlightSelection(color) {
+        const node = contentRef.current;
+        const sel = window.getSelection();
+        if (!node || !sel?.rangeCount) return false;
+        const range = sel.getRangeAt(0);
+        if (range.collapsed || !node.contains(range.startContainer) || !node.contains(range.endContainer)) return false;
+        const startAt = range.cloneRange(); startAt.collapse(true);
+        const endAt = range.cloneRange(); endAt.collapse(false);
+        const endMark = document.createTextNode('\uE001');
+        const startMark = document.createTextNode('\uE000');
+        endAt.insertNode(endMark);
+        startAt.insertNode(startMark);
+        const marked = node.innerText;
+        startMark.remove();
+        endMark.remove();
+        node.normalize();
+        const start = marked.indexOf('\uE000');
+        const end = marked.indexOf('\uE001') - 1;
+        if (start < 0 || end <= start) return false;
+        const text = node.innerText;
+        const el = elementRef.current;
+        const base = remapHighlights(el.highlights, el.content || '', text);
+        pendingHighlightsRef.current = color
+          ? applyHighlight(base, start, end, color, text.length)
+          : removeHighlightRange(base, start, end);
+        node.blur();
+        return true;
+      },
+    };
+    setActiveTextEditor(editor);
+    return () => clearActiveTextEditor(editor);
+  }, [editing, element.id, element.type]);
   useEffect(() => {
     if (isSelected || !editing) return;
     const node = contentRef.current;
@@ -1026,6 +1084,8 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
     const text = e.target.innerText;
     prevContentRef.current = text;
     const updates = { content: text };
+    const highlights = highlightsFor(text);
+    if (highlights) updates.highlights = highlights;
     // Any manual edit locks the font size wherever it currently sits. The
     // content-aware auto-estimate below (computeEstimatedFontSize) is only
     // meant to size an AI Generate-mode card's text on its initial, unedited
@@ -1380,7 +1440,9 @@ export default function DraggableElement({ element, scale = 1, isSelected, onSel
               spans can't be edited sanely), then re-warps on blur. */}
           {showWarp
             ? <WarpedText text={element.content || ''} warp={element.text_warp} amount={element.text_warp_amount} decoration={textDeco} />
-            : (element.content || '')}
+            : editing
+              ? (element.content || '')
+              : <HighlightedText text={element.content || ''} highlights={element.highlights} />}
         </div>
         {isEmpty && (
           <div

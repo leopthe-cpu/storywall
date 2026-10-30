@@ -9,6 +9,7 @@ import { getTextBoxLayout } from '@/lib/textLayout';
 import { getImageDisplayDims } from '@/lib/imageLayout';
 import { buildOverlayStyle, buildBlurOverlayStyle } from '@/lib/mediaOverlay';
 import WarpedText from './WarpedText';
+import { HighlightedText } from '@/lib/textHighlights';
 import { cssFontFamily } from '@/lib/fontLibrary';
 import { textLineHeight } from '@/lib/cardLayout';
 
@@ -165,7 +166,7 @@ export default function CardThumb({ card, displaySize = 64, autoplay = false, to
                 
                 {warped
                   ? <WarpedText text={el.content || ''} warp={el.text_warp} amount={el.text_warp_amount} decoration={textDeco} />
-                  : (el.content || '')}
+                  : <HighlightedText text={el.content || ''} highlights={el.highlights} />}
               </div>
             </div>);
 
