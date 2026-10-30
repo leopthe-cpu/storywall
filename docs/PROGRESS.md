@@ -1,13 +1,13 @@
 ---
 project: Storywall
-updated: 2026-10-26
-summary: Storywall runs on Railway + Supabase at storywall.io. The Oct 23 release brought the age/Terms consent box, the text-box move fix, the Terms and Privacy pages and faster page loads. Next is the card-format work (4:5 cards, PDF export, a cover on every story, a new design system) for Instagram and LinkedIn carousels.
+updated: 2026-10-30
+summary: On staging (develop), not yet released: per-card sizes (1:1, 4:5, 9:16, 16:9), long pastes continuing on new cards, iPhone (HEIC) photos, copy and paste between cards, a new loading font, a licences page, access tiers (Free, Lifetime, Premium), pinned stories, text highlights, profile colours for Lifetime, the Premium analytics screen and view counting (switched off until the privacy wording is OK'd). Next: the share screen after publishing, once Oz answers its questions.
 ---
 
 ## Doing
-- [ ] Card sizes: 4:5 portrait cards as the default, per-story size, PDF export @claude #builder #marketing
-  Plan in 6 steps (size field and geometry, every renderer, templates/Generate, PNG + PDF export, ticket style, Oz's stories at 4:5).
-  Source: docs/decisions.md 45
+- [ ] View counting: all and unique views per story and card @claude #analytics
+  Merged and on staging, but switched off (VIEW_TRACKING_ENABLED). Location and link clicks come later.
+  Source: docs/decisions.md 34, 50, 51; PR 155
 
 ## To do
 - [ ] Every story starts with a cover, and a new editorial design system @claude #builder #design
@@ -50,9 +50,33 @@ summary: Storywall runs on Railway + Supabase at storywall.io. The Oct 23 releas
   Source: docs/legal-and-privacy-plan.md Step 3
 - [ ] GDPR follow-up: records of processing, rights requests, DPIA, breach plan @claude #legal #later
   Source: docs/legal-and-privacy-plan.md Step 5
-- [ ] Visitor tracking: wall views, story views, link clicks @claude #analytics
-  The first thing to build after the migration (decision 34). Check the privacy-notice wording first.
-  Source: docs/migration-plan.md "After migration" 4; docs/decisions.md 34
+- [ ] Share screen after publishing: copy link and caption; downloads (PNG, LinkedIn PDF) for Premium @claude #sharing
+  Waiting on Oz's answers (name, buttons, caption, when it shows). Also covers card-size step 4 (PNG at new sizes, PDF export).
+  Source: docs/decisions.md 45, 50
+- [ ] Traffic sources from a tag on shared links (?via=li/ig/x/email/link, referrer as fallback) @claude #analytics
+  Waiting on Oz's OK on the design.
+  Source: docs/decisions.md 34, 50
+- [ ] Dark mode (Lifetime), light/dark mode and glass profile effect (Premium) @claude #wall
+  Source: docs/decisions.md 50
+- [ ] Links on cards (text link and preview widget) with safety checks, also for profile links @claude #sharing #security
+  Needs Oz's Google Cloud account for the link check (Web Risk).
+  Source: feature brief from the Popmart chat, 2026-10-29
+- [ ] Payments for Lifetime (CA$4.99 one-time) and Premium (CA$8.99/month) @claude #payments #later
+  Until then, admins grant tiers.
+  Source: docs/decisions.md 50
+- [ ] Answer the share-screen questions (name, Free vs Premium buttons, caption, when it shows) @me #decision
+  Source: chat, 2026-10-29
+- [ ] Turn on view counting on staging: add the secret VIEW_TRACKING_ENABLED = true in the staging Supabase project @me #analytics
+  The agent's staging token can't set secrets.
+  Source: PR 155
+- [ ] Approve the Privacy Policy wording for view counting (or have the lawyer check it) before it goes live in production @me #legal #analytics
+  The policy says today that there are no analytics or tracking tools. Draft wording given in chat, 2026-10-30.
+  Source: docs/decisions.md 34
+- [ ] Test on a phone (staging): pin a story, highlight a word, paste a long text, add an iPhone (HEIC) photo, pick profile colours; and whether a left text box reopens with two taps @me #testing
+  Profile colours need a Lifetime grant (a lifetime_grants row) for the test account.
+  Source: PRs 147–158
+- [ ] Google Cloud account (for link safety checks) and a payment provider @me #later
+  Source: docs/decisions.md 50
 - [ ] Per-person link previews for shared walls @claude #sharing
   Also replace Base44's old stored description.
   Source: docs/migration-plan.md "After migration" 1; docs/decisions.md 10
@@ -100,6 +124,37 @@ summary: Storywall runs on Railway + Supabase at storywall.io. The Oct 23 releas
   Source: CLAUDE.md "Open items / backlog"
 
 ## Done
+- [x] Card sizes per card: 1:1, 4:5, 9:16, 16:9; format chooser in the Cards gallery @claude #builder (2026-10-27)
+  Source: docs/decisions.md 45, 48; PRs 141–145
+- [x] Wall colours as named tokens (no visible change) @claude #wall (2026-10-28)
+  Source: docs/decisions.md 49; PR 146
+- [x] A paste too long for its text box continues on new cards; pastes come in as plain text @claude #builder (2026-10-28)
+  Source: PR 147
+- [x] iPhone (HEIC) photos converted to JPEG before upload @claude #builder (2026-10-28)
+  Source: PR 148
+- [x] Copy an element and paste it onto any card (menu and Ctrl/Cmd+C/V) @claude #builder (2026-10-29)
+  Source: PR 149
+- [x] Loading-screen percentage uses Micro 5 (free, SIL OFL), picked by Oz @claude #brand (2026-10-29)
+  Source: PR 150
+- [x] Open-source licences page at /about/licenses @claude #legal (2026-10-29)
+  Source: PR 151
+- [x] Decisions 50–52: tiers and prices, views, pins, highlights, cover rule @me #decision (2026-10-30)
+  Source: PR 152
+- [x] Access tiers: Lifetime grant next to Premium, enforced on the server @claude #access (2026-10-30)
+  Live on staging.
+  Source: docs/decisions.md 50; PR 153
+- [x] Pin up to 3 stories to the top of a wall @claude #wall (2026-10-30)
+  Live on staging (getPublicProfile redeployed there).
+  Source: docs/decisions.md 51; PR 154
+- [x] Text highlights (marker), colour picked by the user @claude #builder (2026-10-30)
+  Live on staging. Still needs a check on a real iPhone.
+  Source: docs/decisions.md 51; PR 156
+- [x] Profile colours for Lifetime supporters: stored, shown on the wall, picked in Settings ("Profile theme") @claude #wall (2026-10-30)
+  Live on staging (migration applied, getPublicProfile redeployed there).
+  Source: docs/decisions.md 49–50; PRs 157, 158
+- [x] Premium analytics screen (first version: totals, a 30-day chart per story, views per card, where readers stop) @claude #analytics (2026-10-30)
+  On staging. Tested in a browser with made-up numbers; real numbers need view counting on.
+  Source: docs/decisions.md 34, 50, 51; PR 159
 - [x] Release the staging batch to production @me #release
   Released 2026-10-21 to 2026-10-23 (PRs 126, 129, 137): loading screens, templates, theme picker, data export, account deletion, age gate and consent box, Terms/Privacy, change password, www redirect, faster loads, text-box move fix. Live on storywall.io (Railway deploy of main, 2026-10-23).
   Source: PRs 126, 129, 137
