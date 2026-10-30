@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, LogOut, Archive, Download } from '@/components/icons';
+import { X, LogOut, Archive, Download, BarChart } from '@/components/icons';
 import { getMe, signOut, filterPosts, updateMe } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
 import EditableUsername from '@/components/profile/EditableUsername';
 import ArchivesModal from '@/components/profile/ArchivesModal';
+import AnalyticsModal from '@/components/profile/AnalyticsModal';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { downloadMyData } from '@/lib/dataExport';
 import DeleteAccountSheet from '@/components/profile/DeleteAccountSheet';
@@ -19,6 +20,7 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged, onThemePr
   // and ignores taps, so it never flashes "public" or flips the wrong way.
   const [isPrivate, setIsPrivate] = useState(null);
   const [showArchives, setShowArchives] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const navigate = useNavigate();
   const [archivedCount, setArchivedCount] = useState(0);
 
@@ -79,7 +81,7 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged, onThemePr
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      {!showArchives && (
+      {!showArchives && !showAnalytics && (
         <>
       {/* Backdrop — fades with the panel. It used to be a plain div that
           stayed fully dark until the panel's spring finished settling (a
@@ -142,6 +144,20 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged, onThemePr
           {/* Content */}
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Content</p>
+            {/* Premium analytics (decision 50). The data function returns
+                nothing to anyone else, so hiding the row is cosmetic. */}
+            {currentUser?.is_premium && (
+              <button
+                onClick={() => setShowAnalytics(true)}
+                className="w-full flex items-center justify-between py-2 group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <BarChart size={16} className="text-gray-400 group-hover:text-gray-600" />
+                  <p className="text-sm font-medium text-gray-900">Analytics</p>
+                </div>
+                <span className="text-xs text-gray-300">›</span>
+              </button>
+            )}
             <button
               onClick={() => setShowArchives(true)}
               className="w-full flex items-center justify-between py-2 group"
@@ -247,6 +263,8 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged, onThemePr
       {showArchives && (
         <ArchivesModal onClose={() => setShowArchives(false)} onRestored={onArchivesChanged} />
       )}
+
+      {showAnalytics && <AnalyticsModal onClose={() => setShowAnalytics(false)} />}
 
       {showDelete && (
         <DeleteAccountSheet

@@ -366,6 +366,13 @@ export async function myStoryViewTotals() {
   return Object.fromEntries(rows.map((r) => [r.post_id, Number(r.unique_views) || 0]));
 }
 
+// The signed-in Premium author's daily story and card views (decisions 34,
+// 50): rows { post_id, day, card_index, views, unique_views }. Empty for
+// everyone else (the database decides).
+export async function myStoryAnalytics(days = 90) {
+  return check(await getSupabase().rpc('my_story_analytics', { p_days: days })) || [];
+}
+
 // ---------- File uploads (each user writes only inside their own folder)
 
 function fileExtension(file) {

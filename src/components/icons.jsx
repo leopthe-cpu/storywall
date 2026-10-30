@@ -93,6 +93,7 @@ export const Download = wrap(I.Download, 'Download');
 export const Archive = wrap(I.Archive, 'Archive');
 export const Pin = wrap(I.Pin, 'Pin');
 export const Eye = wrap(I.Eye, 'Eye');
+export const BarChart = wrap(I.StatsReport, 'BarChart');
 export const PinSlash = wrap(I.PinSlash, 'PinSlash');
 export const FolderOpen = wrap(I.Folder, 'FolderOpen');
 export const FileEdit = wrap(I.PageEdit, 'FileEdit');
