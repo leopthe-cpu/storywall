@@ -1,6 +1,7 @@
 import { withSupabase } from 'npm:@supabase/server@1.9.1';
 import { getClientIP, isRateLimited, isRateLimitedShared } from '../_shared/rateLimit.ts';
 import { isAllowedUsername, normalizeUsername } from '../_shared/username.ts';
+import { hasLifetime } from '../_shared/premium.ts';
 
 // A wall's public data. Port of base44/functions/getPublicProfile.
 // Callable without signing in (anyone with a wall link), rate-limited per IP.
@@ -11,7 +12,7 @@ import { isAllowedUsername, normalizeUsername } from '../_shared/username.ts';
 // Body: { username }
 
 const PROFILE_FIELDS =
-  'id, username, full_name, display_name, headline, bio, location, skills, links, profile_image, is_private';
+  'id, username, full_name, display_name, headline, bio, location, skills, links, profile_image, is_private, wall_theme';
 const POST_FIELDS =
   'id, author_id, title, status, cards, color_tokens, cover_image, tags, display_order, pinned_at, ai_generated, generation_style, card_size, created_at, updated_at';
 
@@ -48,6 +49,10 @@ export default {
         .eq('author_id', profile.id).eq('status', 'published')
         .order('created_at', { ascending: false }).limit(50);
       if (postsError) throw postsError;
+
+      // Profile colours show only while the owner is a Lifetime supporter
+      // (decisions 49, 50); saved colours are kept if that ends.
+      if (profile.wall_theme && !(await hasLifetime(ctx.supabaseAdmin, profile.id))) profile.wall_theme = null;
 
       const { is_private: _ignored, ...user } = profile;
       return Response.json({ status: 'public', user, posts: posts ?? [] }, { status: 200 });

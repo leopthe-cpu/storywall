@@ -59,9 +59,10 @@ Core pieces:
 - It refuses (with a message) rather than exporting broken cards when an image hasn't loaded or its host blocks CORS. Not captured: the "Blur" photo overlay (backdrop-filter); videos export their current frame.
 - When it becomes a premium feature, gate it with premium access like Generate — it's client-only, so there's no server check to add.
 
-## Wall colours (premium wall theme, decision 49)
+## Wall colours (profile colours: decision 49, Lifetime per decision 50)
 
-- The public wall's colours are CSS variables (`--wall-*` in `src/index.css`, used as `wall-*` Tailwind colours, e.g. `text-wall-text-2`, `bg-wall-btn`). Their defaults are the plain theme; a premium theme replaces them for one wall. Use them for anything new on the wall page instead of fixed colours. Not themed: the hero card's text over the photo, story cards, red for errors, owner-only dialogs and sheets.
+- The public wall's colours are CSS variables (`--wall-*` in `src/index.css`, used as `wall-*` Tailwind colours, e.g. `text-wall-text-2`, `bg-wall-btn`). Their defaults are the plain theme. Use them for anything new on the wall page instead of fixed colours. Not themed: the hero card's text over the photo, story cards, red for errors, owner-only dialogs and sheets.
+- A Lifetime supporter's colours are `profiles.wall_theme` (`{ bg, text, tag }`, hex). Setting them needs Lifetime, checked by the database (`profiles_check_wall_theme`); `getPublicProfile` returns them only while the owner has Lifetime. `src/lib/wallTheme.js` turns the three colours into all the `--wall-*` variables (applied on the wall's root element) and switches the top bar and logo to light on dark backgrounds.
 
 ## Old gotcha (Base44 only): the schema stripped undeclared fields
 

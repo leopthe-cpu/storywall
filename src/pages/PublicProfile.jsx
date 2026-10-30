@@ -8,6 +8,7 @@ import StoryKebab from '@/components/profile/StoryKebab';
 import DeleteStoryModal from '@/components/profile/DeleteStoryModal';
 import EditProfileModal from '@/components/profile/EditProfileModal';
 import BurgerMenu from '@/components/profile/BurgerMenu';
+import { wallThemeVars, wallTopbarIsLight } from '@/lib/wallTheme';
 import { useToast } from '@/components/ui/use-toast';
 import ProfileEmptyState from '@/components/profile/ProfileEmptyState';
 import ShareUrlModal from '@/components/profile/ShareUrlModal';
@@ -348,8 +349,11 @@ export default function PublicProfile() {
     <div
       className="min-h-screen relative"
       style={{
-        // Wall colours are CSS variables (--wall-*, src/index.css), so a
-        // profile theme can change them for this wall.
+        // Wall colours are CSS variables (--wall-*, src/index.css); a
+        // Lifetime supporter's profile colours replace them for this wall
+        // (wallTheme.js). getPublicProfile only returns colours while the
+        // owner has Lifetime.
+        ...wallThemeVars(profile?.wall_theme),
         background: 'var(--wall-bg)',
         backgroundImage: 'linear-gradient(var(--wall-grid) 1px, transparent 1px), linear-gradient(90deg, var(--wall-grid) 1px, transparent 1px)',
         backgroundSize: '38px 38px',
@@ -406,7 +410,7 @@ export default function PublicProfile() {
           className="hidden lg:block absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
           style={{ left: `calc((100% - ${DESKTOP_BLOCK_WIDTH}px) / 4)` }}
         >
-          <img src="/logo-slash-ink.png" alt="Storywall" className="h-[18px] w-auto" />
+          <img src={wallTopbarIsLight(profile?.wall_theme) ? '/logo-slash-light.png' : '/logo-slash-ink.png'} alt="Storywall" className="h-[18px] w-auto" />
         </Link>
         <div className="mx-auto px-4 md:px-8 flex items-center justify-between" style={{ maxWidth: DESKTOP_CONTAINER_WIDTH }}>
           <span className="text-sm font-mono tracking-tight" style={{ color: HEADER_INK }}>
