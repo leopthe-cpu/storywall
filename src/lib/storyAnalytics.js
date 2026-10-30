@@ -66,3 +66,23 @@ export function summarizeViews(rows, posts, { days = 30, today } = {}) {
     stories,
   };
 }
+
+// Names for traffic sources (decision 53): share-link tags, "direct", and
+// otherwise the referring site's domain as is.
+const SOURCE_NAMES = { li: 'LinkedIn', ig: 'Instagram', x: 'X', email: 'Email', link: 'Copied link', direct: 'Direct or unknown' };
+export const sourceName = (source) => SOURCE_NAMES[source] || source;
+
+// Story views per source over the last `days` days, most first, for the
+// published stories in `posts`: [{ source, name, views }].
+export function summarizeSources(rows, posts, { days = 30, today } = {}) {
+  const published = new Set((posts || []).map((p) => p.id));
+  const since = lastDays(days, today)[0];
+  const totals = new Map();
+  for (const r of rows || []) {
+    if (!published.has(r.post_id) || r.day < since) continue;
+    totals.set(r.source, (totals.get(r.source) || 0) + r.views);
+  }
+  return [...totals.entries()]
+    .map(([source, views]) => ({ source, name: sourceName(source), views }))
+    .sort((a, b) => b.views - a.views);
+}

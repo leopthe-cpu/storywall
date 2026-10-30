@@ -14,10 +14,19 @@ import { getClientIP, isRateLimited, isRateLimitedShared } from '../_shared/rate
 // - Off unless the VIEW_TRACKING_ENABLED secret is "true": tracking must not
 //   go live before the privacy notice is checked (decision 34), so it is
 //   switched on per project (staging first).
-// Body: { post_id, card_index? }  →  204, always (a visitor never needs an
-// answer, and failures must not show on the wall).
+// Body: { post_id, card_index?, source? }  →  204, always (a visitor never
+// needs an answer, and failures must not show on the wall).
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Where a story view came from (decision 53): a share-link tag, "direct",
+// or the domain of the site the visitor came from. Anything else is dropped
+// (the view still counts, without a source).
+const SOURCE_TAGS = new Set(['li', 'ig', 'x', 'email', 'link', 'direct']);
+const DOMAIN = /^(?=.{1,100}$)[a-z0-9-]+(\.[a-z0-9-]+)+$/;
+const cleanSource = (value: unknown): string | null => {
+  const s = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  return SOURCE_TAGS.has(s) || DOMAIN.test(s) ? s : null;
+};
 const done = () => new Response(null, { status: 204 });
 
 export default {
@@ -45,6 +54,7 @@ export default {
       const visitor = `${ip}|${req.headers.get('user-agent') || ''}`;
       const { error: recordError } = await ctx.supabaseAdmin.rpc('record_story_view', {
         p_post_id: postId, p_card_index: cardIndex, p_visitor: visitor,
+        p_source: cardIndex === -1 ? cleanSource(body?.source) : null,
       });
       if (recordError) throw recordError;
       return done();

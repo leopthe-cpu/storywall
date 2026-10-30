@@ -51,6 +51,7 @@ Core pieces:
 - All and unique views per day in `story_view_days` (`card_index` -1 = the story). Unique = a hash of address + browser with a daily secret; the secret and the day's hashes are deleted after the day, so nothing personal is kept.
 - Off unless the function secret `VIEW_TRACKING_ENABLED` is `true` (set per project; production only with Oz's OK, after the privacy notice is checked).
 - Lifetime owners see each story's unique views on their wall (`my_story_view_totals`).
+- Traffic sources (decision 53): links copied from Storywall carry `?via=` (`li`, `ig`, `x`, `email`, `link`; `withVia` in `src/lib/visitSource.js`). The wall reads it once per page load and removes it from the address bar; without it, the referring site's domain, else `direct`. Story views send it as `source`; `record_story_view` counts it per day in `story_source_days`; Premium reads it through `my_story_sources` ("Where your visitors came from" in Analytics).
 
 ## Share screen and card image export (decision 53)
 

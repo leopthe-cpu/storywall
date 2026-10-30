@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { X } from '@/components/icons';
-import { getMe, filterPosts, myStoryAnalytics } from '@/api/storywallApi';
+import { getMe, filterPosts, myStoryAnalytics, myStorySources } from '@/api/storywallApi';
 import SectionLoader from '@/components/ui/SectionLoader';
 import { withTimeout } from '@/lib/imageOptimize';
-import { summarizeViews } from '@/lib/storyAnalytics';
+import { summarizeViews, summarizeSources } from '@/lib/storyAnalytics';
 
 // The Premium analytics screen, first version (decisions 34, 50): a list of
 // totals from the view counts (story and card views, all and unique), the
@@ -15,7 +15,7 @@ import { summarizeViews } from '@/lib/storyAnalytics';
 
 const LOAD_TIMEOUT_MS = 15000;
 const DAYS = 30;
-const COMING = ['Reading time', 'Keywords people found you by', 'Profile visits, with city and time', 'Where your visitors came from'];
+const COMING = ['Reading time', 'Keywords people found you by', 'Profile visits, with city and time'];
 
 const fmt = (n) => Number(n || 0).toLocaleString();
 
@@ -80,14 +80,15 @@ export default function AnalyticsModal({ onClose }) {
     setLoading(true);
     setLoadError(false);
     try {
-      const [rows, posts] = await withTimeout((async () => {
+      const [rows, posts, sources] = await withTimeout((async () => {
         const user = await getMe();
         return Promise.all([
           myStoryAnalytics(DAYS),
           filterPosts({ author_id: user.id, status: 'published' }, '-created_at', 100),
+          myStorySources(DAYS),
         ]);
       })(), LOAD_TIMEOUT_MS);
-      setSummary(summarizeViews(rows, posts, { days: DAYS }));
+      setSummary({ ...summarizeViews(rows, posts, { days: DAYS }), sources: summarizeSources(sources, posts, { days: DAYS }) });
     } catch (e) {
       console.error('[AnalyticsModal] load failed:', e);
       setLoadError(true);
@@ -136,6 +137,22 @@ export default function AnalyticsModal({ onClose }) {
               ) : (
                 <div className="flex flex-col gap-2">
                   {summary.stories.map((s) => <StoryRow key={s.post.id} story={s} />)}
+                </div>
+              )}
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-6 mb-2">Where your visitors came from</p>
+              {summary.sources.length === 0 ? (
+                <p className="text-sm text-gray-400 py-2">No story views counted yet.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {summary.sources.map((s) => (
+                    <div key={s.source} className="flex items-center gap-2 text-sm">
+                      <span className="w-32 truncate text-gray-700">{s.name}</span>
+                      <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div className="h-full bg-gray-900 rounded-full" style={{ width: `${(s.views / summary.sources[0].views) * 100}%` }} />
+                      </div>
+                      <span className="w-12 text-right text-gray-600 tabular-nums">{fmt(s.views)}</span>
+                    </div>
+                  ))}
                 </div>
               )}
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-6 mb-2">Coming soon</p>

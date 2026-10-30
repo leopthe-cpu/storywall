@@ -373,6 +373,11 @@ export async function myStoryAnalytics(days = 90) {
   return check(await getSupabase().rpc('my_story_analytics', { p_days: days })) || [];
 }
 
+// Story views by traffic source (decision 53), Premium only like the above.
+export async function myStorySources(days = 90) {
+  return check(await getSupabase().rpc('my_story_sources', { p_days: days })) || [];
+}
+
 // ---------- File uploads (each user writes only inside their own folder)
 
 function fileExtension(file) {

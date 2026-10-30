@@ -14,6 +14,7 @@ import ProfileEmptyState from '@/components/profile/ProfileEmptyState';
 import ShareUrlModal from '@/components/profile/ShareUrlModal';
 import ShareStorySheet from '@/components/profile/ShareStorySheet';
 import { shareAfterPublishSkipped } from '@/lib/shareStory';
+import { captureVisitSource, withVia } from '@/lib/visitSource';
 import CopyToast from '@/components/profile/CopyToast';
 import WriteGenerateToggle from '@/components/creator/WriteGenerateToggle';
 import { aiCarouselBuilderEnabled } from '@/lib/featureFlags';
@@ -232,7 +233,7 @@ export default function PublicProfile() {
   }, [selectedTags]);
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/${username}`;
+    const url = withVia(`${window.location.origin}/${username}`);
     try {
       await navigator.clipboard.writeText(url);
       setShowCopyToast(true);
@@ -241,6 +242,13 @@ export default function PublicProfile() {
       setShowShareModal(true);
     }
   };
+
+  // Traffic sources (decision 53): note where this visit came from, then
+  // drop ?via= from the address bar so it isn't copied on with the link.
+  useEffect(() => {
+    const rest = captureVisitSource(location.search);
+    if (rest != null) navigate({ pathname: location.pathname, search: rest }, { replace: true, state: location.state });
+  }, []);
 
   // Right after a publish, the builder sends the story's id along: open
   // "Share your story" for it (unless the owner chose not to see it again),
@@ -684,7 +692,7 @@ export default function PublicProfile() {
       {/* SHARE URL MODAL (clipboard fallback) */}
       {showShareModal && (
         <ShareUrlModal
-          url={`${window.location.origin}/${username}`}
+          url={withVia(`${window.location.origin}/${username}`)}
           onClose={() => setShowShareModal(false)}
         />
       )}
