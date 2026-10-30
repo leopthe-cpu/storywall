@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom';
 import useDocumentTitle from '@/lib/useDocumentTitle';
 import { LEGAL_UPDATED } from '@/lib/legal';
+import GridBackdrop from '@/components/ui/GridBackdrop';
 
-// Shared layout for the Terms and the Privacy Policy: the paper background,
-// the logo back to the home page, a plain-language summary box on top, then
-// the numbered sections. Kept as plain, readable text: these pages are read
+// Shared layout for the Terms, the Privacy Policy and the licences: the
+// paper background with the site's grid (like walls and the home page), the
+// logo back to the home page, a plain-language summary box on top, then the
+// numbered sections. Kept as plain, readable text: these pages are read
 // on phones, so no tables or columns.
 
 export function Section({ title, children }) {
@@ -27,8 +29,9 @@ export function List({ items }) {
 export default function LegalPage({ title, summary, children, other, updated = LEGAL_UPDATED }) {
   useDocumentTitle(`${title} | storywall`);
   return (
-    <div className="min-h-screen bg-[#F4F2EC]">
-      <div className="mx-auto max-w-2xl px-5 sm:px-8 py-8 sm:py-12">
+    <div className="relative min-h-screen bg-[#F4F2EC]">
+      <GridBackdrop />
+      <div className="relative mx-auto max-w-2xl px-5 sm:px-8 py-8 sm:py-12">
         <Link to="/" aria-label="Back to the Storywall home page" className="inline-block">
           <img src="/logo-slash-ink.png" alt="Storywall" className="h-[20px] w-auto" />
         </Link>
