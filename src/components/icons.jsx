@@ -92,6 +92,7 @@ export const Share2 = wrap(I.ShareIos, 'Share2'); // Apple's own share-arrow gly
 export const Download = wrap(I.Download, 'Download');
 export const Archive = wrap(I.Archive, 'Archive');
 export const Pin = wrap(I.Pin, 'Pin');
+export const Eye = wrap(I.Eye, 'Eye');
 export const PinSlash = wrap(I.PinSlash, 'PinSlash');
 export const FolderOpen = wrap(I.Folder, 'FolderOpen');
 export const FileEdit = wrap(I.PageEdit, 'FileEdit');

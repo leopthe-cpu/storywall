@@ -1,12 +1,43 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import CardCarousel from '@/components/creator/CardCarousel';
 import Tag from '@/components/profile/Tag';
 import { CardFormatProvider } from '@/components/creator/CardFormatContext';
-import { Pin } from '@/components/icons';
+import { Pin, Eye } from '@/components/icons';
+import { recordView, VIEW_VISIBLE_RATIO, VIEW_VISIBLE_MS } from '@/lib/viewTracking';
 
-export default function StoryCard({ post, selectedTags = [], onToggleTag, kebab, onTap }) {
+// trackViews: count this story's views (not for the owner's own wall, nor
+// template placeholders). uniqueViews: the owner's Lifetime view count,
+// shown only when given.
+export default function StoryCard({ post, selectedTags = [], onToggleTag, kebab, onTap, trackViews = false, uniqueViews }) {
   const hasTitle = !!post.title;
   const titlePointer = useRef(null);
+
+  // A view counts once the story has been at least half on screen for a
+  // second (decision 51); from then on, each card shown counts too.
+  const rootRef = useRef(null);
+  const seenRef = useRef(false);
+  const activeCardRef = useRef(0);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!trackViews || !el || typeof IntersectionObserver === 'undefined') return;
+    let timer = null;
+    const io = new IntersectionObserver(([entry]) => {
+      clearTimeout(timer);
+      if (!entry.isIntersecting || seenRef.current) return;
+      timer = setTimeout(() => {
+        seenRef.current = true;
+        recordView(post.id);
+        recordView(post.id, activeCardRef.current);
+        io.disconnect();
+      }, VIEW_VISIBLE_MS);
+    }, { threshold: VIEW_VISIBLE_RATIO });
+    io.observe(el);
+    return () => { clearTimeout(timer); io.disconnect(); };
+  }, [trackViews, post.id]);
+  const onActiveCardChange = (i) => {
+    activeCardRef.current = i;
+    if (trackViews && seenRef.current) recordView(post.id, i);
+  };
 
   // Intent detection — only a true tap (minimal movement, short duration)
   // scrolls the story into view; a drag/scroll does not.
@@ -24,7 +55,7 @@ export default function StoryCard({ post, selectedTags = [], onToggleTag, kebab,
   };
 
   return (
-    <div>
+    <div ref={rootRef}>
       {/* Title row — title only, above the card carousel */}
       {hasTitle && (
         <div className="mb-2">
@@ -42,7 +73,7 @@ export default function StoryCard({ post, selectedTags = [], onToggleTag, kebab,
       <div className="relative">
         {/* Each story has its own card size (posts.card_size). */}
         <CardFormatProvider value={post.card_size}>
-          <CardCarousel cards={post.cards} onTap={onTap} tokens={post.color_tokens} />
+          <CardCarousel cards={post.cards} onTap={onTap} tokens={post.color_tokens} onActiveCardChange={onActiveCardChange} />
         </CardFormatProvider>
         {/* Pinned to the top of the wall (decision 51), shown to everyone. */}
         {post.pinned_at && (
@@ -56,6 +87,14 @@ export default function StoryCard({ post, selectedTags = [], onToggleTag, kebab,
           </div>
         )}
       </div>
+
+      {/* The owner's view count (Lifetime: unique views, decision 50). */}
+      {uniqueViews != null && (
+        <div className="flex items-center gap-1 pt-2 text-xs text-wall-text-3">
+          <Eye size={13} />
+          {uniqueViews === 1 ? '1 view' : `${uniqueViews.toLocaleString()} views`}
+        </div>
+      )}
 
       {/* Tags below carousel */}
       {post.tags?.length > 0 && (

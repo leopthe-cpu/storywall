@@ -45,6 +45,13 @@ Core pieces:
 - Enforced server-side in `supabase/functions/_shared/premium.ts`: `hasPremium` (used by `structureStory`, `startGeneration`, `generateJobImage` and `generateImage`) and `hasLifetime`. Any new tier-gated backend function must call the right one; database rules use `private.has_premium` / `private.has_lifetime`.
 - The client reads its access through the `my_access` database function (`myAccess()` in `src/api/storywallApi.js`: `is_admin`, `is_premium`, `is_lifetime`) only to show/hide UI. Never gate features on client state alone, and never add access flags to the profile.
 
+## Story views (decisions 34, 50, 51)
+
+- The wall reports a story when it has been at least half on screen for a second, then each card as it's shown (`src/lib/viewTracking.js`, `StoryCard`); once per page load. The `recordView` Edge Function skips the owner and unpublished stories and calls `record_story_view`.
+- All and unique views per day in `story_view_days` (`card_index` -1 = the story). Unique = a hash of address + browser with a daily secret; the secret and the day's hashes are deleted after the day, so nothing personal is kept.
+- Off unless the function secret `VIEW_TRACKING_ENABLED` is `true` (set per project; production only with Oz's OK, after the privacy notice is checked).
+- Lifetime owners see each story's unique views on their wall (`my_story_view_totals`).
+
 ## Card image export (admin-only, planned premium)
 
 - "Download all cards as images" button under the publish-flow preview (`PostFlowSheet.jsx`), and "Download images" in a published story's ⋯ menu on the profile (`StoryKebab` → sheet in `PublicProfile.jsx`, auto-starts). Both shown only when `user.role === 'admin'`.
