@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Download } from '@/components/icons';
 import PixelSpinner from '@/components/ui/PixelSpinner';
 import CardThumb from '@/components/creator/CardThumb';
-import { saveCardImages } from '@/lib/cardExport';
+import { saveCardImages, saveCardsPdf } from '@/lib/cardExport';
 import { useCardFormat } from '@/components/creator/CardFormatContext';
 import { cardSizeOf, getCardSize } from '@/lib/cardGeometry';
 
@@ -82,7 +82,8 @@ async function loadCardFonts(cards) {
 // autoStart: begin exporting on mount (used by the profile story menu, where
 // the menu tap itself is the intent). onDone: called after files are saved.
 // label: the idle button text (default "Download all N cards as images").
-export default function DownloadCardsButton({ cards, tokens, title, className = '', autoStart = false, onDone, label: idleLabel }) {
+// format: 'images' (PNG files) or 'pdf' (one PDF, a page per card).
+export default function DownloadCardsButton({ cards, tokens, title, className = '', autoStart = false, onDone, label: idleLabel, format = 'images' }) {
   const [status, setStatus] = useState(autoStart ? 'rendering' : 'idle'); // idle | rendering | error
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
@@ -160,7 +161,8 @@ export default function DownloadCardsButton({ cards, tokens, title, className = 
         }
         if (cancelled) return;
         setProgress(nodes.length);
-        await saveCardImages(blobs, titleRef.current);
+        if (format === 'pdf') await saveCardsPdf(blobs, sizes, titleRef.current);
+        else await saveCardImages(blobs, titleRef.current);
         setStatus('idle');
         onDoneRef.current?.();
       } catch (e) {

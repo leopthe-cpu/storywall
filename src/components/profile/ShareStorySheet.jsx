@@ -9,6 +9,10 @@ import { storyShareUrl, storyCaption, coverHeadline, shareAfterPublishSkipped, s
 const DownloadCardsButton = lazy(() => import('@/components/creator/DownloadCardsButton'));
 
 const PREVIEW_SIZE = 96;
+const DOWNLOADS = [
+  { format: 'images', label: 'Download for Instagram (images)' },
+  { format: 'pdf', label: 'Download for LinkedIn (PDF)' },
+];
 
 // "Share your story" (decision 53): opened on the wall right after a
 // publish (with "Don't show this again") and from a story's ⋯ menu. Copy
@@ -104,32 +108,35 @@ export default function ShareStorySheet({ post, username, isPremium, afterPublis
 
           <div className="pt-1">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Download</p>
-            {isPremium ? (
-              <Suspense fallback={null}>
-                <CardFormatProvider value={post.card_size}>
-                  <DownloadCardsButton
-                    key={post.id}
-                    cards={post.cards}
-                    tokens={post.color_tokens}
-                    title={post.title || coverHeadline(post)}
-                    label="Download for Instagram (images)"
-                  />
-                </CardFormatProvider>
-              </Suspense>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setPremiumNote(true)}
-                  className={`${button} border border-gray-200 text-gray-400`}
-                >
-                  <Download size={16} />
-                  <span>Download for Instagram (images)</span>
-                  <span className="ml-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Premium</span>
-                </button>
-                {premiumNote && <p className="mt-2 text-xs text-gray-500">Card downloads come with Premium.</p>}
-              </>
-            )}
+            {DOWNLOADS.map(({ format, label }) => (
+              <div key={format} className="mt-2">
+                {isPremium ? (
+                  <Suspense fallback={null}>
+                    <CardFormatProvider value={post.card_size}>
+                      <DownloadCardsButton
+                        key={`${post.id}-${format}`}
+                        cards={post.cards}
+                        tokens={post.color_tokens}
+                        title={post.title || coverHeadline(post)}
+                        label={label}
+                        format={format}
+                      />
+                    </CardFormatProvider>
+                  </Suspense>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPremiumNote(true)}
+                    className={`${button} border border-gray-200 text-gray-400`}
+                  >
+                    <Download size={16} />
+                    <span>{label}</span>
+                    <span className="ml-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Premium</span>
+                  </button>
+                )}
+              </div>
+            ))}
+            {premiumNote && <p className="mt-2 text-xs text-gray-500">Card downloads come with Premium.</p>}
           </div>
 
           {afterPublish && (

@@ -55,7 +55,7 @@ Core pieces:
 ## Share screen and card image export (decision 53)
 
 - "Share your story" (`src/components/profile/ShareStorySheet.jsx`) opens on the wall right after a publish (the builder navigates with `state.shareStory`; "Don't show this again" is kept in this browser, `src/lib/shareStory.js`) and from a published story's ⋯ menu (`StoryKebab` "Share"). Copy link (`/<username>/<storyId>`, a route that opens the wall on that story) and an editable caption (cover headline, link, tags as hashtags; never reworded by the app).
-- Card downloads are Premium (`is_premium`, admins included): "Download for Instagram (images)" in the share screen and "Download images" in the ⋯ menu; Free users see the share-screen button with a Premium label. It's client-only, so there's no server check to add.
+- Card downloads are Premium (`is_premium`, admins included): "Download for Instagram (images)" and "Download for LinkedIn (PDF)" (one page per card at its export size, `saveCardsPdf` with pdf-lib) in the share screen, and "Download images" in the ⋯ menu; Free users see the share-screen button with a Premium label. It's client-only, so there's no server check to add.
 - `src/components/creator/DownloadCardsButton.jsx` re-renders each card through `CardThumb` at its export size (1080×1080 for 1:1, 1080×1350 for 4:5) in a hidden layer and rasterises it with `html-to-image`; `src/lib/cardExport.js` saves a single PNG, a zip (desktop) or the share sheet (phones). Both libraries load lazily on click.
 - It refuses (with a message) rather than exporting broken cards when an image hasn't loaded or its host blocks CORS. Not captured: the "Blur" photo overlay (backdrop-filter); videos export their current frame.
 

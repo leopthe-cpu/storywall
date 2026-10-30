@@ -72,3 +72,34 @@ export async function saveCardImages(blobs, title) {
   triggerDownload(zipBlob, `${base}-cards.zip`);
   return 'zip';
 }
+
+// One PDF of the whole story, one page per card at the card's own export
+// size (pixels used as points), for LinkedIn document posts (decision 45,
+// 53). blobs: Blob[] (PNG) in card order; sizes: [{ exportWidth,
+// exportHeight }] for each. pdf-lib (MIT) loads only here.
+export async function saveCardsPdf(blobs, sizes, title) {
+  const { PDFDocument } = await import('pdf-lib');
+  const pdf = await PDFDocument.create();
+  pdf.setTitle(title || 'Storywall story');
+  pdf.setCreator('Storywall');
+  for (let i = 0; i < blobs.length; i++) {
+    const image = await pdf.embedPng(new Uint8Array(await blobs[i].arrayBuffer()));
+    const { exportWidth: width, exportHeight: height } = sizes[i];
+    const page = pdf.addPage([width, height]);
+    page.drawImage(image, { x: 0, y: 0, width, height });
+  }
+  const blob = new Blob([await pdf.save()], { type: 'application/pdf' });
+  const name = `storywall-${slugify(title)}.pdf`;
+
+  const files = [new File([blob], name, { type: 'application/pdf' })];
+  if (shouldUseShareSheet(files)) {
+    try {
+      await navigator.share({ files, title: title || 'Storywall story' });
+      return 'share';
+    } catch (e) {
+      if (e?.name === 'AbortError') return 'cancelled';
+    }
+  }
+  triggerDownload(blob, name);
+  return 'download';
+}
