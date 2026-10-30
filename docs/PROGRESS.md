@@ -1,7 +1,7 @@
 ---
 project: Storywall
 updated: 2026-10-30
-summary: On staging (develop), not yet released: per-card sizes (1:1, 4:5, 9:16, 16:9), long pastes continuing on new cards, iPhone (HEIC) photos, copy and paste between cards, a new loading font, a licences page, access tiers (Free, Lifetime, Premium), pinned stories, text highlights, profile colours for Lifetime, the Premium analytics screen with traffic sources, view counting (on in staging only), and the share screen after publishing with Premium image and LinkedIn PDF downloads. Next: Oz's phone tests, the privacy wording, then the release.
+summary: On staging (develop), not yet released: per-card sizes (1:1, 4:5, 9:16, 16:9), long pastes continuing on new cards, iPhone (HEIC) photos, copy and paste between cards, a new loading font, a licences page, access tiers (Free, Lifetime, Premium), pinned stories, text highlights, profile colours for Lifetime, the Premium analytics screen with traffic sources, view counting (on in staging only), the share screen after publishing with Premium image and LinkedIn PDF downloads, and the new Settings (Account, Theme presets). Next: Oz's phone tests, the privacy wording, then the release.
 ---
 
 ## Doing
@@ -61,7 +61,7 @@ summary: On staging (develop), not yet released: per-card sizes (1:1, 4:5, 9:16,
 - [ ] Approve the Privacy Policy wording for view counting (or have the lawyer check it) before it goes live in production @me #legal #analytics
   The policy says today that there are no analytics or tracking tools. Draft wording given in chat, 2026-10-30, plus one line for traffic sources.
   Source: docs/decisions.md 34, 53
-- [ ] Test on a phone (staging): pin a story, highlight a word, paste a long text, add an iPhone (HEIC) photo, pick profile colours, publish and share a story (link, caption, images, PDF), views and analytics; and whether a left text box reopens with two taps @me #testing
+- [ ] Test on a phone (staging): pin a story, highlight a word, paste a long text, add an iPhone (HEIC) photo, pick a theme in Settings, publish and share a story (link, caption, images, PDF), views and analytics; and whether a left text box reopens with two taps @me #testing
   leopteh is admin, so it has every tier. Views only count from someone else (a private tab).
   Source: PRs 147–164
 - [ ] Google Cloud account (for link safety checks) and a payment provider @me #later
@@ -138,6 +138,9 @@ summary: On staging (develop), not yet released: per-card sizes (1:1, 4:5, 9:16,
 - [x] Text highlights (marker), colour picked by the user @claude #builder (2026-10-30)
   Live on staging. Still needs a check on a real iPhone.
   Source: docs/decisions.md 51; PR 156
+- [x] Settings redesign: short home list; Account (with Download my data, kept free, and Delete account), Theme with 8 ready-made themes, legal pages in one entry @claude #settings (2026-10-30)
+  On staging. Mock-ups approved by Oz first. Not yet checked on a real phone.
+  Source: PR 166
 - [x] Share screen "Share your story" after publishing and in the story menu: link, editable caption; images and LinkedIn PDF for Premium @claude #sharing (2026-10-30)
   On staging. Not yet checked on a real phone.
   Source: docs/decisions.md 45, 53; PRs 161, 162, 163
