@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, LogOut, Archive, Download, BarChart, Palette, ChevronLeft, ChevronRight, Trash2, AlertCircle } from '@/components/icons';
+import { X, LogOut, Archive, Download, BarChart, Palette, ChevronLeft, ChevronRight, Trash2, AlertCircle, Lock, Copy, Check, User } from '@/components/icons';
 import { getMe, signOut, filterPosts, updateMe } from '@/api/storywallApi';
 import { motion } from 'framer-motion';
 import { ENABLE_DARK_MODE } from '@/lib/featureFlags';
@@ -14,8 +14,10 @@ import ThemeSettings from '@/components/profile/ThemeSettings';
 import { presetOf } from '@/lib/wallTheme';
 
 // onThemePreview / onThemeSaved: the Theme screen's live preview and saved
-// colours, applied by the wall.
-export default function BurgerMenu({ user, onClose, onArchivesChanged, onThemePreview, onThemeSaved }) {
+// colours, applied by the wall. access: { isPremium, isLifetime } as the
+// wall already loaded them (my_access), so the perks show at once instead of
+// popping in after the menu opens. onEditProfile opens the profile editor.
+export default function BurgerMenu({ user, access, onClose, onArchivesChanged, onThemePreview, onThemeSaved, onEditProfile }) {
   const [currentUser, setCurrentUser] = useState(null);
   // null until the saved setting has loaded: the switch shows neither state
   // and ignores taps, so it never flashes "public" or flips the wrong way.
@@ -33,7 +35,23 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged, onThemePr
   };
   const handleThemeSaved = (theme) => {
     setCurrentUser((u) => (u ? { ...u, wall_theme: theme } : u));
+    setSavedTheme(theme);
     onThemeSaved?.(theme);
+  };
+  // The wall's colours as the wall loaded them (getPublicProfile returns them
+  // only while the owner has Lifetime), updated here on save.
+  const [savedTheme, setSavedTheme] = useState(user?.wall_theme || null);
+  const isPremium = !!(access?.isPremium || currentUser?.is_premium);
+  const isLifetime = !!(access?.isLifetime || currentUser?.is_lifetime);
+  const [emailCopied, setEmailCopied] = useState(false);
+  const copyPrivacyEmail = async () => {
+    try {
+      await navigator.clipboard.writeText(PRIVACY_EMAIL);
+      setEmailCopied(true);
+      setTimeout(() => setEmailCopied(false), 2000);
+    } catch {
+      // Clipboard blocked: the address stays on screen to copy by hand.
+    }
   };
 
   // Fetch the full current user (including email) from auth — the `user` prop
@@ -83,7 +101,7 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged, onThemePr
     window.location.assign('/');
   };
 
-  const themeName = currentUser ? (presetOf(currentUser.wall_theme)?.name || 'Custom') : null;
+  const themeName = presetOf(savedTheme)?.name || 'Custom';
 
   // Email: show the real email if available. If genuinely absent (e.g. Apple
   // hides it), show a provider-based fallback instead of a dash.
@@ -132,37 +150,41 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged, onThemePr
         <div className="flex-1 overflow-y-auto">
           {screen === 'home' && (
             <div className="px-4 py-4 space-y-5">
-              <button
-                type="button"
-                onClick={() => setScreen('account')}
-                className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-xl bg-[#F4F2EC] border border-[#D6D2C7] text-left"
-              >
-                <span aria-hidden="true" className="w-12 h-12 rounded-full bg-[#E6E0D2] overflow-hidden flex items-center justify-center font-display text-xl font-medium shrink-0">
-                  {/* The wall's own copy of the photo (a public URL). */}
-                  {user?.profile_image
-                    ? <img src={user.profile_image} alt="" className="w-full h-full object-cover" />
-                    : (user?.display_name || user?.username || '?').slice(0, 1).toUpperCase()}
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="block text-[15px] font-medium">Account</span>
-                  <span className="block font-mono text-[13px] text-[#6B6964] truncate">storywall.io/{user?.username}</span>
-                  <span className="block text-[13px] text-[#6B6964]">Username, email, password, privacy, your data</span>
-                </span>
-                <Chevron />
-              </button>
-
+              {/* Sections (Oz, 2026-10-30): Your wall, Stories, Your account,
+                  Your perks (only what this person has), About. */}
               <Group title="Your wall">
-                <Row icon={<Palette size={20} />} label="Theme" detail={themeName} onClick={() => setScreen('theme')} />
-                {/* Premium analytics (decision 50). The data function returns
-                    nothing to anyone else, so hiding the row is cosmetic. */}
-                {currentUser?.is_premium && (
-                  <Row icon={<BarChart size={20} />} label="Analytics" onClick={() => setShowAnalytics(true)} />
-                )}
+                <Row icon={<User size={20} />} label="Profile" sub="Photo, name, bio, links and skills" onClick={onEditProfile} />
+              </Group>
+
+              <Group title="Stories">
                 <Row icon={<Archive size={20} />} label="Archived stories" detail={archivedCount > 0 ? String(archivedCount) : null} onClick={() => setShowArchives(true)} />
               </Group>
 
-              <Group title="More">
-                <Row icon={<AlertCircle size={20} />} label="Terms, privacy and licences" onClick={() => setScreen('about')} />
+              <Group title="Your account">
+                <Row
+                  icon={<Lock size={20} />}
+                  label="Account"
+                  sub="Manage your login and username"
+                  badges={[isPremium && 'Premium', isLifetime && 'Lifetime'].filter(Boolean)}
+                  onClick={() => setScreen('account')}
+                />
+              </Group>
+
+              {(isLifetime || isPremium) && (
+                <Group title="Your perks">
+                  {isLifetime && (
+                    <Row icon={<Palette size={20} />} label="Theme" sub={themeName} badges={['Lifetime']} onClick={() => setScreen('theme')} />
+                  )}
+                  {/* Premium analytics (decision 50). The data function returns
+                      nothing to anyone else, so hiding the row is cosmetic. */}
+                  {isPremium && (
+                    <Row icon={<BarChart size={20} />} label="Analytics" badges={['Premium']} onClick={() => setShowAnalytics(true)} />
+                  )}
+                </Group>
+              )}
+
+              <Group title="About">
+                <Row icon={<AlertCircle size={20} />} label="Legal" sub="Terms, privacy and licences" onClick={() => setScreen('about')} />
               </Group>
             </div>
           )}
@@ -243,7 +265,19 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged, onThemePr
                 <Row href="/privacy" label="Privacy Policy" sub="What we collect and why" />
                 <Row href="/about/licenses" label="Open-source licences" sub="Software and fonts Storywall uses" />
               </Group>
-              <p className="text-[13px] text-[#6B6964] mx-1">Questions about your data: privacy@storywall.io</p>
+              <div className="mx-1 flex flex-wrap items-center gap-2">
+                <span className="text-[13px] text-[#6B6964]">Questions about your data?</span>
+                {/* Tapping the address copies it (Oz, 2026-10-30). */}
+                <button
+                  type="button"
+                  onClick={copyPrivacyEmail}
+                  aria-label={`Copy ${PRIVACY_EMAIL}`}
+                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-[#E6E0D2] text-[13px] font-medium text-[#262624] hover:bg-[#D6D2C7] transition-colors"
+                >
+                  {emailCopied ? <Check size={14} /> : <Copy size={14} />}
+                  {emailCopied ? 'Copied' : PRIVACY_EMAIL}
+                </button>
+              </div>
             </div>
           )}
 
@@ -299,11 +333,13 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged, onThemePr
   );
 }
 
+const PRIVACY_EMAIL = 'privacy@storywall.io';
+
 const SCREEN_TITLES = {
   home: 'Settings',
   account: 'Account',
   theme: 'Theme',
-  about: 'Terms, privacy and licences',
+  about: 'Legal',
 };
 
 function PanelHeader({ title, onBack, onClose, badge }) {
@@ -336,7 +372,7 @@ const Chevron = () => <ChevronRight size={16} className="text-[#6B6964] shrink-0
 
 // One row of a group: a button, or a link (href, opened in a new tab like
 // the legal pages always were).
-function Row({ icon, label, sub, detail, onClick, href, disabled, danger, chevron = true }) {
+function Row({ icon, label, sub, detail, badges = [], onClick, href, disabled, danger, chevron = true }) {
   const body = (
     <>
       {icon && <span className={`shrink-0 ${danger ? 'text-red-700' : ''}`}>{icon}</span>}
@@ -345,6 +381,15 @@ function Row({ icon, label, sub, detail, onClick, href, disabled, danger, chevro
         {sub && <span className="block text-[13px] text-[#6B6964]">{sub}</span>}
       </span>
       {detail && <span className="text-[13px] text-[#6B6964]">{detail}</span>}
+      {/* Tier pills, right of centre; stacked when there are two so the
+          row's text keeps its width. */}
+      {badges.length > 0 && (
+        <span className="flex flex-col items-end gap-1 shrink-0">
+          {badges.map((b) => (
+            <span key={b} className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#E6E0D2] px-2 py-0.5 rounded-lg">{b}</span>
+          ))}
+        </span>
+      )}
       {chevron && <Chevron />}
     </>
   );

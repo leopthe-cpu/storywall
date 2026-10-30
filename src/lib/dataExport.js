@@ -1,6 +1,6 @@
 import { exportMyData } from '@/api/storywallApi';
 
-// "Download my data" (Settings → Privacy): saves everything StoryWall stores
+// "Download my data" (Settings → Account): saves everything StoryWall stores
 // about the user as one JSON file (see exportMyData for what's in it).
 export async function downloadMyData() {
   const data = await exportMyData();
