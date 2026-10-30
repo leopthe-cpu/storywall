@@ -9,8 +9,11 @@ import ArchivesModal from '@/components/profile/ArchivesModal';
 import BusyLabel from '@/components/ui/BusyLabel';
 import { downloadMyData } from '@/lib/dataExport';
 import DeleteAccountSheet from '@/components/profile/DeleteAccountSheet';
+import ProfileThemeSection from '@/components/profile/ProfileThemeSection';
 
-export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
+// onThemePreview / onThemeSaved: the Profile theme section's live preview and
+// saved colours, applied by the wall.
+export default function BurgerMenu({ user, onClose, onArchivesChanged, onThemePreview, onThemeSaved }) {
   const [currentUser, setCurrentUser] = useState(null);
   // null until the saved setting has loaded: the switch shows neither state
   // and ignores taps, so it never flashes "public" or flips the wrong way.
@@ -157,6 +160,8 @@ export default function BurgerMenu({ user, onClose, onArchivesChanged }) {
               </div>
             </button>
           </div>
+
+          <ProfileThemeSection currentUser={currentUser} onPreview={onThemePreview} onSaved={onThemeSaved} />
 
           {/* Privacy */}
           <div>

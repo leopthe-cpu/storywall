@@ -86,6 +86,8 @@ export default function PublicProfile() {
   const [isPremium, setIsPremium] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLifetime, setIsLifetime] = useState(false);
+  // Profile colours being tried in Settings, shown live before saving.
+  const [themePreview, setThemePreview] = useState(null);
   // Lifetime: the owner's unique views per story, { [post id]: count }.
   const [viewTotals, setViewTotals] = useState(null);
   const [showNewStoryToggle, setShowNewStoryToggle] = useState(false);
@@ -353,7 +355,7 @@ export default function PublicProfile() {
         // Lifetime supporter's profile colours replace them for this wall
         // (wallTheme.js). getPublicProfile only returns colours while the
         // owner has Lifetime.
-        ...wallThemeVars(profile?.wall_theme),
+        ...wallThemeVars(themePreview ?? profile?.wall_theme),
         background: 'var(--wall-bg)',
         backgroundImage: 'linear-gradient(var(--wall-grid) 1px, transparent 1px), linear-gradient(90deg, var(--wall-grid) 1px, transparent 1px)',
         backgroundSize: '38px 38px',
@@ -410,7 +412,7 @@ export default function PublicProfile() {
           className="hidden lg:block absolute top-1/2 -translate-x-1/2 -translate-y-1/2"
           style={{ left: `calc((100% - ${DESKTOP_BLOCK_WIDTH}px) / 4)` }}
         >
-          <img src={wallTopbarIsLight(profile?.wall_theme) ? '/logo-slash-light.png' : '/logo-slash-ink.png'} alt="Storywall" className="h-[18px] w-auto" />
+          <img src={wallTopbarIsLight(themePreview ?? profile?.wall_theme) ? '/logo-slash-light.png' : '/logo-slash-ink.png'} alt="Storywall" className="h-[18px] w-auto" />
         </Link>
         <div className="mx-auto px-4 md:px-8 flex items-center justify-between" style={{ maxWidth: DESKTOP_CONTAINER_WIDTH }}>
           <span className="text-sm font-mono tracking-tight" style={{ color: HEADER_INK }}>
@@ -564,7 +566,13 @@ export default function PublicProfile() {
       {/* BURGER MENU */}
       <AnimatePresence>
         {showMenu && (
-          <BurgerMenu user={profileUser} onClose={() => setShowMenu(false)} onArchivesChanged={reloadPosts} />
+          <BurgerMenu
+            user={profileUser}
+            onClose={() => { setShowMenu(false); setThemePreview(null); }}
+            onArchivesChanged={reloadPosts}
+            onThemePreview={setThemePreview}
+            onThemeSaved={(wall_theme) => setProfile((p) => (p ? { ...p, wall_theme } : p))}
+          />
         )}
       </AnimatePresence>
 
