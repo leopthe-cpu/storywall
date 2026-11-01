@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { updateMe } from '@/api/storywallApi';
 import { PLAIN_THEME, THEME_PRESETS, isValidWallTheme, presetOf, wallThemeVars } from '@/lib/wallTheme';
 import { contrastRatio } from '@/lib/colorContrast';
@@ -11,6 +11,7 @@ import BusyLabel from '@/components/ui/BusyLabel';
 // Save; leaving without saving brings the saved colours back. Saving the
 // plain colours clears the theme. The database refuses colours from anyone
 // without Lifetime; for them this screen only says what it is.
+// registerGuard lets Settings ask "save your changes?" before leaving.
 
 const FIELDS = [
   { key: 'bg', label: 'Background' },
@@ -20,13 +21,25 @@ const FIELDS = [
 
 const sectionTitle = 'font-mono text-xs font-bold uppercase tracking-wider text-[#6B6964] mx-1 mb-1.5';
 
-export default function ThemeSettings({ currentUser, onPreview, onSaved }) {
+export default function ThemeSettings({ currentUser, onPreview, onSaved, registerGuard }) {
   const initial = isValidWallTheme(currentUser?.wall_theme) ? currentUser.wall_theme : null;
   // The colours as last saved (kept here: currentUser isn't refetched).
   const [saved, setSaved] = useState(initial);
   const [draft, setDraft] = useState(initial || PLAIN_THEME);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+
+  // Read by Settings when someone leaves this screen (filled in below once
+  // the draft is known; nothing to save for people without Lifetime).
+  const guardRef = useRef({ isDirty: () => false, save: async () => true, discard: () => {} });
+  useEffect(() => {
+    registerGuard?.({
+      isDirty: () => guardRef.current.isDirty(),
+      save: () => guardRef.current.save(),
+      discard: () => guardRef.current.discard(),
+    });
+    return () => registerGuard?.(null);
+  }, []);
 
   if (!currentUser) return null;
 
@@ -63,15 +76,18 @@ export default function ThemeSettings({ currentUser, onPreview, onSaved }) {
       onSaved?.(theme);
       onPreview?.(null);
       setMessage('Saved');
+      return true;
     } catch (e) {
       console.error('[ThemeSettings] save failed:', e);
       setMessage("Couldn't save. Please try again.");
+      return false;
     } finally {
       setBusy(false);
     }
   };
 
   const hardToRead = contrastRatio(draft.bg, draft.text) < 3;
+  guardRef.current = { isDirty: () => !unchanged, save, discard: () => onPreview?.(null) };
 
   return (
     <div className="flex flex-col min-h-full">
