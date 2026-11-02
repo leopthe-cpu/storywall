@@ -413,6 +413,22 @@ function UnsavedChangesModal({ onSave, onDiscard, onCancel }) {
   );
 }
 
+// Tier pills (Oz, 2026-11-02): all the same width so a stack lines up;
+// Premium in a gold-brown, Lifetime in silver grey. Both colour pairs keep
+// the text above 4.5:1 contrast.
+const TIER_COLOURS = {
+  Premium: 'bg-[#EADBB8] text-[#5E4512]',
+  Lifetime: 'bg-[#E3E3E1] text-[#45464A]',
+};
+
+function TierPill({ tier }) {
+  return (
+    <span className={`inline-flex justify-center w-[92px] font-mono text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg ${TIER_COLOURS[tier] || 'bg-[#E6E0D2] text-[#262624]'}`}>
+      {tier}
+    </span>
+  );
+}
+
 function PanelHeader({ title, onBack, onClose, badge }) {
   return (
     <div className="flex items-center gap-1 px-3 py-3 border-b border-[#D6D2C7]">
@@ -422,7 +438,7 @@ function PanelHeader({ title, onBack, onClose, badge }) {
         </button>
       )}
       <h2 className={`flex-1 font-display font-medium truncate ${onBack ? 'text-2xl' : 'text-[28px] leading-[34px] pl-2'}`}>{title}</h2>
-      {badge && <span className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#E6E0D2] px-2 py-0.5 rounded-lg">{badge}</span>}
+      {badge && <TierPill tier={badge} />}
       <button type="button" onClick={onClose} aria-label="Close" className="w-11 h-11 flex items-center justify-center rounded-full text-[#6B6964] hover:text-[#262624]">
         <X size={20} />
       </button>
@@ -455,10 +471,8 @@ function Row({ icon, label, sub, detail, badges = [], onClick, href, disabled, d
       {/* Tier pills, right of centre; stacked when there are two so the
           row's text keeps its width. */}
       {badges.length > 0 && (
-        <span className="flex flex-col items-end gap-1 shrink-0">
-          {badges.map((b) => (
-            <span key={b} className="font-mono text-[11px] font-bold uppercase tracking-wider bg-[#E6E0D2] px-2 py-0.5 rounded-lg">{b}</span>
-          ))}
+        <span className="flex flex-col items-end gap-1.5 shrink-0">
+          {badges.map((b) => <TierPill key={b} tier={b} />)}
         </span>
       )}
       {chevron && <Chevron />}
