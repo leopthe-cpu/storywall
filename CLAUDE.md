@@ -139,6 +139,28 @@ On Base44, any card/element field not declared in `base44/entities/Post.jsonc` w
 - Leave a comment explaining WHY on non-obvious logic; most recent code does.
 - Be explicit about what's untested.
 
+## Release checks (Oz, 2026-11-02)
+
+Every change gets a performance and a security check, as set out in `docs/RELEASE_CHECKS.md` in the `leopthe-cpu/popmart.studio` repository (the rule for all of Oz's projects). In short:
+
+- **Before merging a PR that changes pages, styles, scripts or dependencies:** Lighthouse (phone and desktop) on every page the change touches, and a security review of the diff.
+- **Before merging a PR that changes auth, the database, Edge Functions or secrets handling:** a security review of the diff, plus the Supabase security advisors on staging.
+- **After each production deploy:** run this repo's `Popmart audit (performance)` and `Popmart audit (security)` workflows (Actions → Run workflow), and Lighthouse on the pages that changed.
+- **Targets:**
+  - performance 90+ on desktop, as close to 90 on a phone as the page allows;
+  - accessibility and best practices 100, or no drop;
+  - SEO 100 on public pages;
+  - a drop of more than 5 points, or CLS above 0.1, is fixed or explained in the PR.
+- **The security review covers:**
+  - secrets;
+  - auth and permission checks on every endpoint, RPC and function;
+  - RLS and grants;
+  - injection, XSS, SSRF and uploads;
+  - any new external script or host: listed in the PR, allowed in the CSP (`Caddyfile`) only where needed, and named on the privacy page;
+  - dependencies.
+- **Reporting:** scores before and after, findings and run links go in the PR. After a production deploy, Oz gets one line with the results. Anything failing goes under To do in `docs/PROGRESS.md`.
+- **Exemptions and limits:** docs-only changes need neither check. Production rules above still apply: Lighthouse and the audit workflows only read the public site, but anything using a production token needs Oz's OK.
+
 ## Keep the progress file current
 
 Oz follows progress on the Popmart projects dashboard, which reads `docs/PROGRESS.md` (format: `docs/PROGRESS_FORMAT.md` in the `leopthe-cpu/popmart.studio` repo, formerly Creative.can). At the end of every work session:
